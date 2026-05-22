@@ -12,6 +12,7 @@ const PUBLIC_PATHS = [
   "/terms",
   "/privacy",
   "/book",                       // public Calendly-style booking pages
+  "/api/auth/signup",            // account creation — called before the user has a session
   "/api/public/bookings",        // unauthed booking submission endpoint
   "/api/paystack/webhook",
   "/api/lemonsqueezy/webhook",
