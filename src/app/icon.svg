@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- Pink filled circle, Orbit brand color -->
+  <circle cx="32" cy="32" r="30" fill="#E8557A"/>
+  <!-- Main 4-point sparkle, white -->
+  <path d="M32 14 L34.4 28.4 L48 32 L34.4 35.6 L32 50 L29.6 35.6 L16 32 L29.6 28.4 Z" fill="#FFFFFF"/>
+  <!-- Small accent sparkle, top-right -->
+  <path d="M46 20 L46.9 22.6 L49.5 23.5 L46.9 24.4 L46 27 L45.1 24.4 L42.5 23.5 L45.1 22.6 Z" fill="#FFFFFF" opacity="0.85"/>
+</svg>

@@ -1,0 +1,43 @@
+import { createServerClient } from "@supabase/ssr";
+import { cookies } from "next/headers";
+import { sanitizeSupabaseUrl } from "./sanitize";
+
+/** Server-side Supabase client (Server Components, Route Handlers, Server Actions). */
+export async function createClient() {
+  const cookieStore = await cookies();
+
+  return createServerClient(
+    sanitizeSupabaseUrl(process.env.NEXT_PUBLIC_SUPABASE_URL),
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return cookieStore.getAll();
+        },
+        setAll(cookiesToSet) {
+          try {
+            cookiesToSet.forEach(({ name, value, options }) =>
+              cookieStore.set(name, value, options),
+            );
+          } catch {
+            // Server Components can't write cookies - middleware refreshes the session instead.
+          }
+        },
+      },
+    },
+  );
+}
+
+/**
+ * Service-role client. Bypasses RLS - use only in webhook handlers and
+ * trusted server actions. Never expose the service-role key to the browser.
+ */
+export function createServiceClient() {
+  return createServerClient(
+    sanitizeSupabaseUrl(process.env.NEXT_PUBLIC_SUPABASE_URL),
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    {
+      cookies: { getAll: () => [], setAll: () => {} },
+    },
+  );
+}

@@ -1,0 +1,61 @@
+# Pings Orbit's /api/cron/appointment-reminders endpoint every 5 minutes.
+#
+# Why this exists:
+#   Vercel's Hobby plan only allows one cron run per day, which isn't enough
+#   for 30/15/5-minute appointment alerts. GitHub Actions gives us free,
+#   unmetered scheduling, so we ping our own API endpoint on a schedule
+#   from here instead.
+#
+# Setup (one-time):
+#   1. Go to your repo on GitHub -> Settings -> Secrets and variables ->
+#      Actions -> "New repository secret"
+#   2. Add APP_URL = https://your-production-domain.vercel.app
+#      (no trailing slash, no /api on the end)
+#   3. Add CRON_SECRET = any long random string, e.g. 32 hex chars
+#   4. Add the SAME CRON_SECRET value to your Vercel env vars:
+#      Vercel project -> Settings -> Environment Variables -> CRON_SECRET
+#   5. Push this workflow. GitHub starts firing it on its own.
+#
+# Manual trigger:
+#   You can also run this on demand via the "Actions" tab -> this workflow
+#   -> "Run workflow" button. Handy for testing without waiting 5 minutes.
+
+name: Appointment reminders
+
+on:
+  schedule:
+    # GitHub cron uses UTC. Every 5 minutes around the clock.
+    - cron: "*/5 * * * *"
+  workflow_dispatch: {}   # allow manual runs from the Actions tab
+
+# Keep the workflow lightweight; we don't need permissions to anything in the repo
+permissions: {}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    # 2-minute hard cap - the API endpoint should respond in <5s; if it hangs
+    # we want this job to die quickly so the next 5-min slot can run fresh.
+    timeout-minutes: 2
+
+    steps:
+      - name: Ping reminders endpoint
+        env:
+          APP_URL: ${{ secrets.APP_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -z "$APP_URL" ]; then
+            echo "::error::APP_URL secret is not set. Add it in repo Settings -> Secrets."
+            exit 1
+          fi
+          if [ -z "$CRON_SECRET" ]; then
+            echo "::error::CRON_SECRET secret is not set. Add it in repo Settings -> Secrets AND in Vercel env vars."
+            exit 1
+          fi
+
+          # Hit the endpoint. Print body for debugging, fail the job on non-2xx
+          # so the failure shows up in the Actions tab.
+          curl --silent --show-error --fail \
+            --max-time 60 \
+            -H "Authorization: Bearer $CRON_SECRET" \
+            "$APP_URL/api/cron/appointment-reminders"

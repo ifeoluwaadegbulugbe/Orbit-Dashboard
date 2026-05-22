@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 180">
+  <!-- iOS expects a rounded square. We use a 180×180 with the same pink/sparkle. -->
+  <rect width="180" height="180" rx="40" fill="#E8557A"/>
+  <path d="M90 38 L96.5 76 L132 90 L96.5 104 L90 142 L83.5 104 L48 90 L83.5 76 Z" fill="#FFFFFF"/>
+  <path d="M132 56 L134.5 63 L141 65.5 L134.5 68 L132 75 L129.5 68 L123 65.5 L129.5 63 Z" fill="#FFFFFF" opacity="0.85"/>
+</svg>
