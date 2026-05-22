@@ -1,5 +1,4 @@
 {
-  "_comment": "Vercel Hobby plan caps cron at once-per-day. The REAL appointment-reminder cron runs every 5 min from .github/workflows/appointment-reminders.yml (GitHub Actions is free and unmetered). We keep a daily no-op here as a belt-and-braces backup in case GitHub Actions is ever down. If you upgrade to Vercel Pro, change this schedule back to */5 * * * * and you can delete the workflow.",
   "crons": [
     {
       "path": "/api/cron/appointment-reminders",
