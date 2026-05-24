@@ -1,10 +1,10 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
-import { Mail, Lock, Eye, EyeOff, CheckCircle2, ArrowLeft } from "lucide-react";
+import { Mail, Lock, Eye, EyeOff, CheckCircle2, ArrowLeft, RefreshCw } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/Button";
 
@@ -33,9 +33,36 @@ function LoginInner() {
   const verifyError = search.get("verifyError");
   const wasReset    = search.get("reset") === "1";
 
-  const [mode, setMode]   = useState<Mode>("signin");
-  const [showPw, setShowPw] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [mode, setMode]       = useState<Mode>("signin");
+  const [showPw, setShowPw]   = useState(false);
+  const [error, setError]     = useState<string | null>(null);
+
+  // Resend state
+  const [resendBusy, setResendBusy]       = useState(false);
+  const [resendDone, setResendDone]       = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0); // seconds left
+
+  /* ── Countdown timer for resend cooldown ─────────────────────────────── */
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const id = setInterval(() => setResendCooldown((c) => Math.max(0, c - 1)), 1000);
+    return () => clearInterval(id);
+  }, [resendCooldown]);
+
+  /* ── Core: send (or resend) the reset email ──────────────────────────── */
+  const sendReset = useCallback(async (email: string): Promise<boolean> => {
+    const appUrl =
+      process.env.NEXT_PUBLIC_APP_URL ??
+      (typeof window !== "undefined" ? window.location.origin : "");
+    const { error: e } = await createClient().auth.resetPasswordForEmail(email, {
+      redirectTo: `${appUrl}/auth/callback?type=recovery`,
+    });
+    if (e) {
+      console.error("[reset-password]", e.message);
+      return false;
+    }
+    return true;
+  }, []);
 
   /* ── Sign-in ──────────────────────────────────────────────────────────── */
   const signInForm = useForm<SignInValues>({ defaultValues: { remember: false } });
@@ -59,15 +86,37 @@ function LoginInner() {
   async function onForgot(values: ForgotValues) {
     setError(null);
     try {
-      const appUrl = process.env.NEXT_PUBLIC_APP_URL ??
-        (typeof window !== "undefined" ? window.location.origin : "");
-      const { error: e } = await createClient().auth.resetPasswordForEmail(
-        values.resetEmail,
-        { redirectTo: `${appUrl}/auth/callback?type=recovery` },
-      );
-      if (e) console.warn("[forgot-password]", e.message);
+      const ok = await sendReset(values.resetEmail);
+      if (!ok) {
+        setError("Couldn't send the reset email. Check your email address and try again.");
+        return;
+      }
+      setResendCooldown(60); // 60-second cooldown before first resend
+      setResendDone(false);
       setMode("sent");
-    } catch (e) { setError(e instanceof Error ? e.message : "Could not send reset email"); }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not send reset email");
+    }
+  }
+
+  /* ── Resend from the confirmation screen ────────────────────────────── */
+  async function onResend() {
+    if (!sentEmail || resendBusy || resendCooldown > 0) return;
+    setResendBusy(true);
+    setResendDone(false);
+    try {
+      const ok = await sendReset(sentEmail);
+      if (ok) {
+        setResendDone(true);
+        setResendCooldown(60);
+      } else {
+        setError("Couldn't resend the email. Try again in a moment.");
+      }
+    } catch {
+      setError("Couldn't resend the email. Try again in a moment.");
+    } finally {
+      setResendBusy(false);
+    }
   }
 
   /* ── Friendly error copy ─────────────────────────────────────────────── */
@@ -127,22 +176,52 @@ function LoginInner() {
         </div>
         <h1 className="text-section font-bold text-[var(--color-ink)]">Check your inbox</h1>
         <p className="mt-2 text-small text-[var(--color-ink-light)]">
-          If <strong className="text-[var(--color-ink)]">{sentEmail}</strong> matches an account,
-          a reset link is on its way.
+          A reset link was sent to{" "}
+          <strong className="text-[var(--color-ink)]">{sentEmail}</strong>.
         </p>
       </div>
 
-      <div className="px-4 py-3 rounded-[var(--radius-md)] bg-[var(--color-canvas)] text-tiny text-[var(--color-ink-light)] leading-relaxed mb-5">
+      {/* Error from resend attempt */}
+      {error && (
+        <div className="mb-4 px-4 py-3 rounded-[var(--radius-md)] bg-[var(--color-danger-light)] text-[var(--color-danger-deep)] text-small">
+          {error}
+        </div>
+      )}
+
+      {/* Resend success confirmation */}
+      {resendDone && !error && (
+        <div className="mb-4 flex items-center gap-2 px-4 py-3 rounded-[var(--radius-md)] bg-[var(--color-success-light)] text-[var(--color-success-deep)] text-small">
+          <CheckCircle2 className="h-4 w-4 flex-shrink-0" />
+          Reset link resent — check your inbox again.
+        </div>
+      )}
+
+      {/* Resend button */}
+      <button
+        onClick={onResend}
+        disabled={resendBusy || resendCooldown > 0}
+        className="w-full flex items-center justify-center gap-2 h-11 mb-3 rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-white text-small font-semibold text-[var(--color-ink)] hover:bg-[var(--color-canvas)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        <RefreshCw className={`h-4 w-4 ${resendBusy ? "animate-spin" : ""}`} />
+        {resendBusy
+          ? "Sending…"
+          : resendCooldown > 0
+            ? `Resend reset link (${resendCooldown}s)`
+            : "Resend reset link"}
+      </button>
+
+      {/* Didn't get it tips */}
+      <div className="px-4 py-3 rounded-[var(--radius-md)] bg-[var(--color-canvas)] text-tiny text-[var(--color-ink-light)] leading-relaxed mb-4">
         <p className="font-semibold text-[var(--color-ink)] mb-1">Not seeing it?</p>
         <ul className="list-disc pl-4 space-y-0.5">
           <li>Check your spam or promotions folder</li>
-          <li>Wait 60 seconds — the email service sometimes throttles</li>
           <li>Make sure you used the correct email address</li>
+          <li>Wait a moment — delivery can take up to 60 seconds</li>
         </ul>
       </div>
 
       <button
-        onClick={() => { setMode("forgot"); forgotForm.reset(); }}
+        onClick={() => { setMode("forgot"); forgotForm.reset(); setError(null); }}
         className="w-full flex items-center justify-center gap-1.5 py-2 text-small text-[var(--color-ink-light)] hover:text-[var(--color-ink)] transition-colors"
       >
         <ArrowLeft className="h-3.5 w-3.5" /> Try a different email
