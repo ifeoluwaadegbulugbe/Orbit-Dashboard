@@ -50,18 +50,28 @@ function LoginInner() {
   }, [resendCooldown]);
 
   /* ── Core: send (or resend) the reset email ──────────────────────────── */
-  const sendReset = useCallback(async (email: string): Promise<boolean> => {
-    const appUrl =
-      process.env.NEXT_PUBLIC_APP_URL ??
-      (typeof window !== "undefined" ? window.location.origin : "");
+  // Returns null on success, or a user-friendly error string on failure.
+  const sendReset = useCallback(async (email: string): Promise<string | null> => {
+    // Use window.location.origin so the URL is always correct in every env.
+    // Only /auth/callback (no extra query params) — Supabase appends ?code=
+    // and ?type=recovery itself, and a plain path is easier to add to the
+    // Supabase → Auth → URL Configuration → Redirect URLs allowlist.
+    const origin = typeof window !== "undefined" ? window.location.origin : "";
     const { error: e } = await createClient().auth.resetPasswordForEmail(email, {
-      redirectTo: `${appUrl}/auth/callback?type=recovery`,
+      redirectTo: `${origin}/auth/callback`,
     });
-    if (e) {
-      console.error("[reset-password]", e.message);
-      return false;
-    }
-    return true;
+    if (!e) return null; // success
+    const m = e.message.toLowerCase();
+    if (m.includes("60 seconds") || m.includes("rate limit"))
+      return "You can only request a reset link once every 60 seconds — please wait a moment and try again.";
+    if (m.includes("invalid redirect") || m.includes("redirect") || m.includes("not allowed"))
+      return `Reset link configuration error. In the Supabase dashboard go to Authentication → URL Configuration → Redirect URLs and add: ${origin}/auth/callback`;
+    if (m.includes("smtp") || m.includes("sending email") || m.includes("email service"))
+      return "Email delivery failed. Check that your Supabase project has email sending configured, then try again.";
+    if (m.includes("user not found") || m.includes("no user"))
+      return null; // Supabase intentionally hides "no account" for security — treat as success
+    // Fall back to the raw Supabase message so nothing is hidden
+    return e.message;
   }, []);
 
   /* ── Sign-in ──────────────────────────────────────────────────────────── */
@@ -86,12 +96,9 @@ function LoginInner() {
   async function onForgot(values: ForgotValues) {
     setError(null);
     try {
-      const ok = await sendReset(values.resetEmail);
-      if (!ok) {
-        setError("Couldn't send the reset email. Check your email address and try again.");
-        return;
-      }
-      setResendCooldown(60); // 60-second cooldown before first resend
+      const err = await sendReset(values.resetEmail);
+      if (err) { setError(err); return; }
+      setResendCooldown(60);
       setResendDone(false);
       setMode("sent");
     } catch (e) {
@@ -104,16 +111,14 @@ function LoginInner() {
     if (!sentEmail || resendBusy || resendCooldown > 0) return;
     setResendBusy(true);
     setResendDone(false);
+    setError(null);
     try {
-      const ok = await sendReset(sentEmail);
-      if (ok) {
-        setResendDone(true);
-        setResendCooldown(60);
-      } else {
-        setError("Couldn't resend the email. Try again in a moment.");
-      }
-    } catch {
-      setError("Couldn't resend the email. Try again in a moment.");
+      const err = await sendReset(sentEmail);
+      if (err) { setError(err); return; }
+      setResendDone(true);
+      setResendCooldown(60);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Couldn't resend the email. Try again in a moment.");
     } finally {
       setResendBusy(false);
     }
