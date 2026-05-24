@@ -22,6 +22,9 @@ import { notify } from "@/lib/notifications/server";
 
 interface RequestBody {
   slug?: string;
+  /** New: array of service names. Falls back to legacy `service` string if present. */
+  services?: string[];
+  /** Legacy single-service field kept for backward compatibility. */
   service?: string;
   date?: string;
   time?: string;
@@ -42,7 +45,17 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
   }
 
-  const { slug, service, date, time, customer, notes } = body;
+  const { slug, services: servicesArr, service: legacyService, date, time, customer, notes } = body;
+
+  // Normalise: accept new `services[]` array or legacy single `service` string
+  const serviceNames: string[] = Array.isArray(servicesArr) && servicesArr.length > 0
+    ? servicesArr.map((s) => s.trim()).filter(Boolean)
+    : legacyService?.trim()
+    ? [legacyService.trim()]
+    : [];
+
+  // The booking title stored in the DB — "Gel Nails + Nail Art" style
+  const bookingTitle = serviceNames.join(" + ");
 
   // ── Validation ─────────────────────────────────────────────────────────
   if (!slug) {
@@ -60,8 +73,8 @@ export async function POST(request: Request) {
   if (!date || !time) {
     return NextResponse.json({ error: "Pick a date and time" }, { status: 400 });
   }
-  if (!service?.trim()) {
-    return NextResponse.json({ error: "Pick a service" }, { status: 400 });
+  if (serviceNames.length === 0) {
+    return NextResponse.json({ error: "Pick at least one service" }, { status: 400 });
   }
 
   const supabase = createServiceClient();
@@ -159,7 +172,7 @@ export async function POST(request: Request) {
     user_id: profile.id,
     client_id: clientId,
     client_name: customerName,
-    title: service,
+    title: bookingTitle,
     date,
     time,
     status: "pending",
@@ -178,9 +191,9 @@ export async function POST(request: Request) {
     userId: profile.id,
     type: "booking_received",
     title: `New booking from ${customerName}`,
-    body: `${service} on ${date} at ${time}. Tap to review and confirm.`,
+    body: `${bookingTitle} on ${date} at ${time}. Tap to review and confirm.`,
     actionUrl: `/clients/${clientId}`,
-    metadata: { client_id: clientId, slug, service, date, time },
+    metadata: { client_id: clientId, slug, services: serviceNames, date, time },
   });
 
   return NextResponse.json({ ok: true });

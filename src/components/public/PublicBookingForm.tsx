@@ -19,7 +19,7 @@ interface PublicBookingFormProps {
 }
 
 export function PublicBookingForm({ slug, businessName, services }: PublicBookingFormProps) {
-  const [selectedService, setSelectedService] = useState<number>(0);
+  const [selectedIndices, setSelectedIndices] = useState<number[]>([]);
   const [date, setDate] = useState(() => new Date(Date.now() + 86400000).toISOString().slice(0, 10));
   const [time, setTime] = useState("10:00");
   const [name, setName] = useState("");
@@ -29,6 +29,15 @@ export function PublicBookingForm({ slug, businessName, services }: PublicBookin
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  function toggleService(i: number) {
+    setSelectedIndices((prev) =>
+      prev.includes(i) ? prev.filter((x) => x !== i) : [...prev, i],
+    );
+  }
+
+  const selectedServices = selectedIndices.map((i) => services[i]).filter(Boolean);
+  const totalMinutes = selectedServices.reduce((sum, s) => sum + (s.duration_minutes || 0), 0);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -40,17 +49,20 @@ export function PublicBookingForm({ slug, businessName, services }: PublicBookin
       setError("This business hasn't added any services yet. Reach out directly.");
       return;
     }
+    if (selectedIndices.length === 0) {
+      setError("Please select at least one service.");
+      return;
+    }
 
     setError(null);
     setSubmitting(true);
     try {
-      const service = services[selectedService];
       const res = await fetch("/api/public/bookings", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           slug,
-          service: service?.name,
+          services: selectedServices.map((s) => s.name),
           date,
           time,
           customer: {
@@ -101,23 +113,35 @@ export function PublicBookingForm({ slug, businessName, services }: PublicBookin
       {services.length > 0 && (
         <div>
           <label className="block text-small font-semibold text-[var(--color-ink)] mb-2">
-            Pick a service
+            Select services{" "}
+            <span className="font-normal text-[var(--color-muted)]">(choose one or more)</span>
           </label>
           <div className="space-y-2">
             {services.map((s, i) => {
-              const isSelected = selectedService === i;
+              const isSelected = selectedIndices.includes(i);
               return (
                 <button
                   key={i}
                   type="button"
-                  onClick={() => setSelectedService(i)}
-                  className={`w-full flex items-center justify-between gap-4 px-5 py-4 rounded-[var(--radius-lg)] border-2 transition-all text-left ${
+                  onClick={() => toggleService(i)}
+                  className={`w-full flex items-center gap-4 px-5 py-4 rounded-[var(--radius-lg)] border-2 transition-all text-left ${
                     isSelected
                       ? "border-[var(--color-primary)] bg-[var(--color-primary-subtle)]"
                       : "border-[var(--color-border)] bg-white hover:border-[var(--color-primary)]/30"
                   }`}
                 >
-                  <div className="min-w-0">
+                  {/* Checkbox indicator */}
+                  <div
+                    className={`flex-shrink-0 w-5 h-5 rounded-[var(--radius-sm)] border-2 flex items-center justify-center transition-colors ${
+                      isSelected
+                        ? "border-[var(--color-primary)] bg-[var(--color-primary)]"
+                        : "border-[var(--color-border)] bg-white"
+                    }`}
+                  >
+                    {isSelected && <Check className="h-3 w-3 text-white" strokeWidth={3} />}
+                  </div>
+
+                  <div className="min-w-0 flex-1">
                     <div className="text-body font-semibold text-[var(--color-ink)] truncate">
                       {s.name || "Untitled service"}
                     </div>
@@ -134,6 +158,20 @@ export function PublicBookingForm({ slug, businessName, services }: PublicBookin
               );
             })}
           </div>
+
+          {/* Summary strip — visible when 2+ services are selected */}
+          {selectedIndices.length > 1 && (
+            <div className="mt-3 px-4 py-2.5 rounded-[var(--radius-md)] bg-[var(--color-primary-subtle)] border border-[var(--color-primary)]/20 flex items-center justify-between text-small">
+              <span className="text-[var(--color-primary-dark)] font-medium">
+                {selectedIndices.length} services selected
+              </span>
+              {totalMinutes > 0 && (
+                <span className="text-[var(--color-muted)]">
+                  ≈ {totalMinutes} min total
+                </span>
+              )}
+            </div>
+          )}
         </div>
       )}
 
