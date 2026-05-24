@@ -327,6 +327,91 @@ A cancellation notice has been sent to the client.
 
 // ─── WhatsApp click-to-chat URL ─────────────────────────────────────────────
 //
+// ─── Birthday wish to client ────────────────────────────────────────────────
+
+export function buildClientBirthdayEmail(p: {
+  clientName: string;
+  businessName: string;
+}): { subject: string; html: string; text: string } {
+  const subject = `Happy Birthday from ${p.businessName}! 🎂`;
+
+  const html = `<!DOCTYPE html>
+<html><body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 560px; margin: 0 auto; padding: 24px; color: #1A1A1A; background: #F2F1EF;">
+  <div style="background: white; border-radius: 16px; padding: 32px; border: 1px solid #E5E3DF; text-align: center;">
+    <div style="font-size: 48px; margin-bottom: 16px;">🎂</div>
+    <div style="font-size: 12px; font-weight: 700; color: #F97316; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px;">Happy Birthday</div>
+    <h1 style="font-size: 24px; font-weight: 800; margin: 0 0 16px;">Hey ${escapeHtml(p.clientName)}, today&rsquo;s your day!</h1>
+    <p style="font-size: 15px; color: #3D3D3D; margin: 0 0 20px; line-height: 1.7;">
+      Wishing you a wonderful birthday filled with everything you love.
+      Thank you for being such a valued client &mdash; we truly appreciate you.
+    </p>
+    <p style="font-size: 15px; color: #6B6B6B; margin: 0; line-height: 1.6;">
+      With warmth,<br/>
+      <strong style="color: #1A1A1A;">${escapeHtml(p.businessName)}</strong>
+    </p>
+  </div>
+  <p style="font-size: 12px; color: #9A9893; text-align: center; margin-top: 16px;">Sent via Orbit · the CRM your business runs on</p>
+</body></html>`;
+
+  const text = `Happy Birthday, ${p.clientName}!
+
+Wishing you a wonderful day filled with everything you love.
+Thank you for being such a valued client — we truly appreciate you.
+
+With warmth,
+${p.businessName}`;
+
+  return { subject, html, text };
+}
+
+// ─── Birthday notification to business owner ─────────────────────────────────
+
+export function buildOwnerBirthdayEmail(p: {
+  clientName: string;
+  businessName: string;
+  clientEmail?: string | null;
+  clientPhone?: string | null;
+}): { subject: string; html: string; text: string } {
+  const subject = `🎂 ${p.clientName}'s birthday is today`;
+
+  const contactLine = [
+    p.clientEmail ? `Email: ${escapeHtml(p.clientEmail)}` : null,
+    p.clientPhone ? `Phone: ${escapeHtml(p.clientPhone)}` : null,
+  ]
+    .filter(Boolean)
+    .join(" &nbsp;&middot;&nbsp; ");
+
+  const html = `<!DOCTYPE html>
+<html><body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 560px; margin: 0 auto; padding: 24px; color: #1A1A1A; background: #F2F1EF;">
+  <div style="background: white; border-radius: 16px; padding: 32px; border: 1px solid #E5E3DF;">
+    <div style="font-size: 12px; font-weight: 700; color: #F97316; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px;">Client birthday</div>
+    <h1 style="font-size: 22px; font-weight: 800; margin: 0 0 8px;">It&rsquo;s ${escapeHtml(p.clientName)}&rsquo;s birthday today! 🎂</h1>
+    <p style="font-size: 15px; color: #3D3D3D; margin: 0 0 24px;">
+      ${p.clientEmail
+        ? `We&rsquo;ve sent ${escapeHtml(p.clientName)} a personalised birthday wish on your behalf.`
+        : `${escapeHtml(p.clientName)} doesn&rsquo;t have an email on file &mdash; consider reaching out personally.`}
+    </p>
+    ${contactLine
+      ? `<div style="padding: 12px 16px; background: #F9F8F7; border-radius: 10px; font-size: 13px; color: #6B6B6B;">${contactLine}</div>`
+      : ""}
+  </div>
+  <p style="font-size: 12px; color: #9A9893; text-align: center; margin-top: 16px;">Sent via Orbit · the CRM your business runs on</p>
+</body></html>`;
+
+  const text = `It's ${p.clientName}'s birthday today!
+
+${p.clientEmail
+    ? `We've sent ${p.clientName} a birthday wish on your behalf.`
+    : `${p.clientName} doesn't have an email on file — consider reaching out personally.`}
+${p.clientEmail ? `\nEmail: ${p.clientEmail}` : ""}${p.clientPhone ? `\nPhone: ${p.clientPhone}` : ""}
+
+- Orbit`;
+
+  return { subject, html, text };
+}
+
+// ─── WhatsApp click-to-chat URL ─────────────────────────────────────────────
+//
 // wa.me opens WhatsApp Web / mobile app pre-filled with our text. The
 // business owner taps "Send" themselves - we can't send programmatically
 // without a paid WhatsApp Business API setup, which most small businesses

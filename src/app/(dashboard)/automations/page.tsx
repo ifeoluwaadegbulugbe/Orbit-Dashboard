@@ -59,8 +59,7 @@ const INITIAL_RULES: AutomationRule[] = [
     title: "Birthday messages",
     description: "Send personalised wishes on client birthdays",
     detail: "A warm message goes out automatically on each client's birthday.",
-    enabled: false,
-    comingSoon: true,
+    enabled: true,
   },
   {
     id: "weekly_summary",
