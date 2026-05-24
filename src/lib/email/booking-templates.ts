@@ -19,6 +19,10 @@ export interface BookingMessageParams {
   time: string;
   /** Owner's email so replies route to them. */
   ownerEmail?: string;
+  /** Client's email — included in owner-facing emails so they can reach the client. */
+  clientEmail?: string | null;
+  /** Client's phone — included in owner-facing emails. */
+  clientPhone?: string | null;
 }
 
 // ─── Formatting helpers ─────────────────────────────────────────────────────
@@ -165,6 +169,168 @@ function buildCancelText(p: BookingMessageParams): string {
 
 - ${p.businessName}`;
 }
+
+// ─── Owner: new booking request ────────────────────────────────────────────
+
+/**
+ * Email sent to the BUSINESS OWNER the moment a client submits a booking
+ * request via the public booking link.
+ */
+export function buildOwnerNewBookingEmail(p: BookingMessageParams): {
+  subject: string;
+  html: string;
+  text: string;
+} {
+  const dateLine = formatDate(p.date);
+  const timeLine = formatTime(p.time);
+
+  const subject = `New booking request from ${p.clientName}`;
+
+  const contactLine = [
+    p.clientEmail ? `Email: ${escapeHtml(p.clientEmail)}` : null,
+    p.clientPhone ? `Phone: ${escapeHtml(p.clientPhone)}` : null,
+  ]
+    .filter(Boolean)
+    .join(" &nbsp;·&nbsp; ");
+
+  const html = `<!DOCTYPE html>
+<html><body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 560px; margin: 0 auto; padding: 24px; color: #1A1A1A; background: #F2F1EF;">
+  <div style="background: white; border-radius: 16px; padding: 32px; border: 1px solid #E5E3DF;">
+    <div style="font-size: 12px; font-weight: 700; color: #F97316; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px;">New booking request</div>
+    <h1 style="font-size: 22px; font-weight: 800; margin: 0 0 8px;">You have a new booking from ${escapeHtml(p.clientName)}.</h1>
+    <p style="font-size: 15px; color: #3D3D3D; margin: 0 0 24px;">
+      Log in to Orbit to confirm or decline this request.
+    </p>
+    <table style="width: 100%; border-collapse: collapse; margin: 0 0 24px;">
+      <tr><td style="padding: 8px 0; font-size: 13px; color: #6B6B6B; width: 90px;">Client</td><td style="padding: 8px 0; font-size: 15px; font-weight: 600;">${escapeHtml(p.clientName)}</td></tr>
+      <tr><td style="padding: 8px 0; font-size: 13px; color: #6B6B6B;">Service</td><td style="padding: 8px 0; font-size: 15px; font-weight: 600;">${escapeHtml(p.service)}</td></tr>
+      <tr><td style="padding: 8px 0; font-size: 13px; color: #6B6B6B;">Date</td><td style="padding: 8px 0; font-size: 15px; font-weight: 600;">${escapeHtml(dateLine)}</td></tr>
+      <tr><td style="padding: 8px 0; font-size: 13px; color: #6B6B6B;">Time</td><td style="padding: 8px 0; font-size: 15px; font-weight: 600;">${escapeHtml(timeLine)}</td></tr>
+      ${contactLine ? `<tr><td style="padding: 8px 0; font-size: 13px; color: #6B6B6B;">Contact</td><td style="padding: 8px 0; font-size: 14px; color: #3D3D3D;">${contactLine}</td></tr>` : ""}
+    </table>
+    <p style="font-size: 13px; color: #9A9893; margin: 0; line-height: 1.6;">
+      This is a pending request — the slot is not yet confirmed. Head to your Orbit dashboard to respond.
+    </p>
+  </div>
+  <p style="font-size: 12px; color: #9A9893; text-align: center; margin-top: 16px;">Sent via Orbit · the CRM your business runs on</p>
+</body></html>`;
+
+  const text = `New booking request — ${p.clientName}
+
+  Service: ${p.service}
+  Date:    ${dateLine}
+  Time:    ${timeLine}
+${p.clientEmail ? `  Email:   ${p.clientEmail}\n` : ""}${p.clientPhone ? `  Phone:   ${p.clientPhone}\n` : ""}
+Log in to Orbit to confirm or decline this request.
+
+- Orbit`;
+
+  return { subject, html, text };
+}
+
+// ─── Owner: booking confirmed (copy for their records) ──────────────────────
+
+/**
+ * Email sent to the BUSINESS OWNER after they confirm a booking, so they
+ * have a record in their inbox alongside the client's confirmation.
+ */
+export function buildOwnerConfirmEmail(p: BookingMessageParams): {
+  subject: string;
+  html: string;
+  text: string;
+} {
+  const dateLine = formatDate(p.date);
+  const timeLine = formatTime(p.time);
+
+  const subject = `Booking confirmed — ${p.clientName}`;
+
+  const html = `<!DOCTYPE html>
+<html><body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 560px; margin: 0 auto; padding: 24px; color: #1A1A1A; background: #F2F1EF;">
+  <div style="background: white; border-radius: 16px; padding: 32px; border: 1px solid #E5E3DF;">
+    <div style="font-size: 12px; font-weight: 700; color: #22C55E; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px;">Booking confirmed</div>
+    <h1 style="font-size: 22px; font-weight: 800; margin: 0 0 8px;">You confirmed ${escapeHtml(p.clientName)}'s booking.</h1>
+    <p style="font-size: 15px; color: #3D3D3D; margin: 0 0 24px;">
+      A confirmation email has been sent to ${escapeHtml(p.clientName)}. Here's your copy:
+    </p>
+    <table style="width: 100%; border-collapse: collapse; margin: 0 0 24px;">
+      <tr><td style="padding: 8px 0; font-size: 13px; color: #6B6B6B; width: 90px;">Client</td><td style="padding: 8px 0; font-size: 15px; font-weight: 600;">${escapeHtml(p.clientName)}</td></tr>
+      <tr><td style="padding: 8px 0; font-size: 13px; color: #6B6B6B;">Service</td><td style="padding: 8px 0; font-size: 15px; font-weight: 600;">${escapeHtml(p.service)}</td></tr>
+      <tr><td style="padding: 8px 0; font-size: 13px; color: #6B6B6B;">Date</td><td style="padding: 8px 0; font-size: 15px; font-weight: 600;">${escapeHtml(dateLine)}</td></tr>
+      <tr><td style="padding: 8px 0; font-size: 13px; color: #6B6B6B;">Time</td><td style="padding: 8px 0; font-size: 15px; font-weight: 600;">${escapeHtml(timeLine)}</td></tr>
+      ${p.clientEmail ? `<tr><td style="padding: 8px 0; font-size: 13px; color: #6B6B6B;">Client email</td><td style="padding: 8px 0; font-size: 14px; color: #3D3D3D;">${escapeHtml(p.clientEmail)}</td></tr>` : ""}
+      ${p.clientPhone ? `<tr><td style="padding: 8px 0; font-size: 13px; color: #6B6B6B;">Client phone</td><td style="padding: 8px 0; font-size: 14px; color: #3D3D3D;">${escapeHtml(p.clientPhone)}</td></tr>` : ""}
+    </table>
+  </div>
+  <p style="font-size: 12px; color: #9A9893; text-align: center; margin-top: 16px;">Sent via Orbit · the CRM your business runs on</p>
+</body></html>`;
+
+  const text = `You confirmed ${p.clientName}'s booking.
+
+  Service: ${p.service}
+  Date:    ${dateLine}
+  Time:    ${timeLine}
+${p.clientEmail ? `  Email:   ${p.clientEmail}\n` : ""}${p.clientPhone ? `  Phone:   ${p.clientPhone}\n` : ""}
+A confirmation email has been sent to the client.
+
+- Orbit`;
+
+  return { subject, html, text };
+}
+
+// ─── Owner: booking cancelled (copy for their records) ──────────────────────
+
+/**
+ * Email sent to the BUSINESS OWNER after they cancel a booking.
+ */
+export function buildOwnerCancelEmail(p: BookingMessageParams): {
+  subject: string;
+  html: string;
+  text: string;
+} {
+  const dateLine = formatDate(p.date);
+  const timeLine = formatTime(p.time);
+
+  const subject = `Booking cancelled — ${p.clientName}`;
+
+  const html = `<!DOCTYPE html>
+<html><body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 560px; margin: 0 auto; padding: 24px; color: #1A1A1A; background: #F2F1EF;">
+  <div style="background: white; border-radius: 16px; padding: 32px; border: 1px solid #E5E3DF;">
+    <div style="font-size: 12px; font-weight: 700; color: #E8557A; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px;">Booking cancelled</div>
+    <h1 style="font-size: 22px; font-weight: 800; margin: 0 0 8px;">You cancelled ${escapeHtml(p.clientName)}'s booking.</h1>
+    <p style="font-size: 15px; color: #3D3D3D; margin: 0 0 24px;">
+      A cancellation notice has been sent to ${escapeHtml(p.clientName)}. Here's your record:
+    </p>
+    <table style="width: 100%; border-collapse: collapse; margin: 0 0 24px;">
+      <tr><td style="padding: 8px 0; font-size: 13px; color: #6B6B6B; width: 90px;">Client</td><td style="padding: 8px 0; font-size: 15px; font-weight: 600;">${escapeHtml(p.clientName)}</td></tr>
+      <tr><td style="padding: 8px 0; font-size: 13px; color: #6B6B6B;">Service</td><td style="padding: 8px 0; font-size: 15px; font-weight: 600;">${escapeHtml(p.service)}</td></tr>
+      <tr><td style="padding: 8px 0; font-size: 13px; color: #6B6B6B;">Date</td><td style="padding: 8px 0; font-size: 15px; font-weight: 600;">${escapeHtml(dateLine)}</td></tr>
+      <tr><td style="padding: 8px 0; font-size: 13px; color: #6B6B6B;">Time</td><td style="padding: 8px 0; font-size: 15px; font-weight: 600;">${escapeHtml(timeLine)}</td></tr>
+      ${p.clientEmail ? `<tr><td style="padding: 8px 0; font-size: 13px; color: #6B6B6B;">Client email</td><td style="padding: 8px 0; font-size: 14px; color: #3D3D3D;">${escapeHtml(p.clientEmail)}</td></tr>` : ""}
+      ${p.clientPhone ? `<tr><td style="padding: 8px 0; font-size: 13px; color: #6B6B6B;">Client phone</td><td style="padding: 8px 0; font-size: 14px; color: #3D3D3D;">${escapeHtml(p.clientPhone)}</td></tr>` : ""}
+    </table>
+  </div>
+  <p style="font-size: 12px; color: #9A9893; text-align: center; margin-top: 16px;">Sent via Orbit · the CRM your business runs on</p>
+</body></html>`;
+
+  const text = `You cancelled ${p.clientName}'s booking.
+
+  Service: ${p.service}
+  Date:    ${dateLine}
+  Time:    ${timeLine}
+${p.clientEmail ? `  Email:   ${p.clientEmail}\n` : ""}${p.clientPhone ? `  Phone:   ${p.clientPhone}\n` : ""}
+A cancellation notice has been sent to the client.
+
+- Orbit`;
+
+  return { subject, html, text };
+}
+
+// ─── WhatsApp click-to-chat URL ─────────────────────────────────────────────
+//
+// wa.me opens WhatsApp Web / mobile app pre-filled with our text. The
+// business owner taps "Send" themselves - we can't send programmatically
+// without a paid WhatsApp Business API setup, which most small businesses
+// won't have. This is the best free path.
 
 /**
  * Build a wa.me URL the owner can open in a new tab to send the message via

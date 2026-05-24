@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
 import { notify } from "@/lib/notifications/server";
+import { sendEmail } from "@/lib/email/server";
+import { buildOwnerNewBookingEmail } from "@/lib/email/booking-templates";
 
 /**
  * Public booking submission. Accepts an unauthenticated POST from /book/<slug>
@@ -35,6 +37,9 @@ interface RequestBody {
 interface ProfileRow {
   id: string;
   business_type: string;
+  email: string | null;
+  full_name: string | null;
+  business_name: string | null;
 }
 
 export async function POST(request: Request) {
@@ -82,7 +87,7 @@ export async function POST(request: Request) {
   // ── 1. Look up the business owner ──────────────────────────────────────
   const { data: profileData, error: profileErr } = await supabase
     .from("profiles")
-    .select("id, business_type")
+    .select("id, business_type, email, full_name, business_name")
     .eq("booking_link->>slug", slug)
     .maybeSingle();
 
@@ -183,6 +188,25 @@ export async function POST(request: Request) {
   if (bookingErr) {
     console.error("[public-booking] booking insert failed:", bookingErr.message);
     return NextResponse.json({ error: bookingErr.message }, { status: 500 });
+  }
+
+  // ── Email the owner about the new booking request ─────────────────────
+  if (profile.email) {
+    const businessName =
+      profile.business_name?.trim() || profile.full_name?.trim() || "your business";
+    const { subject, html, text } = buildOwnerNewBookingEmail({
+      clientName: customerName,
+      businessName,
+      service: bookingTitle,
+      date,
+      time,
+      clientEmail: customerEmail,
+      clientPhone: customerPhone,
+    });
+    const emailResult = await sendEmail({ to: profile.email, subject, html, text });
+    if (!emailResult.ok && !emailResult.skipped) {
+      console.warn("[public-booking] owner email failed:", emailResult.error);
+    }
   }
 
   // Fire an in-app notification so the business owner sees the booking in

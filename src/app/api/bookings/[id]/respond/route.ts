@@ -5,6 +5,8 @@ import { sendEmail } from "@/lib/email/server";
 import {
   buildConfirmEmail,
   buildCancelEmail,
+  buildOwnerConfirmEmail,
+  buildOwnerCancelEmail,
   buildWhatsAppUrl,
 } from "@/lib/email/booking-templates";
 
@@ -144,6 +146,8 @@ export async function POST(
     date: booking.date,
     time: booking.time,
     ownerEmail: profile?.email ?? undefined,
+    clientEmail: client?.email ?? null,
+    clientPhone: client?.whatsapp_number || client?.phone || null,
   };
 
   // ── Email the client if we have an address ─────────────────────────────
@@ -160,7 +164,20 @@ export async function POST(
       emailSent = true;
     } else if (!result.skipped) {
       emailError = result.error ?? "Email failed";
-      console.warn("[booking-respond] email failed:", emailError);
+      console.warn("[booking-respond] client email failed:", emailError);
+    }
+  }
+
+  // ── Email the owner a copy of the confirmation / cancellation ──────────
+  if (profile?.email) {
+    const { subject, html, text } =
+      action === "confirmed"
+        ? buildOwnerConfirmEmail(messageParams)
+        : buildOwnerCancelEmail(messageParams);
+
+    const ownerResult = await sendEmail({ to: profile.email, subject, html, text });
+    if (!ownerResult.ok && !ownerResult.skipped) {
+      console.warn("[booking-respond] owner email failed:", ownerResult.error);
     }
   }
 
