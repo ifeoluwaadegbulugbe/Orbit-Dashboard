@@ -50,28 +50,27 @@ function LoginInner() {
   }, [resendCooldown]);
 
   /* ── Core: send (or resend) the reset email ──────────────────────────── */
+  // Calls our own API route which uses the Supabase Admin API to generate
+  // the reset link and sends it via Resend (bypassing Supabase's emailer).
   // Returns null on success, or a user-friendly error string on failure.
   const sendReset = useCallback(async (email: string): Promise<string | null> => {
-    // Use window.location.origin so the URL is always correct in every env.
-    // Only /auth/callback (no extra query params) — Supabase appends ?code=
-    // and ?type=recovery itself, and a plain path is easier to add to the
-    // Supabase → Auth → URL Configuration → Redirect URLs allowlist.
-    const origin = typeof window !== "undefined" ? window.location.origin : "";
-    const { error: e } = await createClient().auth.resetPasswordForEmail(email, {
-      redirectTo: `${origin}/auth/callback`,
-    });
-    if (!e) return null; // success
-    const m = e.message.toLowerCase();
-    if (m.includes("60 seconds") || m.includes("rate limit"))
-      return "You can only request a reset link once every 60 seconds — please wait a moment and try again.";
-    if (m.includes("invalid redirect") || m.includes("redirect") || m.includes("not allowed"))
-      return `Reset link configuration error. In the Supabase dashboard go to Authentication → URL Configuration → Redirect URLs and add: ${origin}/auth/callback`;
-    if (m.includes("smtp") || m.includes("sending email") || m.includes("email service"))
-      return "Email delivery failed. Check that your Supabase project has email sending configured, then try again.";
-    if (m.includes("user not found") || m.includes("no user"))
-      return null; // Supabase intentionally hides "no account" for security — treat as success
-    // Fall back to the raw Supabase message so nothing is hidden
-    return e.message;
+    try {
+      const res = await fetch("/api/auth/forgot-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      const json = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
+      if (!res.ok || !json.ok) {
+        const msg = (json.error ?? "").toLowerCase();
+        if (msg.includes("rate limit") || msg.includes("60 seconds"))
+          return "You can only request a reset link once every 60 seconds — please wait a moment.";
+        return json.error ?? "Could not send reset email. Please try again.";
+      }
+      return null; // success
+    } catch (e) {
+      return e instanceof Error ? e.message : "Network error — check your connection and try again.";
+    }
   }, []);
 
   /* ── Sign-in ──────────────────────────────────────────────────────────── */

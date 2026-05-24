@@ -424,6 +424,90 @@ ${p.clientEmail ? `\nEmail: ${p.clientEmail}` : ""}${p.clientPhone ? `\nPhone: $
  * Strips non-digits from the phone but leaves the leading country code intact
  * if present.
  */
+// ─── Password reset email ───────────────────────────────────────────────────
+
+export interface PasswordResetParams {
+  resetLink: string;
+}
+
+/**
+ * Sent to the user when they request a password reset.
+ * resetLink is the full Supabase action_link generated server-side via
+ * supabase.auth.admin.generateLink({ type: 'recovery', email }).
+ */
+export function buildPasswordResetEmail(p: PasswordResetParams): {
+  subject: string;
+  html: string;
+  text: string;
+} {
+  const subject = "Reset your Orbit password";
+
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${subject}</title></head>
+<body style="margin:0;padding:0;background:#F2F1EF;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="padding:40px 16px;">
+    <tr><td align="center">
+      <table width="100%" style="max-width:520px;background:#ffffff;border-radius:16px;border:1px solid #E5E3DF;overflow:hidden;">
+        <tr>
+          <td style="background:#E8557A;padding:32px 40px;text-align:center;">
+            <p style="margin:0;font-size:28px;">🔐</p>
+            <h1 style="margin:8px 0 0;font-size:20px;font-weight:700;color:#ffffff;letter-spacing:-0.3px;">Reset your password</h1>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:32px 40px;">
+            <p style="margin:0 0 8px;font-size:15px;color:#1A1A1A;font-weight:600;">Hi there,</p>
+            <p style="margin:0 0 24px;font-size:14px;color:#6B6B6B;line-height:1.6;">
+              We received a request to reset the password for your Orbit account. Click the button below to set a new password.
+            </p>
+            <table width="100%" cellpadding="0" cellspacing="0">
+              <tr>
+                <td align="center" style="padding:4px 0 28px;">
+                  <a href="${p.resetLink}" style="display:inline-block;background:#E8557A;color:#ffffff;text-decoration:none;font-size:15px;font-weight:600;padding:14px 36px;border-radius:10px;letter-spacing:-0.2px;">
+                    Reset password
+                  </a>
+                </td>
+              </tr>
+            </table>
+            <div style="background:#F2F1EF;border-radius:8px;padding:14px 16px;margin-bottom:24px;">
+              <p style="margin:0;font-size:13px;color:#6B6B6B;line-height:1.5;">
+                ⏱ This link expires in <strong style="color:#1A1A1A;">1 hour</strong>. If it expires, request a new one from the login page.
+              </p>
+            </div>
+            <p style="margin:0 0 6px;font-size:13px;color:#9A9893;">If the button doesn't work, copy and paste this URL into your browser:</p>
+            <p style="margin:0 0 24px;font-size:12px;word-break:break-all;"><a href="${p.resetLink}" style="color:#E8557A;">${p.resetLink}</a></p>
+            <p style="margin:0;font-size:13px;color:#9A9893;line-height:1.5;">If you didn't request this, you can safely ignore this email — your password won't change.</p>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:20px 40px;border-top:1px solid #E5E3DF;text-align:center;">
+            <p style="margin:0;font-size:12px;color:#9A9893;">Orbit · Sent because a password reset was requested for this account.</p>
+          </td>
+        </tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+
+  const text = `Reset your Orbit password
+
+We received a request to reset your password. Click the link below to set a new one:
+
+${p.resetLink}
+
+This link expires in 1 hour. If it expires, request a new one from the login page.
+
+If you didn't request this, ignore this email — your password won't change.
+
+— Orbit`;
+
+  return { subject, html, text };
+}
+
+// ─── WhatsApp click-to-chat URL ─────────────────────────────────────────────
+
 export function buildWhatsAppUrl(
   phone: string | null | undefined,
   params: BookingMessageParams,
