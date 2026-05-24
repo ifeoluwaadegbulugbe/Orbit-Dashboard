@@ -1,0 +1,50 @@
+# Pings Orbit's /api/cron/birthday-messages endpoint every day at 08:00 UTC.
+#
+# Why this exists:
+#   Vercel's Hobby plan only allows one cron per day PER route. Since the
+#   appointment-reminders workflow already owns the frequent slot, this
+#   separate workflow handles the once-daily birthday check at a
+#   predictable time (8am UTC / 9am WAT).
+#
+# Setup (one-time) — same secrets as appointment-reminders:
+#   1. GitHub repo → Settings → Secrets and variables → Actions
+#   2. APP_URL      = https://your-production-domain.vercel.app  (no trailing slash)
+#   3. CRON_SECRET  = the same value set in Vercel Environment Variables
+#
+# Manual trigger:
+#   Actions tab → "Birthday messages" → "Run workflow"
+
+name: Birthday messages
+
+on:
+  schedule:
+    # 08:00 UTC daily (09:00 WAT / Lagos time)
+    - cron: "0 8 * * *"
+  workflow_dispatch: {}   # allow manual runs
+
+permissions: {}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+
+    steps:
+      - name: Ping birthday-messages endpoint
+        env:
+          APP_URL: ${{ secrets.APP_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -z "$APP_URL" ]; then
+            echo "::error::APP_URL secret is not set. Add it in repo Settings → Secrets."
+            exit 1
+          fi
+          if [ -z "$CRON_SECRET" ]; then
+            echo "::error::CRON_SECRET secret is not set. Add it in repo Settings → Secrets AND in Vercel env vars."
+            exit 1
+          fi
+
+          curl --silent --show-error --fail \
+            --max-time 60 \
+            -H "Authorization: Bearer $CRON_SECRET" \
+            "$APP_URL/api/cron/birthday-messages"
