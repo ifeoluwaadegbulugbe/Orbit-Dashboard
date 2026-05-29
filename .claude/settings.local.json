@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(xargs grep -l \"could not create account\" -i)",
+      "Bash(Get-ChildItem \"C:\\\\Users\\\\USER\\\\New\\\\TinyCRM\\\\web\\\\node_modules\\\\@supabase\\\\supabase-js\\\\dist\" -Recurse -Name)",
+      "Bash(curl -s -X POST http://localhost:3000/api/auth/signup -H 'Content-Type: application/json' -d '{\"email\":\"test_debug_user@example.com\",\"password\":\"TestPass123\",\"fullName\":\"Test User\",\"businessName\":\"Test Biz\",\"businessType\":\"nail_tech\"}')",
+      "mcp__Claude_Preview__preview_start",
+      "Bash(git remote *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)",
+      "Bash(xargs grep -l \"interface Booking\\\\|type Booking\\\\|interface Service\\\\|type Service\")",
+      "Bash(npx tsc *)",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\USER\\\\New\\\\TinyCRM\\\\web\\\\src\" -Recurse -Directory)",
+      "Bash(Select-Object FullName)",
+      "Bash(Sort-Object FullName)"
+    ]
+  }
+}
