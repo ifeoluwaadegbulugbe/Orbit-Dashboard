@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createFlutterwavePaymentLink } from "@/lib/flutterwave/server";
-import { createStripeCheckout } from "@/lib/lemonsqueezy/server";
+import { createStripePaymentLink } from "@/lib/stripe/server";
 import type { PaymentProvider } from "@/types";
 
 /**
@@ -119,7 +119,7 @@ export async function POST(
         );
       }
 
-      const result = await createStripeCheckout({
+      const result = await createStripePaymentLink({
         apiKey: lsKeys.apiKey,
         storeId: lsKeys.storeId,
         variantId: lsKeys.variantId,
