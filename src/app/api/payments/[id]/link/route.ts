@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createFlutterwavePaymentLink } from "@/lib/flutterwave/server";
-import { createLemonSqueezyCheckout } from "@/lib/lemonsqueezy/server";
+import { createStripeCheckout } from "@/lib/lemonsqueezy/server";
 import type { PaymentProvider } from "@/types";
 
 /**
@@ -11,18 +11,18 @@ import type { PaymentProvider } from "@/types";
  *
  *   POST /api/payments/:id/link
  *     body: {
- *       provider: "lemonsqueezy" | "flutterwave",
+ *       provider: "stripe" | "flutterwave",
  *       keys:     { ...provider-specific fields }
  *     }
  *     returns { payment_link, transaction_reference, provider }
  */
 
 const PROVIDER_LABEL: Record<PaymentProvider, string> = {
-  lemonsqueezy: "Lemon Squeezy",
+  stripe: "Stripe",
   flutterwave: "Flutterwave",
 };
 
-interface LemonSqueezyKeys {
+interface StripeKeys {
   apiKey: string;
   storeId: string;
   variantId: string;
@@ -32,7 +32,7 @@ interface FlutterwaveKeys {
   secretKey: string;
 }
 
-type ProviderKeys = LemonSqueezyKeys | FlutterwaveKeys;
+type ProviderKeys = StripeKeys | FlutterwaveKeys;
 
 interface RequestBody {
   provider: PaymentProvider;
@@ -71,7 +71,7 @@ export async function POST(
   // ── 3. Parse request body ──────────────────────────────────────────────
   const body = (await request.json().catch(() => ({}))) as RequestBody;
   const { provider, keys } = body;
-  if (provider !== "lemonsqueezy" && provider !== "flutterwave") {
+  if (provider !== "stripe" && provider !== "flutterwave") {
     return NextResponse.json(
       { error: "Connect a payment provider first in Online Payments." },
       { status: 400 },
@@ -106,8 +106,8 @@ export async function POST(
   let transactionReference = reference;
 
   try {
-    if (provider === "lemonsqueezy") {
-      const lsKeys = keys as LemonSqueezyKeys;
+    if (provider === "stripe") {
+      const lsKeys = keys as StripeKeys;
       if (!lsKeys.apiKey || !lsKeys.storeId || !lsKeys.variantId) {
         return NextResponse.json(
           {
@@ -119,7 +119,7 @@ export async function POST(
         );
       }
 
-      const result = await createLemonSqueezyCheckout({
+      const result = await createStripeCheckout({
         apiKey: lsKeys.apiKey,
         storeId: lsKeys.storeId,
         variantId: lsKeys.variantId,
