@@ -63,7 +63,7 @@ export async function POST(request: Request) {
 
     // 3. Build the Stripe client using the business owner's own key.
     //    This means the payment goes into THEIR Stripe account, not Orbit's.
-    const stripe = new Stripe(secretKey, { apiVersion: "2024-06-20" });
+    const stripe = new Stripe(secretKey, { apiVersion: "2025-04-30" });
 
     try {
         // 4. Create a one-time Price object.
