@@ -37,10 +37,10 @@ export function buildProviderKeysForRequest(
   const stored = getStoredProviderKeys(provider);
   if (!stored) return null;
 
-  if (provider === "lemonsqueezy") {
-    const apiKey = stored.lemonsqueezy_api_key;
-    const storeId = stored.lemonsqueezy_store_id;
-    const variantId = stored.lemonsqueezy_variant_id;
+  if (provider === "stripe") {
+    const apiKey = stored.stripe_secret_key;
+    const storeId = stored.stripe_store_id;
+    const variantId = stored.stripe_variant_id;
     if (!apiKey || !storeId || !variantId) return null;
     return { apiKey, storeId, variantId };
   }
@@ -70,7 +70,7 @@ export function useConnectedProvider(): ConnectedProvider {
         // Only accept providers still recognized by the current build.
         // Older builds may have saved "paystack" or "stripe" - we treat those
         // as "no provider connected" and clean them up.
-        const valid = saved.provider === "lemonsqueezy" || saved.provider === "flutterwave";
+        const valid = saved.provider === "stripe" || saved.provider === "flutterwave";
         if (valid) {
           setState({ provider: saved.provider as PaymentProvider, hydrated: true });
           return;

@@ -23,7 +23,7 @@ export type PaymentStatus = "paid" | "pending" | "overdue" | "partial" | "failed
 // Providers for client-facing invoice payment links. The Orbit user (business
 // owner) connects ONE of these with their own merchant keys; payments land in
 // their account, not Orbit's.
-export type PaymentProvider = "lemonsqueezy" | "flutterwave";
+export type PaymentProvider = "stripe" | "flutterwave";
 
 export type BookingStatus = "confirmed" | "pending" | "cancelled" | "completed";
 
