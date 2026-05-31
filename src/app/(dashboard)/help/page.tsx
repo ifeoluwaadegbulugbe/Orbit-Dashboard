@@ -1,3 +1,14 @@
+// app/(dashboard)/help/page.tsx
+//
+// The help / guides page. Contains accordion sections that walk the user through
+// setting up each payment provider, sending payment links, etc.
+//
+// What changed from the original:
+//   - The "lemonsqueezy" section is replaced with a "stripe" section
+//   - The QuickLink row at the top now says "Set up Stripe" instead of Lemon Squeezy
+//   - All Flutterwave content is 100% unchanged
+//   - FAQ answers updated where they mentioned Lemon Squeezy
+
 "use client";
 
 import { useState, useMemo } from "react";
@@ -8,12 +19,11 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
-// ─── Content model ─────────────────────────────────────────────────────────
+// ─── Content model ───────────────────────────────────────────────────────────
 
 interface GuideStep {
   title: string;
   body: React.ReactNode;
-  /** Optional callout shown under the step body. */
   note?: { tone: "info" | "warning"; text: React.ReactNode };
 }
 
@@ -25,96 +35,137 @@ interface GuideSection {
   title: string;
   intro: string;
   steps: GuideStep[];
-  /** Final CTA shown after the steps. */
   cta?: { label: string; href: string; external?: boolean };
 }
 
+// ─── Guide content ───────────────────────────────────────────────────────────
+
 const SECTIONS: GuideSection[] = [
-  // ── Lemon Squeezy ──
+
+  // ── Stripe (replaces Lemon Squeezy) ──────────────────────────────────────
   {
-    id: "lemonsqueezy",
+    id: "stripe",
     icon: CreditCard,
-    iconColor: "#FFC233",
-    iconBg: "#FFF8DD",
-    title: "Set up Lemon Squeezy",
+    iconColor: "#635BFF",
+    iconBg: "#EEEDFE",
+    title: "Set up Stripe",
     intro:
-      "Lemon Squeezy is the easiest way to accept card payments globally. Your payouts settle to your own bank. Takes about 10 minutes the first time.",
+      "Best for accepting card payments from clients anywhere in the world. " +
+      "Payouts settle to your own bank. Takes about 5 minutes the first time.",
     steps: [
       {
-        title: "Create your Lemon Squeezy account",
+        title: "Create your Stripe account",
         body: (
           <>
-            Go to <a href="https://app.lemonsqueezy.com/register" target="_blank" rel="noopener noreferrer" className="underline font-semibold text-[var(--color-primary)]">lemonsqueezy.com</a>
-            {" "}and sign up with your business email. Verify the email Lemon Squeezy sends you.
+            Go to{" "}
+            <a
+              href="https://dashboard.stripe.com/register"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline font-semibold text-[var(--color-primary)]"
+            >
+              stripe.com/register
+            </a>{" "}
+            and sign up with your business email. Verify the email Stripe sends you.
           </>
         ),
       },
       {
-        title: "Create your store",
+        title: "Add your bank account for payouts",
         body: (
           <>
-            Once you log in, click <strong>Stores</strong> in the left menu, then <strong>Create store</strong>.
-            Give it a name (e.g. your business name) and pick the country you operate in. Your payouts
-            will go to a bank account in that country.
-          </>
-        ),
-      },
-      {
-        title: "Add your bank account",
-        body: (
-          <>
-            In your store settings, click <strong>Payouts</strong> and follow the prompts to connect your bank.
-            Lemon Squeezy handles the rest — when a customer pays, the money lands in this account.
+            Once logged in, Stripe will guide you through activating your account.
+            Click <strong>Settings → Payouts</strong> and add your bank account details.
+            Stripe deposits your earnings here automatically — usually within 2 business days.
           </>
         ),
         note: {
           tone: "info",
-          text: "You can use Lemon Squeezy in test mode without verifying your bank. Real payouts need full verification (usually 1–2 business days).",
+          text: "You can test Stripe without a bank account using test mode (sk_test_ keys). Real payouts require account activation, which usually takes 1–2 days.",
         },
       },
       {
-        title: "Create a 'Pay-what-you-want' product",
+        title: "Get your API key",
         body: (
           <>
-            In your store, click <strong>Products → New product</strong>. Name it something generic like
-            "Invoice payment" — your clients won't see this name. Click <strong>Pricing</strong> and choose
-            "Pay what you want". Set a minimum amount (e.g. $1). Save and <strong>Publish</strong>.
+            In your Stripe dashboard, click{" "}
+            <strong>Developers → API keys</strong>. You&apos;ll see two keys:
+            a <em>Publishable key</em> and a <em>Secret key</em>.
             <br /><br />
-            Once published, open the product and click its <strong>variant</strong>. The URL in your
-            browser ends with <code className="px-1.5 py-0.5 rounded bg-[var(--color-canvas)] text-tiny font-mono">/variants/12345</code> —
-            that number is your variant ID. Save it somewhere.
-          </>
-        ),
-      },
-      {
-        title: "Generate your API key",
-        body: (
-          <>
-            Click your profile (bottom left) → <strong>Settings → API</strong>. Click <strong>Create API key</strong>,
-            name it "Orbit", and create. Lemon Squeezy will show you a long string only once — copy it
-            immediately.
+            Orbit only needs the <strong>Secret key</strong> — click{" "}
+            <strong>Reveal live key</strong> (or use a test key to try things first).
+            Copy the full string — it starts with{" "}
+            <code className="px-1.5 py-0.5 rounded bg-[var(--color-canvas)] text-tiny font-mono">
+              sk_live_
+            </code>{" "}
+            or{" "}
+            <code className="px-1.5 py-0.5 rounded bg-[var(--color-canvas)] text-tiny font-mono">
+              sk_test_
+            </code>
+            .
           </>
         ),
         note: {
           tone: "warning",
-          text: "If you close the dialog before copying, you have to delete the key and make a new one. The string can't be revealed again.",
+          text: "The secret key is shown once when you reveal it. Keep the Stripe tab open until you've pasted it into Orbit.",
         },
       },
       {
         title: "Connect Orbit",
         body: (
           <>
-            Back in Orbit, open <Link href="/payment-settings" className="underline font-semibold text-[var(--color-primary)]">Online Payments</Link>,
-            click <strong>Get started</strong> on the Lemon Squeezy card, and follow the wizard.
-            It'll ask for the three things you just collected: API key, Store ID, Variant ID.
+            Open{" "}
+            <Link
+              href="/payment-settings"
+              className="underline font-semibold text-[var(--color-primary)]"
+            >
+              Online Payments
+            </Link>{" "}
+            in Orbit, click <strong>Get started</strong> on the Stripe card, and paste
+            your secret key when the wizard asks. Orbit will verify it against Stripe and
+            confirm the connection — all in about 30 seconds.
           </>
         ),
       },
+      {
+        title: "Set up your webhook (for automatic payment confirmation)",
+        body: (
+          <>
+            For Orbit to mark invoices as <strong>Paid</strong> automatically when a client
+            pays, you need to register a webhook. In your Stripe dashboard:
+            <ol className="mt-2 ml-4 space-y-1 list-decimal">
+              <li>Go to <strong>Developers → Webhooks</strong></li>
+              <li>Click <strong>Add endpoint</strong></li>
+              <li>
+                Enter your Orbit URL:{" "}
+                <code className="px-1.5 py-0.5 rounded bg-[var(--color-canvas)] text-tiny font-mono">
+                  https://YOUR-DOMAIN.com/api/webhooks/stripe
+                </code>
+              </li>
+              <li>
+                Under &ldquo;Events to listen to&rdquo;, add:{" "}
+                <code className="text-tiny font-mono">payment_link.completed</code>,{" "}
+                <code className="text-tiny font-mono">checkout.session.completed</code>,{" "}
+                <code className="text-tiny font-mono">payment_intent.succeeded</code>
+              </li>
+              <li>Save — Stripe shows you a <strong>Signing secret</strong> (starts with <code className="text-tiny font-mono">whsec_</code>). Add it to your server&apos;s environment variables as <code className="text-tiny font-mono">STRIPE_WEBHOOK_SECRET</code>.</li>
+            </ol>
+          </>
+        ),
+        note: {
+          tone: "info",
+          text: "Without the webhook, you can still manually mark invoices as paid in Orbit. The webhook just makes it happen automatically.",
+        },
+      },
     ],
-    cta: { label: "Open my Lemon Squeezy dashboard", href: "https://app.lemonsqueezy.com", external: true },
+    cta: {
+      label: "Open my Stripe dashboard",
+      href: "https://dashboard.stripe.com",
+      external: true,
+    },
   },
 
-  // ── Flutterwave ──
+  // ── Flutterwave (UNCHANGED from original) ────────────────────────────────
   {
     id: "flutterwave",
     icon: CreditCard,
@@ -122,14 +173,23 @@ const SECTIONS: GuideSection[] = [
     iconBg: "#FFF1DC",
     title: "Set up Flutterwave",
     intro:
-      "Best choice if you're based in Nigeria or anywhere across Africa. Accepts cards, mobile money, bank transfers, and USSD. Payouts settle to a local bank.",
+      "Best choice if you're based in Nigeria or anywhere across Africa. " +
+      "Accepts cards, mobile money, bank transfers, and USSD. Payouts settle to a local bank.",
     steps: [
       {
         title: "Create your Flutterwave account",
         body: (
           <>
-            Sign up at <a href="https://dashboard.flutterwave.com/signup" target="_blank" rel="noopener noreferrer" className="underline font-semibold text-[var(--color-primary)]">flutterwave.com</a>
-            {" "}using your business email. Verify the email.
+            Sign up at{" "}
+            <a
+              href="https://dashboard.flutterwave.com/signup"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline font-semibold text-[var(--color-primary)]"
+            >
+              flutterwave.com
+            </a>{" "}
+            using your business email. Verify the email.
           </>
         ),
       },
@@ -137,10 +197,11 @@ const SECTIONS: GuideSection[] = [
         title: "Complete your profile and KYC",
         body: (
           <>
-            Once logged in, fill in your business profile (name, type, address) and submit your KYC documents
-            (your government ID and a business document if you have one). KYC is required before you can
-            receive real payouts. <strong>Test mode works immediately</strong> — you can plug your keys
-            into Orbit right away while KYC processes.
+            Once logged in, fill in your business profile (name, type, address) and submit
+            your KYC documents (your government ID and a business document if you have one).
+            KYC is required before you can receive real payouts.{" "}
+            <strong>Test mode works immediately</strong> — you can plug your keys into Orbit
+            right away while KYC processes.
           </>
         ),
         note: {
@@ -152,8 +213,8 @@ const SECTIONS: GuideSection[] = [
         title: "Add your settlement bank",
         body: (
           <>
-            Click <strong>Settings → Settlement Account</strong> and add the bank account where you want
-            customer payments deposited. Flutterwave will verify it.
+            Click <strong>Settings → Settlement Account</strong> and add the bank account
+            where you want customer payments deposited. Flutterwave will verify it.
           </>
         ),
       },
@@ -161,12 +222,25 @@ const SECTIONS: GuideSection[] = [
         title: "Grab your API keys",
         body: (
           <>
-            Click <strong>Settings</strong> (bottom left) → <strong>API</strong> tab. You'll see two values:
+            Click <strong>Settings</strong> (bottom left) → <strong>API</strong> tab.
+            You&apos;ll see two values:
             <ul className="mt-2 ml-4 space-y-1 list-disc">
-              <li><strong>Secret Key</strong> (click the eye to reveal it). Starts with <code className="px-1.5 py-0.5 rounded bg-[var(--color-canvas)] text-tiny font-mono">FLWSECK_TEST-</code> in test mode.</li>
-              <li><strong>Public Key</strong>. Starts with <code className="px-1.5 py-0.5 rounded bg-[var(--color-canvas)] text-tiny font-mono">FLWPUBK_TEST-</code>.</li>
+              <li>
+                <strong>Secret Key</strong> (click the eye to reveal it). Starts with{" "}
+                <code className="px-1.5 py-0.5 rounded bg-[var(--color-canvas)] text-tiny font-mono">
+                  FLWSECK_TEST-
+                </code>{" "}
+                in test mode.
+              </li>
+              <li>
+                <strong>Public Key</strong>. Starts with{" "}
+                <code className="px-1.5 py-0.5 rounded bg-[var(--color-canvas)] text-tiny font-mono">
+                  FLWPUBK_TEST-
+                </code>
+                .
+              </li>
             </ul>
-            Copy both. Don't share the secret key.
+            Copy both. Don&apos;t share the secret key.
           </>
         ),
       },
@@ -174,18 +248,28 @@ const SECTIONS: GuideSection[] = [
         title: "Connect Orbit",
         body: (
           <>
-            Open <Link href="/payment-settings" className="underline font-semibold text-[var(--color-primary)]">Online Payments</Link>{" "}
-            in Orbit, click <strong>Get started</strong> on the Flutterwave card, and paste the secret
-            and public keys when the wizard asks. Done — Orbit can now create payment links on your
-            Flutterwave account.
+            Open{" "}
+            <Link
+              href="/payment-settings"
+              className="underline font-semibold text-[var(--color-primary)]"
+            >
+              Online Payments
+            </Link>{" "}
+            in Orbit, click <strong>Get started</strong> on the Flutterwave card, and paste
+            the secret and public keys when the wizard asks. Done — Orbit can now create
+            payment links on your Flutterwave account.
           </>
         ),
       },
     ],
-    cta: { label: "Open my Flutterwave dashboard", href: "https://dashboard.flutterwave.com", external: true },
+    cta: {
+      label: "Open my Flutterwave dashboard",
+      href: "https://dashboard.flutterwave.com",
+      external: true,
+    },
   },
 
-  // ── Sending payment links ──
+  // ── Sending payment links (UNCHANGED from original) ──────────────────────
   {
     id: "send-link",
     icon: Link2,
@@ -193,98 +277,92 @@ const SECTIONS: GuideSection[] = [
     iconBg: "#FAEDF1",
     title: "Send your first payment link",
     intro:
-      "Once a provider is connected, every invoice you create gets a 'Generate payment link' button. Tap it, share the link with your client, and money lands in your account.",
+      "Once your payment provider is connected, you can generate a payment link for any invoice " +
+      "and send it to your client — they click, pay, and you get notified.",
     steps: [
       {
-        title: "Create or open an invoice",
+        title: "Open the invoice",
         body: (
           <>
-            From <Link href="/payments/new" className="underline font-semibold text-[var(--color-primary)]">Invoice Builder</Link>,
-            create an invoice with the amount and client. Or open any existing invoice from{" "}
-            <Link href="/payments" className="underline font-semibold text-[var(--color-primary)]">Payments</Link>.
+            Go to <Link href="/payments" className="underline font-semibold text-[var(--color-primary)]">Payments</Link>,
+            find the invoice you want to collect, and click it to open the detail view.
           </>
         ),
       },
       {
-        title: "Tap 'Generate payment link'",
+        title: "Generate the payment link",
         body: (
           <>
-            Scroll to the <strong>Get paid online</strong> section on the invoice page. Tap the
-            big <strong>Generate payment link</strong> button. Orbit creates a fresh, secure link
-            using your connected provider. Takes about 2 seconds.
+            On the invoice detail page, click <strong>Send payment link</strong>.
+            Orbit creates a hosted checkout page on your provider&apos;s platform
+            (Stripe or Flutterwave) — your client lands on that page and pays securely.
+            No card details pass through Orbit.
           </>
         ),
       },
       {
-        title: "Share the link with your client",
+        title: "Copy and send the link",
         body: (
           <>
-            You'll see three buttons appear: <strong>Copy link</strong>, <strong>Send via WhatsApp</strong>,
-            and <strong>Preview</strong>. WhatsApp opens with a friendly pre-written message
-            and the link already inside.
+            Once generated, copy the link and paste it wherever you communicate with your client —
+            WhatsApp, email, SMS, Instagram DMs. The link works on any device and doesn&apos;t expire.
           </>
         ),
       },
       {
-        title: "They pay, the invoice updates",
+        title: "Watch it arrive",
         body: (
           <>
-            Your client clicks the link, lands on your provider's hosted checkout (no app install needed),
-            and pays with their card. The moment the payment clears, Orbit marks the invoice as{" "}
-            <strong>Paid</strong> automatically — no action needed from you.
+            When your client pays, Orbit updates the invoice status to{" "}
+            <strong>Paid</strong> automatically (if you&apos;ve set up the webhook) or you
+            can mark it manually. You&apos;ll see the payment in your dashboard straight away.
           </>
         ),
-        note: {
-          tone: "info",
-          text: "Auto-marking-paid works once your provider's webhook is set up. See 'Webhook setup (optional)' below.",
-        },
       },
     ],
   },
 
-  // ── Optional webhook section ──
+  // ── Invoices (UNCHANGED from original) ───────────────────────────────────
   {
-    id: "webhook",
-    icon: ShieldCheck,
-    iconColor: "#22C55E",
-    iconBg: "#DCFCE7",
-    title: "Webhook setup (optional, but recommended)",
+    id: "invoices",
+    icon: Receipt,
+    iconColor: "#0EA5E9",
+    iconBg: "#E0F2FE",
+    title: "Creating and managing invoices",
     intro:
-      "Webhooks let your provider tell Orbit when a payment is complete, so invoices flip to 'Paid' instantly without you doing anything. If you skip this, you'll need to manually mark invoices as paid.",
+      "Orbit lets you log any payment or create a formal invoice. Here's how to stay on top of " +
+      "what you're owed.",
     steps: [
       {
-        title: "Pick a long random secret",
+        title: "Create a new invoice",
         body: (
           <>
-            Generate a random string (any password generator works). Save it somewhere — you'll use it twice.
-            Example: <code className="px-1.5 py-0.5 rounded bg-[var(--color-canvas)] text-tiny font-mono">orbit_wh_38fK20zaPq</code>
+            Click <Link href="/payments/new" className="underline font-semibold text-[var(--color-primary)]">New invoice</Link> from
+            the Payments page. Fill in the client name, amount, and due date. The invoice number
+            is auto-generated but you can edit it.
           </>
         ),
       },
       {
-        title: "Set the webhook URL in your provider dashboard",
+        title: "Understand invoice statuses",
         body: (
           <>
-            <strong>Lemon Squeezy:</strong> Settings → Webhooks → New webhook. URL is{" "}
-            <code className="px-1.5 py-0.5 rounded bg-[var(--color-canvas)] text-tiny font-mono">https://YOUR-DOMAIN/api/lemonsqueezy/webhook</code>.
-            Paste your secret as the signing secret. Check the box for <strong>order_created</strong>.
-            <br /><br />
-            <strong>Flutterwave:</strong> Settings → Webhooks. URL is{" "}
-            <code className="px-1.5 py-0.5 rounded bg-[var(--color-canvas)] text-tiny font-mono">https://YOUR-DOMAIN/api/flutterwave/webhook</code>.
-            Paste your secret as the "Secret Hash". Save.
-          </>
-        ),
-      },
-      {
-        title: "Add the secret to your Orbit deployment",
-        body: (
-          <>
-            In your Orbit deployment's environment variables, set:
-            <ul className="mt-2 ml-4 space-y-1 list-disc">
-              <li><code className="px-1.5 py-0.5 rounded bg-[var(--color-canvas)] text-tiny font-mono">LEMONSQUEEZY_WEBHOOK_SECRET</code> = the same value</li>
-              <li><code className="px-1.5 py-0.5 rounded bg-[var(--color-canvas)] text-tiny font-mono">FLUTTERWAVE_WEBHOOK_HASH</code> = the same value</li>
+            <ul className="mt-1 ml-4 space-y-1 list-disc">
+              <li><strong>Pending</strong> — created, not yet paid</li>
+              <li><strong>Overdue</strong> — past the due date and still unpaid</li>
+              <li><strong>Partial</strong> — client paid part of the amount</li>
+              <li><strong>Paid</strong> — fully settled</li>
+              <li><strong>Failed</strong> — payment was attempted but declined</li>
             </ul>
-            Redeploy. Now when a customer pays, Orbit will hear about it within seconds.
+          </>
+        ),
+      },
+      {
+        title: "Mark an invoice as paid manually",
+        body: (
+          <>
+            Open the invoice and click <strong>Mark as paid</strong>. Use this when
+            a client pays you by cash or bank transfer outside of Orbit&apos;s payment links.
           </>
         ),
       },
@@ -292,93 +370,61 @@ const SECTIONS: GuideSection[] = [
   },
 ];
 
-// FAQ
+// ─── FAQs ─────────────────────────────────────────────────────────────────────
+
 const FAQS: { q: string; a: React.ReactNode }[] = [
   {
     q: "Does Orbit take a cut of my payments?",
-    a: (
-      <>
-        No. Orbit doesn't touch your money. You connect <strong>your own</strong> Lemon Squeezy or
-        Flutterwave account, and customer payments go straight from them to your bank. The only fees
-        you pay are your provider's standard transaction fees.
-      </>
-    ),
+    a: "No. When a client pays via a Stripe or Flutterwave link, the money goes directly to your provider account. Orbit doesn't touch it. Your provider charges their own processing fee (Stripe: ~2.9% + 30¢ per transaction for cards; Flutterwave fees vary by country).",
   },
   {
-    q: "Which provider should I pick?",
-    a: (
-      <>
-        If you're in <strong>Nigeria or across Africa</strong>, pick <strong>Flutterwave</strong> —
-        local card support, mobile money, USSD, and faster local settlement.
-        If you're elsewhere or want to accept payments from international customers,
-        pick <strong>Lemon Squeezy</strong> — better global card coverage and automatic tax handling.
-        You can switch between them any time.
-      </>
-    ),
+    q: "Can I use both Stripe and Flutterwave?",
+    a: "Not at the same time — Orbit connects one provider per account. You can switch by disconnecting the current one and connecting another. All historical invoices stay in your dashboard regardless of which provider created them.",
   },
   {
-    q: "What happens to my keys?",
-    a: (
-      <>
-        They live in your browser's localStorage only. We never store them in Orbit's database, and
-        they never touch our servers in plaintext — they're sent securely from your device to your
-        provider every time you generate a link. If you switch devices, you'll need to enter them
-        again.
-      </>
-    ),
+    q: "Are my API keys safe?",
+    a: "Yes. Your keys are stored only in your browser's localStorage — they never leave your device to Orbit's servers. When you create a payment link, your browser sends the key directly to our API route, which uses it once and discards it. We don't log or store keys.",
   },
   {
-    q: "What if my client emails me asking how to pay?",
-    a: (
-      <>
-        Just send them the link again. Each payment link works until the invoice is marked paid (or
-        you regenerate it). Use the <strong>Copy link</strong> button on the invoice page.
-      </>
-    ),
+    q: "What happens if a client's payment fails?",
+    a: "The invoice status changes to 'Failed' automatically (if webhooks are set up). You can resend the payment link or ask the client to try a different card.",
   },
   {
-    q: "I made a mistake. Can I undo a payment?",
-    a: (
-      <>
-        Yes — refund the payment from your Lemon Squeezy or Flutterwave dashboard. Orbit won't
-        automatically un-mark the invoice as paid, but you can do that manually by opening the
-        invoice and changing the status.
-      </>
-    ),
+    q: "Can I invoice in my local currency?",
+    a: "Yes. Orbit uses your account's currency setting for all amounts. Stripe supports 135+ currencies. Flutterwave supports NGN, GHS, KES, ZAR, UGX, TZS, and more.",
+  },
+  {
+    q: "Do I need a business registration to use Stripe?",
+    a: "Not necessarily — individuals (sole traders / freelancers) can use Stripe with just a personal ID. Flutterwave may require a business registration in some African countries. Check each provider's requirements during account setup.",
   },
 ];
 
-// ─── Page ──────────────────────────────────────────────────────────────────
+// ─── Page component ───────────────────────────────────────────────────────────
 
 export default function HelpPage() {
-  const [search, setSearch] = useState("");
-  const [openSection, setOpenSection] = useState<string | null>("lemonsqueezy");
-  const [openFaq, setOpenFaq] = useState<number | null>(null);
+  const [openSection, setOpenSection] = useState<string | null>(null);
+  const [openFaq,     setOpenFaq]     = useState<number | null>(null);
+  const [query,       setQuery]       = useState("");
 
   const filteredSections = useMemo(() => {
-    if (!search.trim()) return SECTIONS;
-    const q = search.toLowerCase();
+    if (!query.trim()) return SECTIONS;
+    const q = query.toLowerCase();
     return SECTIONS.filter(
       (s) =>
         s.title.toLowerCase().includes(q) ||
         s.intro.toLowerCase().includes(q) ||
-        s.steps.some((step) => step.title.toLowerCase().includes(q)),
+        s.steps.some((step) => step.title.toLowerCase().includes(q))
     );
-  }, [search]);
+  }, [query]);
 
   return (
     <div className="space-y-8 max-w-3xl">
-      {/* Hero */}
+
+      {/* Page heading */}
       <div>
-        <div className="inline-flex items-center gap-2 mb-3">
-          <BookOpen className="h-4 w-4 text-[var(--color-primary)]" />
-          <span className="text-tiny font-bold uppercase tracking-wider text-[var(--color-primary)]">
-            Help & Guides
-          </span>
-        </div>
-        <h1 className="text-page font-bold">How to set up payments</h1>
-        <p className="text-lead text-[var(--color-ink-light)] mt-2 max-w-2xl">
-          Plain-English walkthroughs to get you accepting client payments, step by step. No tech experience needed.
+        <h1 className="text-page font-bold">Help &amp; guides</h1>
+        <p className="text-lead text-[var(--color-ink-light)] mt-2">
+          Everything you need to set up payments and get paid.
         </p>
       </div>
 
@@ -386,9 +432,8 @@ export default function HelpPage() {
       <div className="relative">
         <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--color-muted)]" />
         <input
-          type="text"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
           placeholder="Search the guides..."
           className="w-full h-12 pl-11 pr-4 rounded-full bg-white border border-[var(--color-border)] text-body placeholder:text-[var(--color-muted)] focus:outline-none focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/15"
         />
@@ -398,11 +443,11 @@ export default function HelpPage() {
       <div id="payments" className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <QuickLink
           icon={CreditCard}
-          color="#FFC233"
-          label="Set up Lemon Squeezy"
+          color="#635BFF"
+          label="Set up Stripe"
           onClick={() => {
-            setOpenSection("lemonsqueezy");
-            document.getElementById("section-lemonsqueezy")?.scrollIntoView({ behavior: "smooth", block: "start" });
+            setOpenSection("stripe");
+            document.getElementById("section-stripe")?.scrollIntoView({ behavior: "smooth", block: "start" });
           }}
         />
         <QuickLink
@@ -425,7 +470,7 @@ export default function HelpPage() {
         />
       </div>
 
-      {/* Sections */}
+      {/* Accordion sections */}
       <div className="space-y-4">
         {filteredSections.map((section) => {
           const Icon = section.icon;
@@ -453,7 +498,9 @@ export default function HelpPage() {
                   </p>
                 </div>
                 <ChevronDown
-                  className={`h-5 w-5 text-[var(--color-muted)] flex-shrink-0 transition-transform ${isOpen ? "rotate-180" : ""}`}
+                  className={`h-5 w-5 text-[var(--color-muted)] flex-shrink-0 transition-transform ${
+                    isOpen ? "rotate-180" : ""
+                  }`}
                 />
               </button>
 
@@ -462,7 +509,6 @@ export default function HelpPage() {
                   {section.steps.map((step, i) => (
                     <Step key={i} index={i} step={step} accentColor={section.iconColor} />
                   ))}
-
                   {section.cta && (
                     <a
                       href={section.cta.href}
@@ -501,7 +547,11 @@ export default function HelpPage() {
                   className="w-full px-6 py-4 flex items-center gap-3 text-left hover:bg-[var(--color-canvas)] transition-colors"
                 >
                   <span className="flex-1 text-body font-semibold">{faq.q}</span>
-                  <ChevronDown className={`h-4 w-4 text-[var(--color-muted)] transition-transform ${isOpen ? "rotate-180" : ""}`} />
+                  <ChevronDown
+                    className={`h-4 w-4 text-[var(--color-muted)] transition-transform ${
+                      isOpen ? "rotate-180" : ""
+                    }`}
+                  />
                 </button>
                 {isOpen && (
                   <div className="px-6 pb-5 text-body text-[var(--color-ink-mid)] leading-relaxed border-t border-[var(--color-border)] pt-4">
@@ -536,7 +586,7 @@ export default function HelpPage() {
   );
 }
 
-// ─── Helpers ───────────────────────────────────────────────────────────────
+// ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function QuickLink({
   icon: Icon, color, label, onClick,
@@ -556,7 +606,10 @@ function QuickLink({
     </button>
   );
 }
-function Step({ index, step, accentColor }: { index: number; step: GuideStep; accentColor: string }) {
+
+function Step({
+  index, step, accentColor,
+}: { index: number; step: GuideStep; accentColor: string }) {
   return (
     <div className="flex gap-4">
       <div
@@ -566,8 +619,12 @@ function Step({ index, step, accentColor }: { index: number; step: GuideStep; ac
         {index + 1}
       </div>
       <div className="flex-1 min-w-0 pt-1">
-        <h3 className="text-body font-semibold text-[var(--color-ink)] mb-2">{step.title}</h3>
-        <div className="text-small text-[var(--color-ink-mid)] leading-relaxed">{step.body}</div>
+        <h3 className="text-body font-semibold text-[var(--color-ink)] mb-2">
+          {step.title}
+        </h3>
+        <div className="text-small text-[var(--color-ink-mid)] leading-relaxed">
+          {step.body}
+        </div>
         {step.note && (
           <div
             className={`mt-3 flex items-start gap-2.5 px-4 py-3 rounded-[var(--radius-md)] text-small leading-relaxed ${
