@@ -77,7 +77,7 @@ export async function POST(request: Request) {
   // This does NOT need to be a per-user key — verification uses YOUR webhook secret.
   const stripe = new Stripe(
     process.env.STRIPE_WEBHOOK_SECRET_KEY ?? "placeholder", // Not used for verification
-    { apiVersion: "2024-06-20" }
+    { apiVersion: "2026-05-27.dahlia" }
   );
 
   let event: Stripe.Event;
@@ -199,5 +199,6 @@ export async function POST(request: Request) {
   //    If we return anything else, Stripe will keep retrying the webhook.
   return NextResponse.json({ received: true });
 }
+
 
 

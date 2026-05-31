@@ -49,7 +49,7 @@ export async function POST(request: Request) {
   //    the key belongs to. If the key is wrong, Stripe throws a 401 error.
   try {
     const stripe = new Stripe(secretKey, {
-      apiVersion: "2024-06-20",
+      apiVersion: "2026-05-27.dahlia",
       // We don't want to retry on network errors during a quick validation
       maxNetworkRetries: 0,
     });
