@@ -30,7 +30,7 @@ export async function createStripePaymentLink({
   redirectUrl,
   customData,
 }: CreateStripePaymentLinkParams): Promise<CreateStripePaymentLinkResult> {
-  const stripe = new Stripe(apiKey, { apiVersion: "2025-04-30" });
+  const stripe = new Stripe(apiKey, { apiVersion: "2026-05-27.dahlia" });
 
   // Create a one-time price on the fly
   const price = await stripe.prices.create({
