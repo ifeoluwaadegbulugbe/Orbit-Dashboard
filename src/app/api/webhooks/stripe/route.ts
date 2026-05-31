@@ -32,7 +32,6 @@ export async function POST(request: Request) {
 
   try {
     switch (event.type) {
-      case "payment_link.completed":
       case "checkout.session.completed": {
         const session = event.data.object as Stripe.CheckoutSession;
         const orbitPaymentId = session.metadata?.orbit_payment_id;
