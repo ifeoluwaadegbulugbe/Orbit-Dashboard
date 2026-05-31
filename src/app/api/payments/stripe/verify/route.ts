@@ -45,7 +45,7 @@ export async function POST(request: Request) {
   }
 
   // 3. Try to call Stripe with the provided key
-  //    stripe.accounts.retrieve() with no arguments returns the account
+  //    stripe.accounts.retrieve('self') with no arguments returns the account
   //    the key belongs to. If the key is wrong, Stripe throws a 401 error.
   try {
     const stripe = new Stripe(secretKey, {
@@ -54,7 +54,7 @@ export async function POST(request: Request) {
       maxNetworkRetries: 0,
     });
 
-    const account = await stripe.accounts.retrieve();
+    const account = await stripe.accounts.retrieve('self');
 
     // 4. Return the account name so the wizard can show "Connected to: Acme Inc."
     return NextResponse.json({
