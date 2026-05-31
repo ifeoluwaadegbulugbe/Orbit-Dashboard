@@ -2,6 +2,19 @@ import Stripe from "stripe";
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
 
+interface StripeSession {
+  id: string;
+  metadata?: Record<string, string> | null;
+  amount_total?: number | null;
+}
+
+interface StripePaymentIntent {
+  id: string;
+  metadata?: Record<string, string> | null;
+  amount_received?: number | null;
+  last_payment_error?: { message?: string } | null;
+}
+
 export async function POST(request: Request) {
   const rawBody = await request.text();
 
@@ -33,7 +46,7 @@ export async function POST(request: Request) {
   try {
     switch (event.type) {
       case "checkout.session.completed": {
-        const session = event.data.object as Stripe.AccountSession & { metadata?: Record<string, string>; amount_total?: number | null; id: string };
+        const session = event.data.object as unknown as StripeSession;
         const orbitPaymentId = session.metadata?.orbit_payment_id;
         if (!orbitPaymentId) break;
         const paidAmount = session.amount_total ? session.amount_total / 100 : null;
@@ -42,8 +55,8 @@ export async function POST(request: Request) {
       }
 
       case "payment_intent.succeeded": {
-        const intent = event.data.object as Stripe.PaymentIntent;
-        const orbitPaymentId = (intent.metadata as Record<string, string>)?.orbit_payment_id;
+        const intent = event.data.object as unknown as StripePaymentIntent;
+        const orbitPaymentId = intent.metadata?.orbit_payment_id;
         if (!orbitPaymentId) break;
         const paidAmount = intent.amount_received ? intent.amount_received / 100 : null;
         console.log(`[webhook/stripe] PaymentIntent succeeded. orbit_payment_id=${orbitPaymentId} amount=${paidAmount}`);
@@ -51,8 +64,8 @@ export async function POST(request: Request) {
       }
 
       case "payment_intent.payment_failed": {
-        const intent = event.data.object as Stripe.PaymentIntent;
-        const orbitPaymentId = (intent.metadata as Record<string, string>)?.orbit_payment_id;
+        const intent = event.data.object as unknown as StripePaymentIntent;
+        const orbitPaymentId = intent.metadata?.orbit_payment_id;
         if (!orbitPaymentId) break;
         const failureReason = intent.last_payment_error?.message ?? "Payment declined";
         console.log(`[webhook/stripe] Payment failed. orbit_payment_id=${orbitPaymentId} reason="${failureReason}"`);
