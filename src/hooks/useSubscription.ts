@@ -21,6 +21,13 @@ interface SubscriptionState {
  */
 const FORCE_PRO = process.env.NEXT_PUBLIC_FORCE_PRO === "true";
 
+/**
+ * Owner override - these emails always get Pro access, regardless of
+ * subscription status. Useful so the founder's own account never hits
+ * the paywall. Add your Gmail (or whichever email you sign in with) here.
+ */
+const ADMIN_EMAILS = ["ifeoluwaadegbulugbe@gmail.com"];
+
 let warnedAboutForcePro = false;
 
 /**
@@ -48,6 +55,11 @@ export function useSubscription(): SubscriptionState {
       return { isPro: true, isOnTrial: false, trialDaysLeft: null, trialUsed: false };
     }
 
+    // Owner override: this account always gets Pro, no paywall.
+    if (profile?.email && ADMIN_EMAILS.includes(profile.email)) {
+      return { isPro: true, isOnTrial: false, trialDaysLeft: null, trialUsed: false };
+    }
+
     const status = profile?.subscription_status;
     const trialEndsAt = profile?.trial_ends_at;
 
@@ -69,5 +81,5 @@ export function useSubscription(): SubscriptionState {
 
     const trialUsed = !!trialEndsAt && new Date(trialEndsAt).getTime() < Date.now();
     return { isPro: false, isOnTrial: false, trialDaysLeft: null, trialUsed };
-  }, [profile?.subscription_status, profile?.trial_ends_at]);
+  }, [profile?.email, profile?.subscription_status, profile?.trial_ends_at]);
 }
