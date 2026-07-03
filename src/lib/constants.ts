@@ -9,7 +9,7 @@ export const CLIENT_LIMIT_WARNING_THRESHOLD = FREE_CLIENT_LIMIT - 2; // 8
 export const FREE_TRIAL_DAYS = 7;
 
 /** Display price. Actual billing happens via Paystack plan. */
-export const PRO_PRICE_DISPLAY = "$17";
+export const PRO_PRICE_DISPLAY = "$12";
 export const PRO_PRICE_PERIOD = "/month";
 
 /** Paystack plan code (env var). Plan is created in Paystack dashboard. */
