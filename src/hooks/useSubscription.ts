@@ -26,7 +26,7 @@ const FORCE_PRO = process.env.NEXT_PUBLIC_FORCE_PRO === "true";
  * subscription status. Useful so the founder's own account never hits
  * the paywall. Add your Gmail (or whichever email you sign in with) here.
  */
-const ADMIN_EMAILS = ["your@gmail.com"];
+const ADMIN_EMAILS = ["ifeoluwaadegbulugbe@gmail.com"];
 
 let warnedAboutForcePro = false;
 
