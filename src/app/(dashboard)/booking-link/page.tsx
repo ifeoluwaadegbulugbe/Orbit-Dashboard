@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Link2, Copy, Check, ExternalLink, Plus, Trash2, Save, Calendar, Scissors, ArrowRight } from "lucide-react";
+import { ProGate } from "@/components/paywall/ProGate";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { useAuthStore } from "@/stores/authStore";
@@ -34,7 +35,14 @@ const DEFAULTS: BookingConfig = {
 };
 
 export default function BookingLinkPage() {
-  return <BookingLinkInner />;
+  return (
+    <ProGate
+      title="Booking Link"
+      description="Let new clients book you directly. Share one link - they pick a service and time, you get a notification."
+    >
+      <BookingLinkInner />
+    </ProGate>
+  );
 }
 
 function BookingLinkInner() {
