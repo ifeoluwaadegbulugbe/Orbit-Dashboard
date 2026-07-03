@@ -18,15 +18,16 @@ interface NavItem {
 }
 
 const MAIN_NAV: NavItem[] = [
-  { href: "/home",      label: "Home",       icon: Home },
-  { href: "/clients",   label: "Clients",    icon: Users },
-  { href: "/work",      label: "Work",       icon: Briefcase },
-  { href: "/services",  label: "Services",   icon: Scissors },
-  { href: "/payments",  label: "Payments",   icon: CreditCard },
-  { href: "/analytics", label: "Analytics",  icon: BarChart3 },
-  { href: "/reminders", label: "Reminders",  icon: Bell },
-  { href: "/help",      label: "Help",       icon: BookOpen },
-  { href: "/profile",   label: "Profile",    icon: Settings },
+  { href: "/home",         label: "Home",         icon: Home },
+  { href: "/clients",      label: "Clients",      icon: Users },
+  { href: "/work",         label: "Work",         icon: Briefcase },
+  { href: "/services",     label: "Services",     icon: Scissors },
+  { href: "/payments",     label: "Payments",     icon: CreditCard },
+  { href: "/booking-link", label: "Booking Link", icon: Link2 },
+  { href: "/analytics",    label: "Analytics",    icon: BarChart3 },
+  { href: "/reminders",    label: "Reminders",    icon: Bell },
+  { href: "/help",         label: "Help",         icon: BookOpen },
+  { href: "/profile",      label: "Profile",      icon: Settings },
 ];
 
 /** Pro feature shortcuts - only shown when subscription.isPro is true. */
@@ -36,7 +37,6 @@ const PRO_NAV: NavItem[] = [
   { href: "/payment-settings", label: "Online Payments", icon: CreditCard },
   { href: "/automations",      label: "Automations",     icon: Zap },
   { href: "/branding",         label: "Branding",        icon: Palette },
-  { href: "/booking-link",     label: "Booking Link",    icon: Link2 },
   { href: "/templates",        label: "Templates",       icon: MessageSquare },
   { href: "/export",           label: "Export Data",     icon: Download },
 ];
