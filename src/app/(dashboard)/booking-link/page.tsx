@@ -26,7 +26,7 @@ interface BookingConfig {
 
 const DEFAULTS: BookingConfig = {
   slug: "",
-  intro: "Pick a service and a time that works for you. I'll confirm by message within an hour.",
+  intro: "Select a service and a time that works for you. I'll confirm by message within an hour.",
   services: [
     { name: "Initial consultation", duration_minutes: 30, price: "Free" },
   ],
