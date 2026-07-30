@@ -197,6 +197,73 @@ export interface LedgerEntryWithTransaction {
   ledger_transactions: LedgerTransaction;
 }
 
+// ── Wallet custody model (Phase 1 - see supabase/migrations/007, 008) ───────
+// Nothing here moves real money yet: writes go through src/lib/baas/, which
+// throws until a real Anchor/Mono integration exists.
+
+export type KycTier = 0 | 1 | 2;
+export type KycStatus = "unverified" | "pending" | "verified" | "rejected";
+
+export interface KycProfile {
+  id: string;
+  user_id: string;
+  tier: KycTier;
+  status: KycStatus;
+  verification_provider: string | null;
+  verification_reference: string | null;
+  rejection_reason: string | null;
+  verified_at: string | null;
+  created_at: string;
+}
+
+export type BankAccountVerificationStatus = "unverified" | "verified" | "failed";
+
+export interface BankAccount {
+  id: string;
+  user_id: string;
+  bank_name: string;
+  bank_code: string;
+  account_number: string;
+  /** Resolved by the BaaS partner's name-inquiry API - never user-typed. */
+  account_name: string;
+  verification_status: BankAccountVerificationStatus;
+  is_default: boolean;
+  created_at: string;
+}
+
+export type WithdrawalStatus = "requested" | "validated" | "processing" | "completed" | "failed" | "reversed";
+
+export interface Withdrawal {
+  id: string;
+  user_id: string;
+  wallet_id: string;
+  bank_account_id: string;
+  amount_minor: number;
+  currency: string;
+  status: WithdrawalStatus;
+  provider_payout_reference: string | null;
+  failure_reason: string | null;
+  hold_transaction_id: string | null;
+  settlement_transaction_id: string | null;
+  reversal_transaction_id: string | null;
+  requested_at: string;
+  completed_at: string | null;
+}
+
+export type PaymentLinkStatus = "generated" | "active" | "viewed" | "paid" | "expired" | "cancelled";
+
+export interface PaymentLinkRow {
+  id: string;
+  payment_id: string;
+  token: string;
+  status: PaymentLinkStatus;
+  amount_minor: number;
+  currency: string;
+  viewed_at: string | null;
+  expires_at: string;
+  created_at: string;
+}
+
 export const BUSINESS_TYPE_LABELS: Record<BusinessType, string> = {
   nail_tech: "Nail Tech",
   makeup_artist: "Makeup Artist",
