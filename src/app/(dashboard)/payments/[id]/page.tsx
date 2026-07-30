@@ -3,10 +3,9 @@
 import { use, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useQueryClient } from "@tanstack/react-query";
 import {
   ChevronLeft, CheckCircle2, Trash2, Receipt, Calendar, User, MessageCircle,
-  Link2, Copy, Check, ExternalLink, Loader2, Sparkles,
+  Link2, Copy, Check, ExternalLink, Clock,
 } from "lucide-react";
 import { usePayment, useUpdatePayment, useDeletePayment } from "@/hooks/usePayments";
 import { useClient } from "@/hooks/useClients";
@@ -15,8 +14,6 @@ import { Button } from "@/components/ui/Button";
 import { Avatar } from "@/components/ui/Avatar";
 import { formatShortDate, relativeDate } from "@/lib/utils";
 import { useCurrency } from "@/hooks/useCurrency";
-import { useConnectedProvider, buildProviderKeysForRequest } from "@/hooks/useConnectedProvider";
-import { PROVIDER_INFO } from "@/lib/payment-providers";
 import type { PaymentStatus } from "@/types";
 
 const TONE: Record<PaymentStatus, "success" | "warning" | "danger" | "info" | "neutral"> = {
@@ -28,16 +25,12 @@ export default function PaymentDetailPage({ params }: { params: Promise<{ id: st
   const { id } = use(params);
   const router = useRouter();
   const search = useSearchParams();
-  const qc = useQueryClient();
   const { data: payment, isLoading } = usePayment(id);
   const { data: client } = useClient(payment?.client_id);
   const { format: formatCurrency } = useCurrency();
-  const { provider: connectedProvider, hydrated: providerHydrated } = useConnectedProvider();
   const update = useUpdatePayment();
   const del = useDeletePayment();
   const [busy, setBusy] = useState(false);
-  const [linking, setLinking] = useState(false);
-  const [linkError, setLinkError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
   const justPaid = search.get("paid") === "success";
@@ -74,43 +67,6 @@ export default function PaymentDetailPage({ params }: { params: Promise<{ id: st
     if (!confirm("Delete this invoice?")) return;
     await del.mutateAsync(payment.id);
     router.replace("/payments");
-  }
-
-  async function handleGenerateLink() {
-    if (!payment) return;
-    if (!connectedProvider) {
-      setLinkError("Connect a payment provider first in Online Payments.");
-      return;
-    }
-    const keys = buildProviderKeysForRequest(connectedProvider);
-    if (!keys) {
-      setLinkError(
-        "Your saved keys are incomplete. Open Online Payments and finish filling them in.",
-      );
-      return;
-    }
-    setLinkError(null);
-    setLinking(true);
-    try {
-      const res = await fetch(`/api/payments/${payment.id}/link`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ provider: connectedProvider, keys }),
-      });
-      const text = await res.text();
-      let json: { payment_link?: string; error?: string } = {};
-      try {
-        json = text ? JSON.parse(text) : {};
-      } catch {
-        // Non-JSON response (HTML error page, etc.) - fall through to the !res.ok branch
-      }
-      if (!res.ok) throw new Error(json.error ?? `Could not generate link (${res.status})`);
-      qc.invalidateQueries({ queryKey: ["payments"] });
-    } catch (err) {
-      setLinkError(err instanceof Error ? err.message : "Could not generate link");
-    } finally {
-      setLinking(false);
-    }
   }
 
   async function handleCopy(url: string) {
@@ -197,56 +153,22 @@ export default function PaymentDetailPage({ params }: { params: Promise<{ id: st
       {/* ── Payment link section ── */}
       {payment.status !== "paid" && (
         <div className="bg-white rounded-[var(--radius-2xl)] border border-[var(--color-border)] shadow-soft-sm overflow-hidden">
-          <div className="px-7 pt-6 pb-4 flex items-start justify-between gap-3">
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="w-10 h-10 rounded-xl bg-[var(--color-primary-subtle)] flex items-center justify-center flex-shrink-0">
-                <Link2 className="h-5 w-5 text-[var(--color-primary)]" />
-              </div>
-              <div className="min-w-0">
-                <h3 className="text-card-title font-semibold">Get paid online</h3>
-                <p className="text-small text-[var(--color-ink-light)] mt-0.5">
-                  Send your client a secure payment link - they pay by card, bank transfer or USSD.
-                </p>
-              </div>
+          <div className="px-7 pt-6 pb-4 flex items-start gap-3">
+            <div className="w-10 h-10 rounded-xl bg-[var(--color-primary-subtle)] flex items-center justify-center flex-shrink-0">
+              <Link2 className="h-5 w-5 text-[var(--color-primary)]" />
             </div>
-            {/* Connected-provider chip */}
-            {connectedProvider && (
-              <span
-                className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-tiny font-semibold flex-shrink-0"
-                style={{
-                  backgroundColor: `${PROVIDER_INFO[connectedProvider].color}14`,
-                  color: PROVIDER_INFO[connectedProvider].color,
-                }}
-              >
-                Via {PROVIDER_INFO[connectedProvider].name}
-              </span>
-            )}
+            <div className="min-w-0">
+              <h3 className="text-card-title font-semibold">Get paid online</h3>
+              <p className="text-small text-[var(--color-ink-light)] mt-0.5">
+                Send your client a secure payment link - they pay by card, bank transfer or USSD.
+              </p>
+            </div>
           </div>
 
           <div className="px-7 pb-7">
-            {linkError && (
-              <div className="mb-4 px-4 py-3 rounded-[var(--radius-md)] bg-[var(--color-danger-light)] text-small text-[var(--color-danger-deep)] leading-relaxed">
-                {linkError}
-                {/* If the error mentions a provider not being configured, surface a one-click fix */}
-                {(linkError.toLowerCase().includes("not configured") ||
-                  linkError.toLowerCase().includes("isn't set up") ||
-                  linkError.toLowerCase().includes("rejected the api key")) && (
-                  <div className="mt-3">
-                    <Link
-                      href="/payment-settings"
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white text-[var(--color-primary)] text-tiny font-semibold border border-[var(--color-primary)]/30 hover:bg-[var(--color-primary-subtle)] transition-colors"
-                    >
-                      <Sparkles className="h-3 w-3" />
-                      Open setup guide
-                    </Link>
-                  </div>
-                )}
-              </div>
-            )}
-
             {payment.payment_link ? (
               <div className="space-y-4">
-                {/* The link itself */}
+                {/* Historical link from before Orbit Wallet - still shareable, but can't be regenerated */}
                 <div className="flex items-center gap-3 px-4 py-3 rounded-[var(--radius-lg)] bg-[var(--color-canvas)] border border-[var(--color-border)]">
                   <Link2 className="h-4 w-4 text-[var(--color-muted)] flex-shrink-0" />
                   <span className="flex-1 text-small font-mono text-[var(--color-ink-mid)] truncate">
@@ -254,7 +176,6 @@ export default function PaymentDetailPage({ params }: { params: Promise<{ id: st
                   </span>
                 </div>
 
-                {/* Share actions */}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <button
                     onClick={() => handleCopy(payment.payment_link!)}
@@ -297,64 +218,15 @@ export default function PaymentDetailPage({ params }: { params: Promise<{ id: st
                     Reference · {payment.transaction_reference}
                   </p>
                 )}
-
-                <button
-                  onClick={handleGenerateLink}
-                  disabled={linking}
-                  className="text-small font-semibold text-[var(--color-primary)] hover:text-[var(--color-primary-dark)] disabled:opacity-50"
-                >
-                  {linking ? "Regenerating…" : "Regenerate link"}
-                </button>
               </div>
             ) : (
-              <div className="space-y-3">
-                {providerHydrated && !connectedProvider ? (
-                  // ── No provider connected - show CTA to connect first ──
-                  <div className="space-y-4">
-                    <p className="text-small text-[var(--color-ink-light)] leading-relaxed">
-                      You haven&apos;t connected a payment provider yet. Pick one of{" "}
-                      <strong className="text-[var(--color-ink)]">Paystack, Stripe</strong> or{" "}
-                      <strong className="text-[var(--color-ink)]">Flutterwave</strong> in Online Payments - Orbit will
-                      use it to generate the link.
-                    </p>
-                    <Link
-                      href="/payment-settings"
-                      className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-[var(--color-primary)] text-white text-small font-semibold hover:bg-[var(--color-primary-dark)] transition-colors"
-                    >
-                      <Sparkles className="h-4 w-4" />
-                      Connect a payment provider
-                    </Link>
-                  </div>
-                ) : (
-                  // ── Provider connected - ready to generate ──
-                  <>
-                    <p className="text-small text-[var(--color-ink-light)] leading-relaxed">
-                      Generate a one-time payment link via{" "}
-                      <strong className="text-[var(--color-ink)]">
-                        {connectedProvider ? PROVIDER_INFO[connectedProvider].name : "your connected provider"}
-                      </strong>
-                      . Your client pays instantly - the invoice updates here once payment clears.
-                    </p>
-                    {!client?.email && (
-                      <p className="text-small text-[var(--color-warning-deep)] bg-[var(--color-warning-light)] px-4 py-3 rounded-[var(--radius-md)]">
-                        💡 This client doesn&apos;t have an email saved.{" "}
-                        <Link href={`/clients/${client?.id}/edit`} className="font-semibold underline">
-                          Add one
-                        </Link>{" "}
-                        so receipts go to the right place.
-                      </p>
-                    )}
-                    <Button
-                      onClick={handleGenerateLink}
-                      loading={linking}
-                      leftIcon={<Sparkles className="h-4 w-4" />}
-                      size="lg"
-                      disabled={!connectedProvider}
-                    >
-                      Generate payment link
-                    </Button>
-                  </>
-                )}
+              <div className="flex items-start gap-3 px-4 py-3.5 rounded-[var(--radius-md)] bg-[var(--color-warning-light)] text-[var(--color-warning-deep)]">
+                <Clock className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                <p className="text-small leading-relaxed">
+                  Online payment links are coming soon via{" "}
+                  <Link href="/wallet" className="font-semibold underline">Orbit Wallet</Link>.
+                  For now, collect payment directly and click <strong>Mark paid</strong> above once you&apos;ve been paid.
+                </p>
               </div>
             )}
           </div>

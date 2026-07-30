@@ -17,7 +17,6 @@ const PUBLIC_PATHS = [
   "/api/public/bookings",        // unauthed booking submission endpoint
   "/api/paystack/webhook",
   "/api/lemonsqueezy/webhook",
-  "/api/flutterwave/webhook",
 ];
 
 // Track whether we've already warned about a misconfigured Supabase URL in this

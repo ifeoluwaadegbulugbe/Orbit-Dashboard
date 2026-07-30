@@ -23,7 +23,6 @@ const MAIN_NAV: NavItem[] = [
   { href: "/work",         label: "Work",         icon: Briefcase },
   { href: "/services",     label: "Services",     icon: Scissors },
   { href: "/payments",     label: "Payments",     icon: CreditCard },
-  { href: "/wallet",       label: "Wallet",       icon: Wallet },
   { href: "/booking-link", label: "Booking Link", icon: Link2 },
   { href: "/analytics",    label: "Analytics",    icon: BarChart3 },
   { href: "/reminders",    label: "Reminders",    icon: Bell },
@@ -35,7 +34,7 @@ const MAIN_NAV: NavItem[] = [
 const PRO_NAV: NavItem[] = [
   { href: "/ai-assistant",     label: "AI Assistant",    icon: Sparkles },
   { href: "/payments/new",     label: "Invoice Builder", icon: Receipt },
-  { href: "/payment-settings", label: "Online Payments", icon: CreditCard },
+  { href: "/wallet",           label: "Wallet",          icon: Wallet },
   { href: "/automations",      label: "Automations",     icon: Zap },
   { href: "/branding",         label: "Branding",        icon: Palette },
   { href: "/templates",        label: "Templates",       icon: MessageSquare },

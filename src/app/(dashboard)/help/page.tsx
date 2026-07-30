@@ -1,20 +1,14 @@
 // app/(dashboard)/help/page.tsx
 //
-// The help / guides page. Contains accordion sections that walk the user through
-// setting up each payment provider, sending payment links, etc.
-//
-// What changed from the original:
-//   - The "lemonsqueezy" section is replaced with a "stripe" section
-//   - The QuickLink row at the top now says "Set up Stripe" instead of Lemon Squeezy
-//   - All Flutterwave content is 100% unchanged
-//   - FAQ answers updated where they mentioned Lemon Squeezy
+// The help / guides page. Contains accordion sections covering Orbit Wallet
+// and invoice management.
 
 "use client";
 
 import { useState, useMemo } from "react";
 import Link from "next/link";
 import {
-  BookOpen, CreditCard, Link2, Receipt, MessageCircle, Search,
+  BookOpen, CreditCard, Receipt, MessageCircle, Search,
   ChevronDown, ExternalLink, Sparkles, ShieldCheck, AlertCircle,
   type LucideIcon,
 } from "lucide-react";
@@ -42,282 +36,54 @@ interface GuideSection {
 
 const SECTIONS: GuideSection[] = [
 
-  // ── Stripe (replaces Lemon Squeezy) ──────────────────────────────────────
+  // ── Orbit Wallet (replaces the old Stripe/Flutterwave connect flow) ──────
   {
-    id: "stripe",
+    id: "wallet",
     icon: CreditCard,
-    iconColor: "#635BFF",
-    iconBg: "#EEEDFE",
-    title: "Set up Stripe",
+    iconColor: "#4F46E5",
+    iconBg: "#EEF2FF",
+    title: "Getting paid with Orbit Wallet",
     intro:
-      "Best for accepting card payments from clients anywhere in the world. " +
-      "Payouts settle to your own bank. Takes about 5 minutes the first time.",
+      "Orbit no longer requires you to connect your own Stripe or Flutterwave account. " +
+      "It's moving to a built-in wallet instead — here's where that stands.",
     steps: [
       {
-        title: "Create your Stripe account",
+        title: "What changed",
         body: (
           <>
-            Go to{" "}
-            <a
-              href="https://dashboard.stripe.com/register"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="underline font-semibold text-[var(--color-primary)]"
-            >
-              stripe.com/register
-            </a>{" "}
-            and sign up with your business email. Verify the email Stripe sends you.
+            Connecting your own payment provider is gone. Every Orbit account now gets a
+            built-in{" "}
+            <Link href="/wallet" className="underline font-semibold text-[var(--color-primary)]">
+              Wallet
+            </Link>{" "}
+            — no API keys, no separate merchant account to set up.
           </>
         ),
       },
       {
-        title: "Add your bank account for payouts",
+        title: "How it will work once live",
         body: (
           <>
-            Once logged in, Stripe will guide you through activating your account.
-            Click <strong>Settings → Payouts</strong> and add your bank account details.
-            Stripe deposits your earnings here automatically — usually within 2 business days.
+            Create an invoice, generate a payment link, your client pays it, and the money
+            lands directly in your Orbit Wallet. Withdraw to your bank whenever you want —
+            no gateway to configure in between.
           </>
         ),
-        note: {
-          tone: "info",
-          text: "You can test Stripe without a bank account using test mode (sk_test_ keys). Real payouts require account activation, which usually takes 1–2 days.",
-        },
       },
       {
-        title: "Get your API key",
+        title: "Right now",
         body: (
           <>
-            In your Stripe dashboard, click{" "}
-            <strong>Developers → API keys</strong>. You&apos;ll see two keys:
-            a <em>Publishable key</em> and a <em>Secret key</em>.
-            <br /><br />
-            Orbit only needs the <strong>Secret key</strong> — click{" "}
-            <strong>Reveal live key</strong> (or use a test key to try things first).
-            Copy the full string — it starts with{" "}
-            <code className="px-1.5 py-0.5 rounded bg-[var(--color-canvas)] text-tiny font-mono">
-              sk_live_
-            </code>{" "}
-            or{" "}
-            <code className="px-1.5 py-0.5 rounded bg-[var(--color-canvas)] text-tiny font-mono">
-              sk_test_
-            </code>
-            .
+            Online payment collection is temporarily unavailable while the wallet is being
+            built out. Mark invoices as{" "}
+            <strong>Paid</strong> manually when a client pays you by cash or bank transfer,
+            and check back here for updates.
           </>
         ),
         note: {
           tone: "warning",
-          text: "The secret key is shown once when you reveal it. Keep the Stripe tab open until you've pasted it into Orbit.",
+          text: "This is a known, temporary gap while Orbit Wallet is being built — not a bug.",
         },
-      },
-      {
-        title: "Connect Orbit",
-        body: (
-          <>
-            Open{" "}
-            <Link
-              href="/payment-settings"
-              className="underline font-semibold text-[var(--color-primary)]"
-            >
-              Online Payments
-            </Link>{" "}
-            in Orbit, click <strong>Get started</strong> on the Stripe card, and paste
-            your secret key when the wizard asks. Orbit will verify it against Stripe and
-            confirm the connection — all in about 30 seconds.
-          </>
-        ),
-      },
-      {
-        title: "Set up your webhook (for automatic payment confirmation)",
-        body: (
-          <>
-            For Orbit to mark invoices as <strong>Paid</strong> automatically when a client
-            pays, you need to register a webhook. In your Stripe dashboard:
-            <ol className="mt-2 ml-4 space-y-1 list-decimal">
-              <li>Go to <strong>Developers → Webhooks</strong></li>
-              <li>Click <strong>Add endpoint</strong></li>
-              <li>
-                Enter your Orbit URL:{" "}
-                <code className="px-1.5 py-0.5 rounded bg-[var(--color-canvas)] text-tiny font-mono">
-                  https://YOUR-DOMAIN.com/api/webhooks/stripe
-                </code>
-              </li>
-              <li>
-                Under &ldquo;Events to listen to&rdquo;, add:{" "}
-                <code className="text-tiny font-mono">payment_link.completed</code>,{" "}
-                <code className="text-tiny font-mono">checkout.session.completed</code>,{" "}
-                <code className="text-tiny font-mono">payment_intent.succeeded</code>
-              </li>
-              <li>Save — Stripe shows you a <strong>Signing secret</strong> (starts with <code className="text-tiny font-mono">whsec_</code>). Add it to your server&apos;s environment variables as <code className="text-tiny font-mono">STRIPE_WEBHOOK_SECRET</code>.</li>
-            </ol>
-          </>
-        ),
-        note: {
-          tone: "info",
-          text: "Without the webhook, you can still manually mark invoices as paid in Orbit. The webhook just makes it happen automatically.",
-        },
-      },
-    ],
-    cta: {
-      label: "Open my Stripe dashboard",
-      href: "https://dashboard.stripe.com",
-      external: true,
-    },
-  },
-
-  // ── Flutterwave (UNCHANGED from original) ────────────────────────────────
-  {
-    id: "flutterwave",
-    icon: CreditCard,
-    iconColor: "#F5A623",
-    iconBg: "#FFF1DC",
-    title: "Set up Flutterwave",
-    intro:
-      "Best choice if you're based in Nigeria or anywhere across Africa. " +
-      "Accepts cards, mobile money, bank transfers, and USSD. Payouts settle to a local bank.",
-    steps: [
-      {
-        title: "Create your Flutterwave account",
-        body: (
-          <>
-            Sign up at{" "}
-            <a
-              href="https://dashboard.flutterwave.com/signup"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="underline font-semibold text-[var(--color-primary)]"
-            >
-              flutterwave.com
-            </a>{" "}
-            using your business email. Verify the email.
-          </>
-        ),
-      },
-      {
-        title: "Complete your profile and KYC",
-        body: (
-          <>
-            Once logged in, fill in your business profile (name, type, address) and submit
-            your KYC documents (your government ID and a business document if you have one).
-            KYC is required before you can receive real payouts.{" "}
-            <strong>Test mode works immediately</strong> — you can plug your keys into Orbit
-            right away while KYC processes.
-          </>
-        ),
-        note: {
-          tone: "info",
-          text: "KYC usually takes 1–3 business days. You can build and test everything in the meantime.",
-        },
-      },
-      {
-        title: "Add your settlement bank",
-        body: (
-          <>
-            Click <strong>Settings → Settlement Account</strong> and add the bank account
-            where you want customer payments deposited. Flutterwave will verify it.
-          </>
-        ),
-      },
-      {
-        title: "Grab your API keys",
-        body: (
-          <>
-            Click <strong>Settings</strong> (bottom left) → <strong>API</strong> tab.
-            You&apos;ll see two values:
-            <ul className="mt-2 ml-4 space-y-1 list-disc">
-              <li>
-                <strong>Secret Key</strong> (click the eye to reveal it). Starts with{" "}
-                <code className="px-1.5 py-0.5 rounded bg-[var(--color-canvas)] text-tiny font-mono">
-                  FLWSECK_TEST-
-                </code>{" "}
-                in test mode.
-              </li>
-              <li>
-                <strong>Public Key</strong>. Starts with{" "}
-                <code className="px-1.5 py-0.5 rounded bg-[var(--color-canvas)] text-tiny font-mono">
-                  FLWPUBK_TEST-
-                </code>
-                .
-              </li>
-            </ul>
-            Copy both. Don&apos;t share the secret key.
-          </>
-        ),
-      },
-      {
-        title: "Connect Orbit",
-        body: (
-          <>
-            Open{" "}
-            <Link
-              href="/payment-settings"
-              className="underline font-semibold text-[var(--color-primary)]"
-            >
-              Online Payments
-            </Link>{" "}
-            in Orbit, click <strong>Get started</strong> on the Flutterwave card, and paste
-            the secret and public keys when the wizard asks. Done — Orbit can now create
-            payment links on your Flutterwave account.
-          </>
-        ),
-      },
-    ],
-    cta: {
-      label: "Open my Flutterwave dashboard",
-      href: "https://dashboard.flutterwave.com",
-      external: true,
-    },
-  },
-
-  // ── Sending payment links (UNCHANGED from original) ──────────────────────
-  {
-    id: "send-link",
-    icon: Link2,
-    iconColor: "#E8557A",
-    iconBg: "#FAEDF1",
-    title: "Send your first payment link",
-    intro:
-      "Once your payment provider is connected, you can generate a payment link for any invoice " +
-      "and send it to your client — they click, pay, and you get notified.",
-    steps: [
-      {
-        title: "Open the invoice",
-        body: (
-          <>
-            Go to <Link href="/payments" className="underline font-semibold text-[var(--color-primary)]">Payments</Link>,
-            find the invoice you want to collect, and click it to open the detail view.
-          </>
-        ),
-      },
-      {
-        title: "Generate the payment link",
-        body: (
-          <>
-            On the invoice detail page, click <strong>Send payment link</strong>.
-            Orbit creates a hosted checkout page on your provider&apos;s platform
-            (Stripe or Flutterwave) — your client lands on that page and pays securely.
-            No card details pass through Orbit.
-          </>
-        ),
-      },
-      {
-        title: "Copy and send the link",
-        body: (
-          <>
-            Once generated, copy the link and paste it wherever you communicate with your client —
-            WhatsApp, email, SMS, Instagram DMs. The link works on any device and doesn&apos;t expire.
-          </>
-        ),
-      },
-      {
-        title: "Watch it arrive",
-        body: (
-          <>
-            When your client pays, Orbit updates the invoice status to{" "}
-            <strong>Paid</strong> automatically (if you&apos;ve set up the webhook) or you
-            can mark it manually. You&apos;ll see the payment in your dashboard straight away.
-          </>
-        ),
       },
     ],
   },
@@ -374,28 +140,20 @@ const SECTIONS: GuideSection[] = [
 
 const FAQS: { q: string; a: React.ReactNode }[] = [
   {
-    q: "Does Orbit take a cut of my payments?",
-    a: "No. When a client pays via a Stripe or Flutterwave link, the money goes directly to your provider account. Orbit doesn't touch it. Your provider charges their own processing fee (Stripe: ~2.9% + 30¢ per transaction for cards; Flutterwave fees vary by country).",
+    q: "Where did Online Payments (Stripe/Flutterwave) go?",
+    a: "It's been replaced by Orbit Wallet, a built-in payment system with no separate provider account to connect. Wallet is being built out now - online payment collection is temporarily unavailable in the meantime.",
   },
   {
-    q: "Can I use both Stripe and Flutterwave?",
-    a: "Not at the same time — Orbit connects one provider per account. You can switch by disconnecting the current one and connecting another. All historical invoices stay in your dashboard regardless of which provider created them.",
+    q: "Will Orbit take a cut of my payments?",
+    a: "Not decided yet. Orbit Wallet is still being built - if a fee is introduced, it'll be shown clearly before it ever applies to a payment.",
   },
   {
-    q: "Are my API keys safe?",
-    a: "Yes. Your keys are stored only in your browser's localStorage — they never leave your device to Orbit's servers. When you create a payment link, your browser sends the key directly to our API route, which uses it once and discards it. We don't log or store keys.",
-  },
-  {
-    q: "What happens if a client's payment fails?",
-    a: "The invoice status changes to 'Failed' automatically (if webhooks are set up). You can resend the payment link or ask the client to try a different card.",
+    q: "How do I get paid right now?",
+    a: "Mark invoices as paid manually when your client pays you directly (cash, bank transfer, etc.) - open the invoice and click Mark as paid.",
   },
   {
     q: "Can I invoice in my local currency?",
-    a: "Yes. Orbit uses your account's currency setting for all amounts. Stripe supports 135+ currencies. Flutterwave supports NGN, GHS, KES, ZAR, UGX, TZS, and more.",
-  },
-  {
-    q: "Do I need a business registration to use Stripe?",
-    a: "Not necessarily — individuals (sole traders / freelancers) can use Stripe with just a personal ID. Flutterwave may require a business registration in some African countries. Check each provider's requirements during account setup.",
+    a: "Yes. Orbit uses your account's currency setting for all invoice amounts.",
   },
 ];
 
@@ -440,32 +198,23 @@ export default function HelpPage() {
       </div>
 
       {/* Quick links */}
-      <div id="payments" className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      <div id="payments" className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <QuickLink
           icon={CreditCard}
-          color="#635BFF"
-          label="Set up Stripe"
+          color="#4F46E5"
+          label="About Orbit Wallet"
           onClick={() => {
-            setOpenSection("stripe");
-            document.getElementById("section-stripe")?.scrollIntoView({ behavior: "smooth", block: "start" });
+            setOpenSection("wallet");
+            document.getElementById("section-wallet")?.scrollIntoView({ behavior: "smooth", block: "start" });
           }}
         />
         <QuickLink
-          icon={CreditCard}
-          color="#F5A623"
-          label="Set up Flutterwave"
+          icon={Receipt}
+          color="#0EA5E9"
+          label="Managing invoices"
           onClick={() => {
-            setOpenSection("flutterwave");
-            document.getElementById("section-flutterwave")?.scrollIntoView({ behavior: "smooth", block: "start" });
-          }}
-        />
-        <QuickLink
-          icon={Link2}
-          color="#E8557A"
-          label="Send a payment link"
-          onClick={() => {
-            setOpenSection("send-link");
-            document.getElementById("section-send-link")?.scrollIntoView({ behavior: "smooth", block: "start" });
+            setOpenSection("invoices");
+            document.getElementById("section-invoices")?.scrollIntoView({ behavior: "smooth", block: "start" });
           }}
         />
       </div>
@@ -570,16 +319,16 @@ export default function HelpPage() {
           <Sparkles className="h-5 w-5 text-[var(--color-primary)]" />
         </div>
         <div className="flex-1 min-w-0">
-          <div className="text-body font-bold text-[var(--color-ink)]">Ready to connect?</div>
+          <div className="text-body font-bold text-[var(--color-ink)]">Want to see the wallet?</div>
           <div className="text-small text-[var(--color-ink-mid)] mt-0.5">
-            Head to Online Payments and pick the provider that fits your business.
+            Check your balance and activity in the meantime.
           </div>
         </div>
         <Link
-          href="/payment-settings"
+          href="/wallet"
           className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-small font-bold bg-[var(--color-primary)] text-white hover:bg-[var(--color-primary-dark)] transition-colors"
         >
-          Go to Online Payments
+          Go to Wallet
         </Link>
       </div>
     </div>

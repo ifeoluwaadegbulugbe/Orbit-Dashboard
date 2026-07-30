@@ -22,7 +22,7 @@ interface Tool {
 const TOOLS: Tool[] = [
   { href: "/ai-assistant",     icon: Sparkles,      iconBg: "#FAEDF1", iconColor: "#E8557A", title: "AI Assistant",     description: "Get smart, tailored business advice 24/7." },
   { href: "/payments/new",     icon: Receipt,       iconBg: "#EDE9FF", iconColor: "#6366F1", title: "Invoice Builder",  description: "Create and share professional invoices." },
-  { href: "/payment-settings", icon: CreditCard,    iconBg: "#E0F4FF", iconColor: "#0EA5E9", title: "Online Payments",  description: "Connect Paystack, Stripe or Flutterwave." },
+  { href: "/wallet",           icon: CreditCard,    iconBg: "#E0F4FF", iconColor: "#0EA5E9", title: "Wallet",           description: "Get paid and withdraw to your bank." },
   { href: "/automations",      icon: Zap,           iconBg: "#FEF3C7", iconColor: "#92400E", title: "Automations",      description: "Auto reminders and client follow-ups." },
   { href: "/analytics",        icon: BarChart3,     iconBg: "#DCFCE7", iconColor: "#166534", title: "Analytics+",       description: "Revenue trends and client insights." },
   { href: "/branding",         icon: Palette,       iconBg: "#FAEDF1", iconColor: "#E8557A", title: "Branding",         description: "Logo, colour and tagline for invoices." },

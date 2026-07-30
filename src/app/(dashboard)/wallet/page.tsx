@@ -12,6 +12,7 @@ import {
 } from "@/hooks/useWallet";
 import { relativeDate } from "@/lib/utils";
 import { toast } from "@/stores/toastStore";
+import { ProGate } from "@/components/paywall/ProGate";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
@@ -59,6 +60,17 @@ const WITHDRAWAL_STATUS_STYLE: Record<WithdrawalStatus, { tone: "success" | "war
 };
 
 export default function WalletPage() {
+  return (
+    <ProGate
+      title="Orbit Wallet"
+      description="Get paid and withdraw straight to your bank - no payment gateway to set up."
+    >
+      <WalletPageInner />
+    </ProGate>
+  );
+}
+
+function WalletPageInner() {
   const { data: balances = [], isLoading: balancesLoading, isError: balancesError } = useWalletBalances();
   const { data: transactions = [], isLoading: txLoading } = useWalletTransactions();
   const { data: bankAccounts = [] } = useBankAccounts();
