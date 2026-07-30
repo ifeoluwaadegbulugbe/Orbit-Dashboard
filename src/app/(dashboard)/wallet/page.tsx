@@ -107,24 +107,26 @@ function WalletPageInner() {
           <p className="text-small text-[var(--color-ink-light)]">No wallet activity yet.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+        <div className="space-y-4">
           {balances.map((b) => (
             <div
               key={b.wallet_id}
-              className="bg-white rounded-[var(--radius-2xl)] border border-[var(--color-border)] shadow-soft-sm p-7"
+              className="bg-white rounded-[var(--radius-2xl)] border border-[var(--color-border)] shadow-soft-sm p-8"
             >
-              <div className="flex items-center justify-between mb-5">
-                <span className="text-tiny font-semibold uppercase tracking-wider text-[var(--color-muted)]">
-                  {b.currency} balance
-                </span>
-                <div className="w-11 h-11 rounded-xl flex items-center justify-center bg-[var(--color-primary-subtle)] text-[var(--color-primary)]">
-                  <WalletIcon className="h-5 w-5" />
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <span className="text-tiny font-semibold uppercase tracking-wider text-[var(--color-muted)]">
+                    {b.currency} balance
+                  </span>
+                  <div className="mt-2 text-stat font-bold">{formatMinor(b.balance_minor, b.currency)}</div>
+                </div>
+                <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-[var(--color-primary-subtle)] text-[var(--color-primary)] flex-shrink-0">
+                  <WalletIcon className="h-6 w-6" />
                 </div>
               </div>
-              <div className="text-stat font-bold">{formatMinor(b.balance_minor, b.currency)}</div>
-              <div className="mt-4 flex items-center justify-between">
+              <div className="mt-6 pt-6 border-t border-[var(--color-border)] flex items-center justify-between gap-4">
                 <span className="text-small text-[var(--color-muted)]">Lifetime confirmed payments</span>
-                <Button size="sm" variant="secondary" onClick={() => setWithdrawOpen(true)}>Withdraw</Button>
+                <Button variant="secondary" onClick={() => setWithdrawOpen(true)}>Withdraw</Button>
               </div>
             </div>
           ))}

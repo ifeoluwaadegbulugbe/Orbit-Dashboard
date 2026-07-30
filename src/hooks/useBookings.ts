@@ -9,6 +9,23 @@ const KEY = "bookings";
 
 type BookingInsert = Omit<Booking, "id" | "created_at" | "updated_at">;
 
+/**
+ * Fire-and-forget push to Google Calendar. These hooks write directly to
+ * Supabase from the browser, so there's no server context to call
+ * syncBookingToGoogleCalendar() in-process - this hits the thin API wrapper
+ * instead. Never awaited by callers and never throws into the UI: a sync
+ * failure must not surface as a booking-save error.
+ */
+function syncToGoogleCalendar(bookingId: string) {
+  fetch("/api/google-calendar/sync-booking", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ bookingId }),
+  }).catch(() => {
+    // Best-effort - ignore. The booking itself already saved successfully.
+  });
+}
+
 // ─── Queries ────────────────────────────────────────────────────────────────
 
 export function useBookings() {
@@ -59,8 +76,12 @@ export function useUpdateBookingStatus() {
       const supabase = createClient();
       const { error } = await supabase.from("bookings").update({ status }).eq("id", id);
       if (error) throw new Error(error.message);
+      return id;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: [KEY] }),
+    onSuccess: (id) => {
+      qc.invalidateQueries({ queryKey: [KEY] });
+      syncToGoogleCalendar(id);
+    },
   });
 }
 
@@ -82,6 +103,9 @@ export function useCreateBooking() {
       if (error) throw new Error(error.message);
       return data as Booking;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: [KEY] }),
+    onSuccess: (booking) => {
+      qc.invalidateQueries({ queryKey: [KEY] });
+      syncToGoogleCalendar(booking.id);
+    },
   });
 }

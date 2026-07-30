@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { notify } from "@/lib/notifications/server";
 import { sendEmail } from "@/lib/email/server";
+import { syncBookingToGoogleCalendar } from "@/lib/google-calendar/server";
 import {
   buildConfirmEmail,
   buildCancelEmail,
@@ -116,6 +117,10 @@ export async function POST(
   if (updateErr) {
     return NextResponse.json({ error: updateErr.message }, { status: 500 });
   }
+
+  // Push to Google Calendar if the owner has one connected - best-effort,
+  // never blocks or fails this request.
+  await syncBookingToGoogleCalendar(supabase, id);
 
   // ── Look up client contact info + owner's business name ────────────────
   const [{ data: clientRow }, { data: profileRow }] = await Promise.all([
