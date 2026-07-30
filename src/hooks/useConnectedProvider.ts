@@ -38,15 +38,13 @@ export function buildProviderKeysForRequest(
   if (!stored) return null;
 
   if (provider === "stripe") {
-    const apiKey = stored.stripe_secret_key;
-    const storeId = stored.stripe_store_id;
-    const variantId = stored.stripe_variant_id;
-    if (!apiKey || !storeId || !variantId) return null;
-    return { apiKey, storeId, variantId };
+    const apiKey = stored.secretKey;
+    if (!apiKey) return null;
+    return { apiKey };
   }
 
   if (provider === "flutterwave") {
-    const secretKey = stored.flutterwave_secret_key;
+    const secretKey = stored.secretKey;
     if (!secretKey) return null;
     return { secretKey };
   }

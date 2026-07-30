@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
 import { verifyFlutterwaveHash } from "@/lib/flutterwave/server";
 import { notify } from "@/lib/notifications/server";
+import { recordWebhookEvent, markWebhookProcessed, postInvoicePayment } from "@/lib/ledger/server";
+import { recalcClientBalance } from "@/lib/payments/recalc-client-balance";
 
 /**
  * Flutterwave webhook -> mark invoice payments paid.
@@ -29,6 +31,8 @@ export async function POST(request: Request) {
   let event: {
     event?: string;
     data?: {
+      id?: number | string;
+      tx_ref?: string;
       status?: string;
       amount?: number;
       currency?: string;
@@ -45,8 +49,23 @@ export async function POST(request: Request) {
   const meta = data.meta ?? {};
   const isSuccess = data.status === "successful" || data.status === "completed";
 
+  const supabase = createServiceClient();
+
+  // Idempotency: store the raw payload before acting on it. Flutterwave
+  // retries webhooks on failure, so duplicate deliveries are expected.
+  const providerEventId = String(data.id ?? data.tx_ref ?? `${event.event ?? "unknown"}:unknown`);
+  const { isNew } = await recordWebhookEvent(supabase, {
+    provider: "flutterwave",
+    providerEventId,
+    eventType: event.event,
+    payload: event,
+    signatureValid: true,
+  });
+  if (!isNew) {
+    return NextResponse.json({ received: true, duplicate: true });
+  }
+
   if (isSuccess && meta.kind === "invoice" && meta.payment_id) {
-    const supabase = createServiceClient();
     const { error } = await supabase
       .from("payments")
       .update({
@@ -62,9 +81,27 @@ export async function POST(request: Request) {
     // In-app notification
     const { data: paymentRow } = await supabase
       .from("payments")
-      .select("client_name, user_id, invoice_number")
+      .select("client_id, client_name, user_id, invoice_number")
       .eq("id", meta.payment_id)
       .single();
+
+    if (paymentRow?.client_id) {
+      await recalcClientBalance(supabase, paymentRow.client_id);
+    }
+
+    // Mirror the confirmed payment into the (non-custodial) wallet ledger.
+    // Orbit never holds this money - it already landed in the business
+    // owner's own Flutterwave account - this just records that it happened.
+    if (paymentRow?.user_id && data.amount) {
+      await postInvoicePayment(supabase, {
+        paymentId: meta.payment_id,
+        userId: paymentRow.user_id,
+        amountMinor: Math.round(data.amount * 100), // Flutterwave sends major units
+        currency: (data.currency ?? "NGN").toUpperCase(),
+        provider: "flutterwave",
+      });
+    }
+
     if (paymentRow?.user_id) {
       await notify(supabase, {
         userId: paymentRow.user_id,
@@ -79,5 +116,6 @@ export async function POST(request: Request) {
     }
   }
 
+  await markWebhookProcessed(supabase, { provider: "flutterwave", providerEventId });
   return NextResponse.json({ received: true });
 }

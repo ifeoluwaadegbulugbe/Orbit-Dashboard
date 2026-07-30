@@ -6,7 +6,7 @@ import type { PaymentProvider } from "@/types";
 
 /**
  * Generate a payment link for an invoice. Each Orbit business owner connects
- * their OWN merchant account (Lemon Squeezy or Flutterwave) on /payment-settings.
+ * their OWN merchant account (Stripe or Flutterwave) on /payment-settings.
  * Money lands in their account, not Orbit's. We pass their keys per request.
  *
  *   POST /api/payments/:id/link
@@ -24,8 +24,6 @@ const PROVIDER_LABEL: Record<PaymentProvider, string> = {
 
 interface StripeKeys {
   apiKey: string;
-  storeId: string;
-  variantId: string;
 }
 
 interface FlutterwaveKeys {
@@ -107,26 +105,32 @@ export async function POST(
 
   try {
     if (provider === "stripe") {
-      const lsKeys = keys as StripeKeys;
-      if (!lsKeys.apiKey || !lsKeys.storeId || !lsKeys.variantId) {
+      const stripeKeys = keys as StripeKeys;
+      if (!stripeKeys.apiKey) {
         return NextResponse.json(
           {
-            error:
-              "Lemon Squeezy needs all three values: API key, store ID, and variant ID. Add them in Online Payments.",
+            error: "Stripe needs your secret key. Add it in Online Payments.",
             code: "PROVIDER_KEYS_INCOMPLETE",
+          },
+          { status: 400 },
+        );
+      }
+      if (!stripeKeys.apiKey.startsWith("sk_")) {
+        return NextResponse.json(
+          {
+            error: "That doesn't look like a valid Stripe secret key (should start with sk_test_ or sk_live_).",
+            code: "PROVIDER_INVALID_KEY",
           },
           { status: 400 },
         );
       }
 
       const result = await createStripePaymentLink({
-        apiKey: lsKeys.apiKey,
-        storeId: lsKeys.storeId,
-        variantId: lsKeys.variantId,
+        apiKey: stripeKeys.apiKey,
         email: customerEmail,
         customerName,
         amount: payment.amount as number,
-        currency: "USD", // LS auto-converts; the merchant's payout currency is set at the store level
+        currency: "USD", // Stripe settles to the merchant's connected bank in their account's default currency
         productName: description,
         productDescription: payment.notes ?? undefined,
         redirectUrl: `${appUrl}/payments/${payment.id}?paid=success`,

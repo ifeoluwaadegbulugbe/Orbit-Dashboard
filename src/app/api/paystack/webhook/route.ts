@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
 import { verifyWebhookSignature } from "@/lib/paystack/server";
 import { notify } from "@/lib/notifications/server";
+import { recordWebhookEvent, markWebhookProcessed, postInvoicePayment } from "@/lib/ledger/server";
+import { recalcClientBalance } from "@/lib/payments/recalc-client-balance";
 
 /**
  * Paystack webhook → subscription status sync.
@@ -32,6 +34,24 @@ export async function POST(request: Request) {
   }
 
   const supabase = createServiceClient();
+
+  // Idempotency: store the raw payload before acting on it. Paystack retries
+  // webhooks on any non-2xx or timeout, so duplicate deliveries are expected,
+  // not hypothetical. `data.id` (the numeric transaction id) is stable across
+  // retries of the same event; `reference` is the fallback for event types
+  // that omit it.
+  const eventData = event.data as { id?: number | string; reference?: string };
+  const providerEventId = String(eventData.id ?? eventData.reference ?? `${event.event}:unknown`);
+  const { isNew } = await recordWebhookEvent(supabase, {
+    provider: "paystack",
+    providerEventId,
+    eventType: event.event,
+    payload: event,
+    signatureValid: true,
+  });
+  if (!isNew) {
+    return NextResponse.json({ received: true, duplicate: true });
+  }
 
   switch (event.event) {
     case "charge.success": {
@@ -69,6 +89,19 @@ export async function POST(request: Request) {
           .single();
         if (paymentRow?.client_id) {
           await recalcClientBalance(supabase, paymentRow.client_id);
+        }
+
+        // Mirror the confirmed payment into the (non-custodial) wallet ledger.
+        // Orbit never holds this money - it already landed in the business
+        // owner's own Paystack account - this just records that it happened.
+        if (paymentRow?.user_id && data.amount) {
+          await postInvoicePayment(supabase, {
+            paymentId: meta.payment_id,
+            userId: paymentRow.user_id,
+            amountMinor: data.amount, // Paystack sends amount in kobo already
+            currency: "NGN",
+            provider: "paystack",
+          });
         }
 
         // In-app notification for the business owner
@@ -137,41 +170,7 @@ export async function POST(request: Request) {
       break;
   }
 
+  await markWebhookProcessed(supabase, { provider: "paystack", providerEventId });
   return NextResponse.json({ received: true });
 }
 
-// ─── Helpers ────────────────────────────────────────────────────────────────
-
-/**
- * Recompute a client's total_paid and outstanding_balance after a payment
- * status change. Mirrors the mobile app's recalcClientBalance behaviour.
- */
-async function recalcClientBalance(
-  supabase: ReturnType<typeof createServiceClient>,
-  clientId: string,
-) {
-  const { data: rows } = await supabase
-    .from("payments")
-    .select("amount,status,paid_amount,remaining_balance")
-    .eq("client_id", clientId);
-  if (!rows) return;
-
-  type Row = { amount: number; status: string; paid_amount: number | null; remaining_balance: number | null };
-  const typed = rows as Row[];
-
-  const totalPaid = typed
-    .filter((p) => p.status === "paid" || p.status === "partial")
-    .reduce((sum, p) => sum + (p.paid_amount ?? (p.status === "paid" ? p.amount : 0)), 0);
-
-  const outstanding = typed
-    .filter((p) => p.status === "pending" || p.status === "overdue" || p.status === "partial")
-    .reduce((sum, p) => {
-      if (p.status === "partial") return sum + Math.max(0, p.amount - (p.paid_amount ?? 0));
-      return sum + (p.amount ?? 0);
-    }, 0);
-
-  await supabase
-    .from("clients")
-    .update({ total_paid: totalPaid, outstanding_balance: outstanding })
-    .eq("id", clientId);
-}

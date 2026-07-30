@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import {
   X, Home, Users, Briefcase, CreditCard, BarChart3, Bell, Settings, Sparkles,
   Receipt, Zap, Palette, Link2, MessageSquare, Download, BookOpen, Scissors,
-  type LucideIcon,
+  Wallet, type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSubscription } from "@/hooks/useSubscription";
@@ -23,6 +23,7 @@ const MAIN_NAV: NavItem[] = [
   { href: "/work",      label: "Work",       icon: Briefcase },
   { href: "/services",  label: "Services",   icon: Scissors },
   { href: "/payments",  label: "Payments",   icon: CreditCard },
+  { href: "/wallet",    label: "Wallet",     icon: Wallet },
   { href: "/analytics", label: "Analytics",  icon: BarChart3 },
   { href: "/reminders", label: "Reminders",  icon: Bell },
   { href: "/help",      label: "Help",       icon: BookOpen },

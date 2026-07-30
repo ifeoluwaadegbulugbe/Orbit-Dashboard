@@ -162,6 +162,41 @@ export interface AiConversation {
   updated_at: string;
 }
 
+// ── Wallet ledger (web-only for now; not yet mirrored in the mobile app) ────
+// See supabase/migrations/005_wallet_ledger.sql. Orbit never holds this
+// money - the ledger is a bookkeeping record of payments already received
+// into the business owner's own Stripe/Paystack/Flutterwave account.
+
+export type LedgerDirection = "debit" | "credit";
+
+/** Row from the `wallet_balances` view - always derived, never a stored column. */
+export interface WalletBalance {
+  wallet_id: string;
+  user_id: string;
+  currency: string;
+  ledger_account_id: string;
+  balance_minor: number;
+}
+
+export interface LedgerTransaction {
+  id: string;
+  type: string;
+  status: "pending" | "posted" | "reversed";
+  currency: string;
+  reference: string | null;
+  metadata: Record<string, unknown>;
+  created_at: string;
+}
+
+/** A ledger_entries row with its parent transaction embedded. */
+export interface LedgerEntryWithTransaction {
+  id: string;
+  direction: LedgerDirection;
+  amount_minor: number;
+  created_at: string;
+  ledger_transactions: LedgerTransaction;
+}
+
 export const BUSINESS_TYPE_LABELS: Record<BusinessType, string> = {
   nail_tech: "Nail Tech",
   makeup_artist: "Makeup Artist",
