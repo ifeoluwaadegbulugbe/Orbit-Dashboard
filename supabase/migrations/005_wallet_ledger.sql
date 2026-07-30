@@ -105,16 +105,9 @@ CREATE INDEX IF NOT EXISTS ledger_transactions_reference_idx ON ledger_transacti
 CREATE INDEX IF NOT EXISTS ledger_transactions_reverses_idx ON ledger_transactions(reverses_transaction_id);
 
 ALTER TABLE ledger_transactions ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Users can view their own ledger transactions"
-  ON ledger_transactions FOR SELECT USING (
-    id IN (
-      SELECT le.transaction_id
-      FROM ledger_entries le
-      JOIN ledger_accounts la ON la.id = le.account_id
-      JOIN wallets w ON w.id = la.wallet_id
-      WHERE w.user_id = auth.uid()
-    )
-  );
+-- The SELECT policy for ledger_transactions references ledger_entries, which
+-- doesn't exist yet at this point in the script - it's created further down.
+-- That policy is defined later, right after the ledger_entries table.
 
 -- No UPDATE/DELETE policy is defined for the `authenticated` role, and RLS
 -- denies by default, so regular users cannot write to this table at all.
@@ -163,6 +156,20 @@ CREATE POLICY "Users can view their own ledger entries"
 CREATE TRIGGER ledger_entries_no_mutation
   BEFORE UPDATE OR DELETE ON ledger_entries
   FOR EACH ROW EXECUTE FUNCTION forbid_ledger_mutation();
+
+-- Now that ledger_entries exists, define the ledger_transactions SELECT
+-- policy that was deferred from just above (it needs to join through
+-- ledger_entries to figure out which transactions belong to the caller).
+CREATE POLICY "Users can view their own ledger transactions"
+  ON ledger_transactions FOR SELECT USING (
+    id IN (
+      SELECT le.transaction_id
+      FROM ledger_entries le
+      JOIN ledger_accounts la ON la.id = le.account_id
+      JOIN wallets w ON w.id = la.wallet_id
+      WHERE w.user_id = auth.uid()
+    )
+  );
 
 -- Deferred so all entries for one transaction can be inserted together and
 -- checked once, at commit, rather than after each individual row insert.
