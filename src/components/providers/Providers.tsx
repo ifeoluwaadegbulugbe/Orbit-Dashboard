@@ -62,11 +62,25 @@ export function Providers({ children }: { children: ReactNode }) {
           .select("*")
           .eq("id", userId)
           .single();
-        const profile = (data as (UserProfile & { country_code?: string | null }) | null) ?? null;
+        const profile = (data as (UserProfile & { country_code?: string | null; timezone?: string | null }) | null) ?? null;
         // Sync currency from profile so the user sees the same symbol they
         // picked on mobile (or on a different web browser).
         if (profile?.country_code) {
           hydrateCurrency(profile.country_code);
+        }
+        // Best-effort: capture the browser's real IANA timezone once, so
+        // Google Calendar sync (and anything else time-sensitive) doesn't
+        // have to guess from country alone. Never blocks, never surfaces
+        // an error - if it fails, the country-based guess is still there.
+        if (profile && !profile.timezone) {
+          try {
+            const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+            if (tz) {
+              supabase.from("profiles").update({ timezone: tz }).eq("id", userId).then(() => {});
+            }
+          } catch {
+            // Intl unsupported or write failed - ignore, not worth surfacing
+          }
         }
         return profile;
       } catch {

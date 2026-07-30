@@ -261,6 +261,7 @@ export default function WelcomePage() {
         status: "confirmed",
         notes: null,
         business_type: profile?.business_type ?? businessType ?? "other",
+        duration_minutes: null,
       });
     } catch {
       // continue

@@ -9,11 +9,11 @@ const GOOGLE_REVOKE_URL = "https://oauth2.googleapis.com/revoke";
 const CALENDAR_API_BASE = "https://www.googleapis.com/calendar/v3";
 const SCOPE = "https://www.googleapis.com/auth/calendar.events";
 
-// Best-effort country -> primary IANA timezone. Orbit doesn't store a real
-// per-user timezone today, only a country (profiles.country_code), so this
-// is an approximation - wrong for users outside a country's main zone (the
-// US especially). Good enough for a v1 one-way push; a real fix needs a
-// timezone field on the profile.
+// Fallback country -> primary IANA timezone, used only when
+// profiles.timezone hasn't been captured yet (accounts created before that
+// existed, or the browser write in Providers.tsx never landed). Still an
+// approximation - wrong for users outside a country's main zone (the US
+// especially) - but profiles.timezone is now the real source of truth.
 const COUNTRY_TIMEZONE: Record<string, string> = {
   NG: "Africa/Lagos",
   US: "America/New_York",
@@ -33,7 +33,7 @@ const COUNTRY_TIMEZONE: Record<string, string> = {
 };
 const DEFAULT_TIMEZONE = "UTC";
 
-/** Bookings have no stored duration - every synced event defaults to this length. */
+/** Fallback event length for bookings with no duration_minutes on record. */
 const DEFAULT_EVENT_MINUTES = 60;
 
 function redirectUri(): string {
@@ -216,10 +216,12 @@ interface BookingForSync {
   notes: string | null;
   status: string;
   google_event_id: string | null;
+  duration_minutes: number | null;
 }
 
 function buildEventBody(booking: BookingForSync, timeZone: string) {
-  const { date: endDate, time: endTime } = addMinutesToTime(booking.date, booking.time, DEFAULT_EVENT_MINUTES);
+  const minutes = booking.duration_minutes ?? DEFAULT_EVENT_MINUTES;
+  const { date: endDate, time: endTime } = addMinutesToTime(booking.date, booking.time, minutes);
   return {
     summary: `${booking.title} with ${booking.client_name}`,
     description: booking.notes ?? undefined,
@@ -278,7 +280,7 @@ export async function syncBookingToGoogleCalendar(supabase: ServiceClient, booki
   try {
     const { data: booking } = await supabase
       .from("bookings")
-      .select("id, user_id, client_name, title, date, time, notes, status, google_event_id")
+      .select("id, user_id, client_name, title, date, time, notes, status, google_event_id, duration_minutes")
       .eq("id", bookingId)
       .maybeSingle();
     if (!booking) return;
@@ -289,11 +291,13 @@ export async function syncBookingToGoogleCalendar(supabase: ServiceClient, booki
 
     const { data: profile } = await supabase
       .from("profiles")
-      .select("country_code")
+      .select("country_code, timezone")
       .eq("id", b.user_id)
       .maybeSingle();
-    const countryCode = (profile as { country_code?: string | null } | null)?.country_code;
-    const timeZone = (countryCode && COUNTRY_TIMEZONE[countryCode]) || DEFAULT_TIMEZONE;
+    const p = profile as { country_code?: string | null; timezone?: string | null } | null;
+    // Real per-user timezone wins when we have it; the country-code map is
+    // only a fallback for accounts from before this was captured.
+    const timeZone = p?.timezone || (p?.country_code && COUNTRY_TIMEZONE[p.country_code]) || DEFAULT_TIMEZONE;
 
     // Only confirmed (or since-completed) bookings live on the calendar - a
     // "pending" booking hasn't been accepted yet, so it shouldn't clutter the

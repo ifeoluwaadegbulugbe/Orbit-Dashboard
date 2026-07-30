@@ -40,6 +40,7 @@ interface ProfileRow {
   email: string | null;
   full_name: string | null;
   business_name: string | null;
+  booking_link: { services?: { name: string; duration_minutes: number }[] } | null;
 }
 
 export async function POST(request: Request) {
@@ -87,7 +88,7 @@ export async function POST(request: Request) {
   // ── 1. Look up the business owner ──────────────────────────────────────
   const { data: profileData, error: profileErr } = await supabase
     .from("profiles")
-    .select("id, business_type, email, full_name, business_name")
+    .select("id, business_type, email, full_name, business_name, booking_link")
     .eq("booking_link->>slug", slug)
     .maybeSingle();
 
@@ -103,6 +104,15 @@ export async function POST(request: Request) {
   }
 
   const profile = profileData as ProfileRow;
+
+  // Sum the selected services' durations (from profile.booking_link.services)
+  // so the calendar event reflects real length instead of a flat default.
+  // Null if none of the picked names match a configured service.
+  const configuredServices = profile.booking_link?.services ?? [];
+  const totalDurationMinutes = serviceNames.reduce((sum, name) => {
+    const match = configuredServices.find((s) => s.name.trim().toLowerCase() === name.trim().toLowerCase());
+    return match ? sum + match.duration_minutes : sum;
+  }, 0);
 
   // ── 2. Find or create a client record for this customer ───────────────
   // Match on email first, then phone. If neither matches an existing client,
@@ -183,6 +193,7 @@ export async function POST(request: Request) {
     status: "pending",
     notes: combinedNotes,
     business_type: profile.business_type,
+    duration_minutes: totalDurationMinutes > 0 ? totalDurationMinutes : null,
   });
 
   if (bookingErr) {

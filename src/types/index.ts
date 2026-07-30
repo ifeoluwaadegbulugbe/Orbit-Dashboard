@@ -101,6 +101,8 @@ export interface Booking {
   notes: string | null;
   status: BookingStatus;
   business_type: BusinessType;
+  /** Minutes, from the selected service(s). Null for older bookings or a freehand title. */
+  duration_minutes: number | null;
   created_at: string;
   updated_at: string;
 }

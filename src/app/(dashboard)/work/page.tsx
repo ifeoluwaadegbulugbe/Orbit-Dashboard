@@ -543,6 +543,7 @@ interface BookingFormValues {
   date: string;
   time: string;
   notes: string;
+  durationMinutes: number | null;
 }
 
 function NewBookingDialog({
@@ -560,6 +561,7 @@ function NewBookingDialog({
       clientId: presetClientId,
       date: tomorrow.toISOString().slice(0, 10),
       time: "10:00",
+      durationMinutes: null,
     },
   });
   const watchedTitle = watch("title");
@@ -589,6 +591,7 @@ function NewBookingDialog({
         status: "confirmed",
         notes: values.notes.trim() || null,
         business_type: profile.business_type,
+        duration_minutes: values.durationMinutes,
       });
       reset();
       onClose();
@@ -636,7 +639,10 @@ function NewBookingDialog({
                   <button
                     key={i}
                     type="button"
-                    onClick={() => setValue("title", s.name, { shouldValidate: true })}
+                    onClick={() => {
+                      setValue("title", s.name, { shouldValidate: true });
+                      setValue("durationMinutes", s.duration_minutes ?? null);
+                    }}
                     className={`px-3.5 py-2 rounded-full border text-small font-semibold transition-colors ${
                       isSelected
                         ? "border-[var(--color-primary)] bg-[var(--color-primary-subtle)] text-[var(--color-primary-dark)]"
