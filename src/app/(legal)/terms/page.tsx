@@ -171,7 +171,7 @@ const SECTIONS: LegalSection[] = [
     title: "Contact Us",
     body: [
       { type: "p", text: "If you have questions about these Terms, please contact us at:" },
-      { type: "email", address: "ifeoluwaadegbulugbe@gmail.com" },
+      { type: "email", address: "getorbitcrm@gmail.com" },
     ],
   },
 ];

@@ -154,7 +154,7 @@ const SECTIONS: LegalSection[] = [
         text:
           "To exercise any of these rights, please contact us at the email below. We will respond within 30 days.",
       },
-      { type: "email", address: "ifeoluwaadegbulugbe@gmail.com" },
+      { type: "email", address: "getorbitcrm@gmail.com" },
       {
         type: "p",
         text:
@@ -216,7 +216,7 @@ const SECTIONS: LegalSection[] = [
     title: "Contact Us",
     body: [
       { type: "p", text: "If you have questions about this Privacy Policy, please contact us:" },
-      { type: "email", address: "ifeoluwaadegbulugbe@gmail.com" },
+      { type: "email", address: "getorbitcrm@gmail.com" },
     ],
   },
 ];
