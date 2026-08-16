@@ -7,7 +7,7 @@ import {
 } from "lucide-react";
 import {
   useWalletBalances, useWalletTransactions,
-  useBankAccounts, useAddBankAccount,
+  useBankAccounts, useAddBankAccount, useBankList,
   useWithdrawals, useRequestWithdrawal,
 } from "@/hooks/useWallet";
 import { relativeDate } from "@/lib/utils";
@@ -84,9 +84,7 @@ function WalletPageInner() {
       <div>
         <h1 className="text-page font-bold">Wallet</h1>
         <p className="text-lead text-[var(--color-ink-light)] mt-2">
-          Orbit&apos;s wallet is being built out. Once a banking partner is connected, customer payments will
-          land here automatically and you&apos;ll withdraw straight to your bank. Until then, use{" "}
-          <span className="font-semibold">Online Payments</span> to get paid — that&apos;s still the only live path.
+          Invoice payments land here automatically. Add a verified bank account below to withdraw whenever you like.
         </p>
       </div>
 
@@ -268,6 +266,7 @@ function AddBankAccountDialog({ open, onClose }: { open: boolean; onClose: () =>
   const [accountNumber, setAccountNumber] = useState("");
   const [bankCode, setBankCode] = useState("");
   const addBankAccount = useAddBankAccount();
+  const { data: banks = [], isLoading: banksLoading } = useBankList();
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -285,18 +284,23 @@ function AddBankAccountDialog({ open, onClose }: { open: boolean; onClose: () =>
   return (
     <Dialog open={open} onClose={onClose} title="Add bank account">
       <form onSubmit={handleSubmit} className="space-y-4">
+        <Select
+          label="Bank"
+          value={bankCode}
+          onChange={(e) => setBankCode(e.target.value)}
+          disabled={banksLoading}
+          required
+        >
+          <option value="">{banksLoading ? "Loading banks…" : "Choose your bank"}</option>
+          {banks.map((b) => (
+            <option key={b.code} value={b.code}>{b.name}</option>
+          ))}
+        </Select>
         <Input
           label="Account number"
           value={accountNumber}
           onChange={(e) => setAccountNumber(e.target.value)}
           placeholder="0123456789"
-          required
-        />
-        <Input
-          label="Bank code"
-          value={bankCode}
-          onChange={(e) => setBankCode(e.target.value)}
-          placeholder="e.g. 044 for Access Bank"
           hint="We resolve the account name with your bank before saving it — never typed in by hand."
           required
         />

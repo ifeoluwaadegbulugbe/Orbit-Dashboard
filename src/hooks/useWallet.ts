@@ -61,6 +61,20 @@ export function useWalletTransactions(limit = 50) {
   });
 }
 
+/** Bank list for the Add Bank Account picker. Rarely changes - cache generously. */
+export function useBankList() {
+  return useQuery<{ name: string; code: string }[]>({
+    queryKey: [KEY, "banks"],
+    staleTime: 24 * 60 * 60 * 1000,
+    queryFn: async () => {
+      const res = await fetch("/api/wallet/banks");
+      if (!res.ok) throw new Error(await parseJsonError(res));
+      const json = (await res.json()) as { banks: { name: string; code: string }[] };
+      return json.banks;
+    },
+  });
+}
+
 /** Saved withdrawal destinations for the caller's own wallet. */
 export function useBankAccounts() {
   const userId = useAuthStore((s) => s.user?.id);

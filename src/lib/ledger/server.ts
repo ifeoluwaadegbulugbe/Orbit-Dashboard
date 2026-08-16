@@ -92,3 +92,42 @@ export async function postInvoicePayment(
   }
   return data as string;
 }
+
+interface PostInvoicePaymentWithFeeParams {
+  paymentId: string;
+  userId: string;
+  netAmountMinor: number;
+  feeAmountMinor: number;
+  currency: string;
+  provider: string;
+}
+
+/**
+ * Same idea as postInvoicePayment, but for the Paystack-backed custody
+ * rail: splits the payment into the user's net share and Orbit's platform
+ * fee as two separate, independently auditable ledger transactions (see
+ * post_invoice_payment_with_fee in migration 011). Also non-throwing -
+ * see the comment on postInvoicePayment for why.
+ */
+export async function postInvoicePaymentWithFee(
+  supabase: ServiceClient,
+  params: PostInvoicePaymentWithFeeParams,
+): Promise<string | null> {
+  if (!(params.netAmountMinor > 0)) {
+    console.warn("[ledger] skipping post_invoice_payment_with_fee: non-positive net amount", params);
+    return null;
+  }
+  const { data, error } = await supabase.rpc("post_invoice_payment_with_fee", {
+    p_payment_id: params.paymentId,
+    p_user_id: params.userId,
+    p_net_amount_minor: Math.round(params.netAmountMinor),
+    p_fee_amount_minor: Math.round(params.feeAmountMinor),
+    p_currency: params.currency,
+    p_provider: params.provider,
+  });
+  if (error) {
+    console.error("[ledger] post_invoice_payment_with_fee failed:", error);
+    return null;
+  }
+  return data as string;
+}

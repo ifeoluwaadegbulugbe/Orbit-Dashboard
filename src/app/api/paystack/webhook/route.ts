@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
 import { verifyWebhookSignature } from "@/lib/paystack/server";
-import { recordWebhookEvent, markWebhookProcessed } from "@/lib/ledger/server";
+import { recordWebhookEvent, markWebhookProcessed, postInvoicePaymentWithFee } from "@/lib/ledger/server";
+import { recalcClientBalance } from "@/lib/payments/recalc-client-balance";
+import { notify } from "@/lib/notifications/server";
+import { splitPaymentMinor } from "@/lib/wallet/fees";
 
 /**
  * Paystack webhook → subscription status sync.
@@ -57,15 +60,67 @@ export async function POST(request: Request) {
         amount?: number;
         customer?: { email?: string };
         reference?: string;
-        metadata?: { user_id?: string };
+        metadata?: { user_id?: string; kind?: string; payment_id?: string };
         plan?: string;
       };
       const meta = data.metadata ?? {};
 
-      // Subscription charges (trial → paid, renewals). This webhook only
-      // handles Orbit's own Pro subscription billing - invoice payment
-      // collection was removed along with the "connect your own account"
-      // flow (see Orbit Wallet).
+      // ── 1. Invoice charges - collected into Orbit's own account, split
+      // between the payer's wallet and Orbit's platform fee. ──
+      if (meta.kind === "invoice" && meta.payment_id) {
+        const paidAmount = data.amount ? data.amount / 100 : null;
+        const { error } = await supabase
+          .from("payments")
+          .update({
+            status: "paid",
+            paid_amount: paidAmount,
+            remaining_balance: 0,
+            payment_completed_at: new Date().toISOString(),
+            transaction_reference: data.reference ?? null,
+            webhook_verified: true,
+          })
+          .eq("id", meta.payment_id);
+        if (error) console.error("[paystack] invoice charge.success update failed:", error);
+
+        const { data: paymentRow } = await supabase
+          .from("payments")
+          .select("client_id, client_name, user_id, invoice_number")
+          .eq("id", meta.payment_id)
+          .single();
+
+        if (paymentRow?.client_id) {
+          await recalcClientBalance(supabase, paymentRow.client_id);
+        }
+
+        if (paymentRow?.user_id && data.amount) {
+          const { userAmountMinor, feeAmountMinor } = splitPaymentMinor(data.amount);
+          await postInvoicePaymentWithFee(supabase, {
+            paymentId: meta.payment_id,
+            userId: paymentRow.user_id,
+            netAmountMinor: userAmountMinor,
+            feeAmountMinor,
+            currency: "NGN",
+            provider: "paystack",
+          });
+        }
+
+        if (paymentRow?.user_id) {
+          const formatted = paidAmount != null ? paidAmount.toFixed(2) : "your invoice";
+          await notify(supabase, {
+            userId: paymentRow.user_id,
+            type: "payment_received",
+            title: `${paymentRow.client_name ?? "A client"} paid your invoice`,
+            body: paymentRow.invoice_number
+              ? `Invoice ${paymentRow.invoice_number} - ${formatted} received into your Orbit Wallet.`
+              : `${formatted} received into your Orbit Wallet.`,
+            actionUrl: `/payments/${meta.payment_id}`,
+            metadata: { payment_id: meta.payment_id, amount: paidAmount, provider: "paystack" },
+          });
+        }
+        break;
+      }
+
+      // ── 2. Subscription charges (trial → paid, renewals) ──
       const userId = meta.user_id;
       const email = data.customer?.email;
       if (userId || email) {
@@ -105,6 +160,32 @@ export async function POST(request: Request) {
           .from("profiles")
           .update({ subscription_status: "free", trial_ends_at: null })
           .eq("email", email);
+      }
+      break;
+    }
+
+    // Withdrawal payouts. `reference` is the withdrawal id we passed as the
+    // idempotency key in initiatePayout() - that's what ties this event
+    // back to the right withdrawals row.
+    case "transfer.success": {
+      const data = event.data as { reference?: string; transfer_code?: string };
+      if (data.reference) {
+        await supabase.rpc("settle_withdrawal", {
+          p_withdrawal_id: data.reference,
+          p_provider_payout_reference: data.transfer_code ?? null,
+        });
+      }
+      break;
+    }
+
+    case "transfer.failed":
+    case "transfer.reversed": {
+      const data = event.data as { reference?: string; failure_reason?: string };
+      if (data.reference) {
+        await supabase.rpc("fail_withdrawal", {
+          p_withdrawal_id: data.reference,
+          p_failure_reason: data.failure_reason ?? "Transfer failed",
+        });
       }
       break;
     }

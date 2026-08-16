@@ -5,8 +5,9 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   ChevronLeft, CheckCircle2, Trash2, Receipt, Calendar, User, MessageCircle,
-  Link2, Copy, Check, ExternalLink, Clock,
+  Link2, Copy, Check, ExternalLink,
 } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { usePayment, useUpdatePayment, useDeletePayment } from "@/hooks/usePayments";
 import { useClient } from "@/hooks/useClients";
 import { Badge } from "@/components/ui/Badge";
@@ -25,6 +26,7 @@ export default function PaymentDetailPage({ params }: { params: Promise<{ id: st
   const { id } = use(params);
   const router = useRouter();
   const search = useSearchParams();
+  const qc = useQueryClient();
   const { data: payment, isLoading } = usePayment(id);
   const { data: client } = useClient(payment?.client_id);
   const { format: formatCurrency } = useCurrency();
@@ -32,6 +34,8 @@ export default function PaymentDetailPage({ params }: { params: Promise<{ id: st
   const del = useDeletePayment();
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [linking, setLinking] = useState(false);
+  const [linkError, setLinkError] = useState<string | null>(null);
 
   const justPaid = search.get("paid") === "success";
 
@@ -67,6 +71,28 @@ export default function PaymentDetailPage({ params }: { params: Promise<{ id: st
     if (!confirm("Delete this invoice?")) return;
     await del.mutateAsync(payment.id);
     router.replace("/payments");
+  }
+
+  async function handleGenerateLink() {
+    if (!payment) return;
+    setLinkError(null);
+    setLinking(true);
+    try {
+      const res = await fetch(`/api/payments/${payment.id}/link`, { method: "POST" });
+      const text = await res.text();
+      let json: { payment_link?: string; error?: string } = {};
+      try {
+        json = text ? JSON.parse(text) : {};
+      } catch {
+        // Non-JSON response (HTML error page, etc.) - fall through to the !res.ok branch
+      }
+      if (!res.ok) throw new Error(json.error ?? `Could not generate link (${res.status})`);
+      qc.invalidateQueries({ queryKey: ["payments"] });
+    } catch (err) {
+      setLinkError(err instanceof Error ? err.message : "Could not generate link");
+    } finally {
+      setLinking(false);
+    }
   }
 
   async function handleCopy(url: string) {
@@ -168,7 +194,6 @@ export default function PaymentDetailPage({ params }: { params: Promise<{ id: st
           <div className="px-7 pb-7">
             {payment.payment_link ? (
               <div className="space-y-4">
-                {/* Historical link from before Orbit Wallet - still shareable, but can't be regenerated */}
                 <div className="flex items-center gap-3 px-4 py-3 rounded-[var(--radius-lg)] bg-[var(--color-canvas)] border border-[var(--color-border)]">
                   <Link2 className="h-4 w-4 text-[var(--color-muted)] flex-shrink-0" />
                   <span className="flex-1 text-small font-mono text-[var(--color-ink-mid)] truncate">
@@ -220,12 +245,17 @@ export default function PaymentDetailPage({ params }: { params: Promise<{ id: st
                 )}
               </div>
             ) : (
-              <div className="flex items-start gap-3 px-4 py-3.5 rounded-[var(--radius-md)] bg-[var(--color-warning-light)] text-[var(--color-warning-deep)]">
-                <Clock className="h-4 w-4 mt-0.5 flex-shrink-0" />
-                <p className="text-small leading-relaxed">
-                  Online payment links are coming soon via{" "}
-                  <Link href="/wallet" className="font-semibold underline">Orbit Wallet</Link>.
-                  For now, collect payment directly and click <strong>Mark paid</strong> above once you&apos;ve been paid.
+              <div className="space-y-3">
+                {linkError && (
+                  <div className="px-4 py-3 rounded-[var(--radius-md)] bg-[var(--color-danger-light)] text-[var(--color-danger-deep)] text-small">
+                    {linkError}
+                  </div>
+                )}
+                <Button onClick={handleGenerateLink} loading={linking} leftIcon={<Link2 className="h-4 w-4" />}>
+                  Generate payment link
+                </Button>
+                <p className="text-tiny text-[var(--color-muted)]">
+                  Paid straight into your <Link href="/wallet" className="font-semibold underline">Orbit Wallet</Link> - no setup needed.
                 </p>
               </div>
             )}
