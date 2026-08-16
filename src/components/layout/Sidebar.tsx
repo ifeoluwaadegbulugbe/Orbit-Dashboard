@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Home, Users, Briefcase, CreditCard, BarChart3, Bell, Settings, Sparkles,
-  Receipt, Zap, Palette, Link2, MessageSquare, Download, BookOpen, Scissors,
+  Zap, Palette, Link2, MessageSquare, Download, BookOpen, Scissors,
   Wallet, type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -33,7 +33,6 @@ const MAIN_NAV: NavItem[] = [
 /** Pro feature shortcuts - only shown when subscription.isPro is true. */
 const PRO_NAV: NavItem[] = [
   { href: "/ai-assistant",     label: "AI Assistant",    icon: Sparkles },
-  { href: "/payments/new",     label: "Invoice Builder", icon: Receipt },
   { href: "/wallet",           label: "Wallet",          icon: Wallet },
   { href: "/automations",      label: "Automations",     icon: Zap },
   { href: "/branding",         label: "Branding",        icon: Palette },
