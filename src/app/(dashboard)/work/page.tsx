@@ -15,7 +15,9 @@ import { Avatar } from "@/components/ui/Avatar";
 import { useBookings, useCreateBooking } from "@/hooks/useBookings";
 import { useAuthStore } from "@/stores/authStore";
 import { useClients } from "@/hooks/useClients";
-import { usePayments } from "@/hooks/usePayments";
+import { usePayments, useCreatePayment } from "@/hooks/usePayments";
+import { computeServiceAmount } from "@/lib/services/price";
+import { toast } from "@/stores/toastStore";
 import { cn, formatShortDate } from "@/lib/utils";
 import { useCurrency } from "@/hooks/useCurrency";
 import { BUSINESS_TYPE_LABELS } from "@/types";
@@ -553,6 +555,7 @@ function NewBookingDialog({
   const { data: services = [] } = useServices();
   const profile = useAuthStore((s) => s.profile);
   const create = useCreateBooking();
+  const createPayment = useCreatePayment();
   const [error, setError] = useState<string | null>(null);
 
   const tomorrow = new Date(Date.now() + 86400000);
@@ -582,10 +585,11 @@ function NewBookingDialog({
       return;
     }
     try {
-      await create.mutateAsync({
+      const title = values.title.trim();
+      const booking = await create.mutateAsync({
         client_id: client.id,
         client_name: client.name,
-        title: values.title.trim(),
+        title,
         date: values.date,
         time: values.time,
         status: "confirmed",
@@ -593,6 +597,41 @@ function NewBookingDialog({
         business_type: profile.business_type,
         duration_minutes: values.durationMinutes,
       });
+
+      // Dashboard bookings are already "confirmed" the moment they're
+      // saved, so try to invoice right away - quietly skips if the title
+      // doesn't cleanly resolve to a priced service (freehand title, "From
+      // N5,000"-style price, etc). See computeServiceAmount.
+      const amount = computeServiceAmount(services, title);
+      if (amount !== null) {
+        try {
+          const invoiceNumber = `INV-${Date.now().toString().slice(-6)}`;
+          await createPayment.mutateAsync({
+            client_id: client.id,
+            client_name: client.name,
+            amount,
+            paid_amount: null,
+            remaining_balance: amount,
+            type: "full",
+            status: "pending",
+            date: values.date,
+            notes: null,
+            invoice_number: invoiceNumber,
+            line_items: null,
+            payment_link: null,
+            transaction_reference: null,
+            payment_provider: null,
+            webhook_verified: null,
+            payment_completed_at: null,
+            booking_id: booking.id,
+          });
+          toast(`Booking saved. Invoice ${invoiceNumber} created.`, "success");
+        } catch {
+          // Booking itself already saved - a failed invoice attempt shouldn't
+          // block the flow or confuse the owner with an error here.
+        }
+      }
+
       reset();
       onClose();
     } catch (err) {

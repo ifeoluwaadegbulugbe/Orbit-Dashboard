@@ -84,6 +84,7 @@ function Inner() {
         payment_provider: null,
         webhook_verified: null,
         payment_completed_at: values.status === "paid" ? new Date().toISOString() : null,
+        booking_id: null,
       });
       router.push(`/payments/${payment.id}`);
     } catch (err) {

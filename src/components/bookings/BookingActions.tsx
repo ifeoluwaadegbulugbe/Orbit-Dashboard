@@ -23,6 +23,8 @@ interface RespondResult {
   whatsappUrl?: string | null;
   clientHasEmail?: boolean;
   clientHasPhone?: boolean;
+  invoiceCreated?: boolean;
+  invoiceNumber?: string | null;
   error?: string;
 }
 
@@ -60,6 +62,9 @@ export function BookingActions({
       // queries. Invalidate the relevant ones so they show the new status.
       qc.invalidateQueries({ queryKey: ["bookings"] });
       qc.invalidateQueries({ queryKey: ["notifications"] });
+      if (json.invoiceCreated) {
+        qc.invalidateQueries({ queryKey: ["payments"] });
+      }
 
       // Open the wa.me link so the owner can hit Send in WhatsApp.
       // (Browsers allow window.open during a user-initiated handler.)
@@ -69,16 +74,17 @@ export function BookingActions({
 
       // Compose a toast that tells the owner exactly what happened.
       const who = clientName ? ` ${clientName}` : "";
+      const invoiceSuffix = json.invoiceCreated ? ` Invoice ${json.invoiceNumber} created.` : "";
       if (action === "confirmed") {
         if (json.emailSent && json.whatsappUrl) {
-          toast(`Confirmed${who}. Email sent + WhatsApp opened.`, "success");
+          toast(`Confirmed${who}. Email sent + WhatsApp opened.${invoiceSuffix}`, "success");
         } else if (json.emailSent) {
-          toast(`Confirmed${who}. Email sent.`, "success");
+          toast(`Confirmed${who}. Email sent.${invoiceSuffix}`, "success");
         } else if (json.whatsappUrl) {
-          toast(`Confirmed${who}. Tap Send in WhatsApp.`, "success");
+          toast(`Confirmed${who}. Tap Send in WhatsApp.${invoiceSuffix}`, "success");
         } else {
           toast(
-            `Confirmed${who}. No email or phone on file - reach out manually.`,
+            `Confirmed${who}. No email or phone on file - reach out manually.${invoiceSuffix}`,
             "success",
           );
         }

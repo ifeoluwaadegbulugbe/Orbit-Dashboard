@@ -3,6 +3,7 @@ import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { notify } from "@/lib/notifications/server";
 import { sendEmail } from "@/lib/email/server";
 import { syncBookingToGoogleCalendar } from "@/lib/google-calendar/server";
+import { maybeCreateInvoiceForBooking } from "@/lib/bookings/auto-invoice";
 import {
   buildConfirmEmail,
   buildCancelEmail,
@@ -122,6 +123,12 @@ export async function POST(
   // never blocks or fails this request.
   await syncBookingToGoogleCalendar(supabase, id);
 
+  // Auto-create an invoice once a booking is actually confirmed (not on a
+  // still-pending request, which might get declined). Best-effort: quietly
+  // does nothing if the title doesn't resolve to a priced service.
+  const autoInvoice =
+    action === "confirmed" ? await maybeCreateInvoiceForBooking(supabase, booking) : { created: false as const };
+
   // ── Look up client contact info + owner's business name ────────────────
   const [{ data: clientRow }, { data: profileRow }] = await Promise.all([
     supabase
@@ -199,7 +206,7 @@ export async function POST(
       action === "confirmed"
         ? `You confirmed ${booking.client_name}'s booking`
         : `You cancelled ${booking.client_name}'s booking`,
-    body: `${booking.title} on ${booking.date} at ${booking.time}.${emailSent ? " Email sent to client." : ""}`,
+    body: `${booking.title} on ${booking.date} at ${booking.time}.${emailSent ? " Email sent to client." : ""}${autoInvoice.created ? ` Invoice ${autoInvoice.invoiceNumber} created.` : ""}`,
     actionUrl: `/clients/${booking.client_id}`,
     metadata: {
       booking_id: booking.id,
@@ -217,5 +224,7 @@ export async function POST(
     whatsappUrl,
     clientHasEmail: !!client?.email,
     clientHasPhone: !!whatsappTarget,
+    invoiceCreated: autoInvoice.created,
+    invoiceNumber: autoInvoice.created ? autoInvoice.invoiceNumber : null,
   });
 }

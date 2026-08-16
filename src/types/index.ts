@@ -87,6 +87,8 @@ export interface Payment {
   payment_provider: PaymentProvider | null;
   webhook_verified: boolean | null;
   payment_completed_at: string | null;
+  /** Set when this invoice was auto-generated from a confirmed booking. Null for manually-created invoices. */
+  booking_id: string | null;
   created_at: string;
 }
 
