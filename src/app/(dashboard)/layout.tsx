@@ -5,6 +5,8 @@ import { Sidebar } from "@/components/layout/Sidebar";
 import { TopBar } from "@/components/layout/TopBar";
 import { MobileNav } from "@/components/layout/MobileNav";
 import { AppointmentReminders } from "@/components/providers/AppointmentReminders";
+import { AssistantPanel } from "@/components/ai/AssistantPanel";
+import { AiLauncherButton } from "@/components/ai/AiLauncherButton";
 
 /**
  * Dashboard shell.
@@ -28,6 +30,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           {children}
         </main>
       </div>
+      <AiLauncherButton />
+      <AssistantPanel />
     </div>
   );
 }
