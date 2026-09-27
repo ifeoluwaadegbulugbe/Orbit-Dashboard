@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import {
   Wallet as WalletIcon, ArrowDownLeft, ArrowUpRight, AlertCircle,
-  Landmark, Plus, Clock,
+  Landmark, Plus, Clock, ChevronLeft,
 } from "lucide-react";
 import {
   useWalletBalances, useWalletTransactions,
@@ -66,6 +67,10 @@ function WalletPageInner() {
 
   return (
     <div className="space-y-8">
+      <Link href="/payments" className="inline-flex items-center gap-1 text-small font-semibold text-[var(--color-ink-light)] hover:text-[var(--color-ink)]">
+        <ChevronLeft className="h-4 w-4" /> Back to Money
+      </Link>
+
       <div>
         <h1 className="text-page font-bold">Wallet</h1>
         <p className="text-lead text-[var(--color-ink-light)] mt-2">

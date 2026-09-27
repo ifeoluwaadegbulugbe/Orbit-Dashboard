@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Palette, Save, Image as ImageIcon } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Palette, Save, Image as ImageIcon, ChevronLeft } from "lucide-react";
 import { ProGate } from "@/components/paywall/ProGate";
 import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
@@ -72,8 +73,17 @@ function BrandingForm() {
     setTimeout(() => setSaved(false), 2500);
   }
 
+  const router = useRouter();
+
   return (
     <div className="space-y-8 max-w-3xl">
+      <button
+        onClick={() => router.back()}
+        className="inline-flex items-center gap-1 text-small font-semibold text-[var(--color-ink-light)] hover:text-[var(--color-ink)]"
+      >
+        <ChevronLeft className="h-4 w-4" /> Back
+      </button>
+
       <div>
         <h1 className="text-page font-bold">Branding</h1>
         <p className="text-lead text-[var(--color-ink-light)] mt-2">
