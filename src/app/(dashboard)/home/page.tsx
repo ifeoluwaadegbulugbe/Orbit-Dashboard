@@ -1,25 +1,35 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import {
   Users, UserCheck, Wallet, TrendingUp,
   Plus, Receipt, Briefcase, CalendarPlus,
-  ChevronRight, Bell, Cake, Calendar,
+  ChevronRight, Bell, Cake, Calendar, Sparkles,
 } from "lucide-react";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { QuickAction } from "@/components/dashboard/QuickAction";
 import { Avatar } from "@/components/ui/Avatar";
 import { Badge } from "@/components/ui/Badge";
 import { BookingActions } from "@/components/bookings/BookingActions";
+import { SuggestButton } from "@/components/ai/SuggestButton";
+import { PaywallModal } from "@/components/paywall/PaywallModal";
 import { useAuthStore } from "@/stores/authStore";
+import { useSubscription } from "@/hooks/useSubscription";
 import { useClients } from "@/hooks/useClients";
 import { usePayments } from "@/hooks/usePayments";
 import { useBookings } from "@/hooks/useBookings";
 import { greetingForHour, formatShortDate, relativeDate } from "@/lib/utils";
 import { useCurrency } from "@/hooks/useCurrency";
 
+function daysSince(dateStr: string): number {
+  return Math.max(0, Math.floor((Date.now() - new Date(dateStr).getTime()) / 86_400_000));
+}
+
 export default function HomePage() {
   const profile = useAuthStore((s) => s.profile);
+  const { isPro } = useSubscription();
+  const [paywallOpen, setPaywallOpen] = useState(false);
   const { format: formatCurrency } = useCurrency();
   const { data: clients = [], isLoading: clientsLoading } = useClients();
   const { data: payments = [], isLoading: paymentsLoading } = usePayments();
@@ -69,6 +79,31 @@ export default function HomePage() {
         <StatCard label="Outstanding" value={formatCurrency(outstandingTotal)} icon={Wallet} tone="warning" />
         <StatCard label="Revenue" value={formatCurrency(revenue)} icon={TrendingUp} tone="info" />
       </div>
+
+      {/* ─── Orbit AI - embedded suggestion layer, not a standalone destination ─── */}
+      {(followUps.length > 0 || overdueInvoices.length > 0) && (
+        <div className="bg-white rounded-[var(--radius-2xl)] border border-[var(--color-border)] shadow-soft-sm p-6 flex items-start gap-4">
+          <div className="w-10 h-10 rounded-xl bg-[var(--color-primary-subtle)] flex items-center justify-center flex-shrink-0">
+            <Sparkles className="h-5 w-5 text-[var(--color-primary)]" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="text-body font-semibold text-[var(--color-ink)]">
+              {overdueInvoices.length > 0 && followUps.length > 0
+                ? `${overdueInvoices.length} invoice${overdueInvoices.length === 1 ? "" : "s"} overdue and ${followUps.length} client${followUps.length === 1 ? "" : "s"} due for a follow-up`
+                : overdueInvoices.length > 0
+                  ? `${overdueInvoices.length} invoice${overdueInvoices.length === 1 ? "" : "s"} overdue`
+                  : `${followUps.length} client${followUps.length === 1 ? "" : "s"} due for a follow-up`}
+            </div>
+            <SuggestButton
+              label="Get a tip from Orbit AI"
+              kind="home_digest"
+              context={{ overdueCount: overdueInvoices.length, followUpCount: followUps.length }}
+              locked={!isPro}
+              onLocked={() => setPaywallOpen(true)}
+            />
+          </div>
+        </div>
+      )}
 
       {/* ─── Pending bookings - confirm-or-decline in one tap ─── */}
       {pendingBookings.length > 0 && (
@@ -134,20 +169,28 @@ export default function HomePage() {
             viewAllHref="/clients?filter=follow_up"
           >
             {followUps.map((c) => (
-              <Link
-                key={c.id}
-                href={`/clients/${c.id}`}
-                className="flex items-center gap-4 px-5 py-3.5 rounded-[var(--radius-lg)] hover:bg-[var(--color-border-light)] transition-colors"
-              >
-                <Avatar name={c.name} size={44} />
-                <div className="flex-1 min-w-0">
-                  <div className="text-body font-semibold text-[var(--color-ink)] truncate">{c.name}</div>
-                  <div className="text-small text-[var(--color-muted)] mt-0.5">
-                    Last contacted {c.last_contacted ? relativeDate(c.last_contacted) : "never"}
+              <div key={c.id} className="px-5 py-3.5 rounded-[var(--radius-lg)] hover:bg-[var(--color-border-light)] transition-colors">
+                <Link href={`/clients/${c.id}`} className="flex items-center gap-4">
+                  <Avatar name={c.name} size={44} />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-body font-semibold text-[var(--color-ink)] truncate">{c.name}</div>
+                    <div className="text-small text-[var(--color-muted)] mt-0.5">
+                      Last contacted {c.last_contacted ? relativeDate(c.last_contacted) : "never"}
+                    </div>
                   </div>
-                </div>
-                <Badge tone="warning">Follow up</Badge>
-              </Link>
+                  <Badge tone="warning">Follow up</Badge>
+                </Link>
+                <SuggestButton
+                  label="Draft follow-up"
+                  kind="client_followup"
+                  context={{
+                    clientName: c.name,
+                    daysSinceContact: c.last_contacted ? daysSince(c.last_contacted) : undefined,
+                  }}
+                  locked={!isPro}
+                  onLocked={() => setPaywallOpen(true)}
+                />
+              </div>
             ))}
           </Section>
         )}
@@ -160,20 +203,29 @@ export default function HomePage() {
             viewAllHref="/payments?filter=overdue"
           >
             {overdueInvoices.map((p) => (
-              <Link
-                key={p.id}
-                href={`/payments/${p.id}`}
-                className="flex items-center gap-4 px-5 py-3.5 rounded-[var(--radius-lg)] hover:bg-[var(--color-border-light)] transition-colors"
-              >
-                <div className="w-11 h-11 rounded-xl bg-[var(--color-danger-light)] flex items-center justify-center flex-shrink-0">
-                  <Receipt className="h-5 w-5 text-[var(--color-danger-deep)]" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="text-body font-semibold text-[var(--color-ink)] truncate">{p.client_name}</div>
-                  <div className="text-small text-[var(--color-muted)] mt-0.5">Due {relativeDate(p.date)}</div>
-                </div>
-                <div className="text-body font-bold text-[var(--color-danger-deep)]">{formatCurrency(p.amount)}</div>
-              </Link>
+              <div key={p.id} className="px-5 py-3.5 rounded-[var(--radius-lg)] hover:bg-[var(--color-border-light)] transition-colors">
+                <Link href={`/payments/${p.id}`} className="flex items-center gap-4">
+                  <div className="w-11 h-11 rounded-xl bg-[var(--color-danger-light)] flex items-center justify-center flex-shrink-0">
+                    <Receipt className="h-5 w-5 text-[var(--color-danger-deep)]" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-body font-semibold text-[var(--color-ink)] truncate">{p.client_name}</div>
+                    <div className="text-small text-[var(--color-muted)] mt-0.5">Due {relativeDate(p.date)}</div>
+                  </div>
+                  <div className="text-body font-bold text-[var(--color-danger-deep)]">{formatCurrency(p.amount)}</div>
+                </Link>
+                <SuggestButton
+                  label="Draft reminder"
+                  kind="invoice_chase"
+                  context={{
+                    clientName: p.client_name,
+                    amount: formatCurrency(p.amount),
+                    daysOverdue: daysSince(p.date),
+                  }}
+                  locked={!isPro}
+                  onLocked={() => setPaywallOpen(true)}
+                />
+              </div>
             ))}
           </Section>
         )}
@@ -232,6 +284,8 @@ export default function HomePage() {
           </Section>
         )}
       </div>
+
+      <PaywallModal open={paywallOpen} onClose={() => setPaywallOpen(false)} />
     </div>
   );
 }

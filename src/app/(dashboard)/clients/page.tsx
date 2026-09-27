@@ -9,6 +9,7 @@ import { Avatar } from "@/components/ui/Avatar";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { PaywallModal } from "@/components/paywall/PaywallModal";
+import { SuggestButton } from "@/components/ai/SuggestButton";
 import {
   FREE_CLIENT_LIMIT,
   CLIENT_LIMIT_WARNING_THRESHOLD,
@@ -169,33 +170,48 @@ export default function ClientsPage() {
       ) : (
         <div className="space-y-2">
           {filtered.map((c) => (
-            <Link
+            <div
               key={c.id}
-              href={`/clients/${c.id}`}
-              className="flex items-center gap-5 px-6 py-5 bg-white rounded-[var(--radius-2xl)] border border-[var(--color-border)] shadow-soft-sm hover:shadow-soft hover:-translate-y-px transition-all"
+              className="px-6 py-5 bg-white rounded-[var(--radius-2xl)] border border-[var(--color-border)] shadow-soft-sm hover:shadow-soft hover:-translate-y-px transition-all"
             >
-              <Avatar name={c.name} size={52} />
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-3 flex-wrap">
-                  <span className="text-body font-semibold text-[var(--color-ink)] truncate">
-                    {c.name}
-                  </span>
-                  {c.outstanding_balance > 0 && (
-                    <span className="text-small font-bold text-[var(--color-danger-deep)]">
-                      {formatCurrency(c.outstanding_balance)} owed
+              <Link href={`/clients/${c.id}`} className="flex items-center gap-5">
+                <Avatar name={c.name} size={52} />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <span className="text-body font-semibold text-[var(--color-ink)] truncate">
+                      {c.name}
                     </span>
-                  )}
+                    {c.outstanding_balance > 0 && (
+                      <span className="text-small font-bold text-[var(--color-danger-deep)]">
+                        {formatCurrency(c.outstanding_balance)} owed
+                      </span>
+                    )}
+                  </div>
+                  <div className="text-small text-[var(--color-muted)] mt-1">{c.phone}</div>
+                  <div className="flex items-center gap-3 mt-2.5">
+                    <Badge tone={STATUS_TONE[c.status]}>{STATUS_LABEL[c.status]}</Badge>
+                    <span className="text-tiny text-[var(--color-muted)]">
+                      Last: {c.last_contacted ? relativeDate(c.last_contacted) : "never"}
+                    </span>
+                  </div>
                 </div>
-                <div className="text-small text-[var(--color-muted)] mt-1">{c.phone}</div>
-                <div className="flex items-center gap-3 mt-2.5">
-                  <Badge tone={STATUS_TONE[c.status]}>{STATUS_LABEL[c.status]}</Badge>
-                  <span className="text-tiny text-[var(--color-muted)]">
-                    Last: {c.last_contacted ? relativeDate(c.last_contacted) : "never"}
-                  </span>
-                </div>
-              </div>
-              <ChevronRight className="h-5 w-5 text-[var(--color-muted)]" />
-            </Link>
+                <ChevronRight className="h-5 w-5 text-[var(--color-muted)] flex-shrink-0" />
+              </Link>
+              {c.status === "follow_up" && (
+                <SuggestButton
+                  label="Draft follow-up"
+                  kind="client_followup"
+                  context={{
+                    clientName: c.name,
+                    daysSinceContact: c.last_contacted
+                      ? Math.floor((Date.now() - new Date(c.last_contacted).getTime()) / 86_400_000)
+                      : undefined,
+                  }}
+                  locked={!isPro}
+                  onLocked={() => setPaywallOpen(true)}
+                />
+              )}
+            </div>
           ))}
         </div>
       )}
