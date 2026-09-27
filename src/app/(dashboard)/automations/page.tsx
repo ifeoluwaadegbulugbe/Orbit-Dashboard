@@ -1,45 +1,52 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Zap, MessageCircle, Calendar, Cake, type LucideIcon, Bell, Sparkles, Hourglass } from "lucide-react";
+import { useState } from "react";
+import { Zap, MessageCircle, Calendar, Cake, type LucideIcon, Bell, Sparkles, Hourglass, Save, Loader2 } from "lucide-react";
 import { ProGate } from "@/components/paywall/ProGate";
+import { Textarea } from "@/components/ui/Textarea";
+import { Button } from "@/components/ui/Button";
 import { useClients } from "@/hooks/useClients";
 import { usePayments } from "@/hooks/usePayments";
+import { useMessageRules, useSetMessageRule } from "@/hooks/useMessageRules";
+import { getEffectiveRule, type TriggerType } from "@/lib/automations/rules";
+import { toast } from "@/stores/toastStore";
 
-const AUTOMATION_STORAGE_KEY = "orbit_automations_v1";
-
-interface AutomationRule {
-  id: string;
+interface RuleMeta {
+  id: TriggerType;
   icon: LucideIcon;
   iconBg: string;
   iconColor: string;
   title: string;
   description: string;
   detail: string;
-  enabled: boolean;
-  comingSoon?: boolean;
+  /** Only payment_reminder/client_followup get an editable template - the
+      other two stay branded HTML emails for now, not user-edited text. */
+  editableTemplate?: boolean;
+  templatePlaceholder?: string;
 }
 
-const INITIAL_RULES: AutomationRule[] = [
+const RULES: RuleMeta[] = [
   {
     id: "payment_reminder",
     icon: Hourglass,
     iconBg: "#DCFCE7",
     iconColor: "#166534",
     title: "Payment reminders",
-    description: "Auto-remind clients with unpaid invoices",
-    detail: "Sends a WhatsApp message 3 days and 7 days after an invoice is due.",
-    enabled: true,
+    description: "Auto-email clients with unpaid invoices",
+    detail: "Sends once around 3 days overdue, and again around 7 days, then stops.",
+    editableTemplate: true,
+    templatePlaceholder: "Hi {{client_name}}, just a friendly reminder that {{amount}} is still outstanding...",
   },
   {
-    id: "follow_up",
+    id: "client_followup",
     icon: MessageCircle,
     iconBg: "#FAEDF1",
     iconColor: "#E8557A",
     title: "Quiet-client follow-ups",
     description: "Re-engage clients you haven't talked to in 30+ days",
-    detail: "Adds a follow-up reminder when a client goes 30 days without contact.",
-    enabled: false,
+    detail: "Sends a check-in email once a client goes quiet, then resets the clock.",
+    editableTemplate: true,
+    templatePlaceholder: "Hi {{client_name}}, it's been a while! Would love to have you back...",
   },
   {
     id: "booking_confirmation",
@@ -47,30 +54,17 @@ const INITIAL_RULES: AutomationRule[] = [
     iconBg: "#EDE9FF",
     iconColor: "#6366F1",
     title: "Booking confirmations",
-    description: "Auto-send a confirmation when a session is booked",
-    detail: "Clients receive a WhatsApp message confirming their booking time and service.",
-    enabled: true,
+    description: "Auto-send a confirmation when you confirm a booking",
+    detail: "Clients get a branded email confirming their booking time and service.",
   },
   {
-    id: "birthday_messages",
+    id: "birthday",
     icon: Cake,
     iconBg: "#FEF3C7",
     iconColor: "#92400E",
     title: "Birthday messages",
     description: "Send personalised wishes on client birthdays",
-    detail: "A warm message goes out automatically on each client's birthday.",
-    enabled: true,
-  },
-  {
-    id: "weekly_summary",
-    icon: Sparkles,
-    iconBg: "#DCFCE7",
-    iconColor: "#166534",
-    title: "Weekly business summary",
-    description: "Get a Monday-morning recap by email",
-    detail: "Revenue, outstanding invoices, busiest day and top clients - sent every Monday at 8am.",
-    enabled: false,
-    comingSoon: true,
+    detail: "A warm email goes out automatically on each client's birthday.",
   },
 ];
 
@@ -88,38 +82,24 @@ export default function AutomationsPage() {
 function AutomationsInner() {
   const { data: clients = [] } = useClients();
   const { data: payments = [] } = usePayments();
+  const { data: rows = [], isLoading } = useMessageRules();
+  const setRule = useSetMessageRule();
 
-  const [rules, setRules] = useState<AutomationRule[]>(INITIAL_RULES);
-
-  useEffect(() => {
-    const raw = localStorage.getItem(AUTOMATION_STORAGE_KEY);
-    if (raw) {
-      try {
-        const saved = JSON.parse(raw) as Record<string, boolean>;
-        setRules((rs) => rs.map((r) => ({ ...r, enabled: saved[r.id] ?? r.enabled })));
-      } catch {
-        // ignore
-      }
-    }
-  }, []);
-
-  function toggle(id: string) {
-    setRules((rs) => {
-      const next = rs.map((r) => (r.id === id && !r.comingSoon ? { ...r, enabled: !r.enabled } : r));
-      const snapshot: Record<string, boolean> = {};
-      next.forEach((r) => (snapshot[r.id] = r.enabled));
-      localStorage.setItem(AUTOMATION_STORAGE_KEY, JSON.stringify(snapshot));
-      return next;
-    });
-  }
-
-  // Live counts that automations would act on
   const overdueCount = payments.filter((p) => p.status === "overdue").length;
   const quietCount = clients.filter((c) => {
     if (!c.last_contacted) return true;
     return Date.now() - new Date(c.last_contacted).getTime() > 30 * 86400000;
   }).length;
-  const activeRules = rules.filter((r) => r.enabled && !r.comingSoon).length;
+  const activeRules = RULES.filter((r) => getEffectiveRule(rows, r.id).enabled).length;
+
+  async function toggle(rule: RuleMeta) {
+    const current = getEffectiveRule(rows, rule.id);
+    try {
+      await setRule.mutateAsync({ triggerType: rule.id, enabled: !current.enabled, template: current.template });
+    } catch (err) {
+      toast(err instanceof Error ? err.message : "Could not update this rule", "danger");
+    }
+  }
 
   return (
     <div className="space-y-8">
@@ -139,38 +119,110 @@ function AutomationsInner() {
 
       {/* Rules list */}
       <div className="space-y-3">
-        {rules.map((r) => {
-          const Icon = r.icon;
-          return (
-            <div
-              key={r.id}
-              className={`flex items-start gap-5 px-6 py-5 bg-white rounded-[var(--radius-2xl)] border border-[var(--color-border)] shadow-soft-sm transition-opacity ${
-                r.comingSoon ? "opacity-60" : ""
-              }`}
-            >
-              <div
-                className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0"
-                style={{ backgroundColor: r.iconBg }}
-              >
-                <Icon className="h-5 w-5" style={{ color: r.iconColor }} />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-body font-semibold">{r.title}</span>
-                  {r.comingSoon && (
-                    <span className="text-tiny font-bold uppercase tracking-wider text-[var(--color-muted)] bg-[var(--color-border-light)] px-2 py-0.5 rounded-full">
-                      Coming soon
-                    </span>
-                  )}
-                </div>
-                <div className="text-small text-[var(--color-ink-light)] mt-0.5">{r.description}</div>
-                <div className="text-tiny text-[var(--color-muted)] mt-2 leading-relaxed">{r.detail}</div>
-              </div>
-              <Toggle enabled={r.enabled} onChange={() => toggle(r.id)} disabled={!!r.comingSoon} />
+        {isLoading ? (
+          <div className="space-y-3">
+            {[0, 1, 2, 3].map((i) => <div key={i} className="h-24 rounded-[var(--radius-2xl)] skeleton" />)}
+          </div>
+        ) : (
+          RULES.map((rule) => (
+            <RuleCard
+              key={rule.id}
+              rule={rule}
+              effective={getEffectiveRule(rows, rule.id)}
+              onToggle={() => toggle(rule)}
+              onSaveTemplate={async (template) => {
+                const current = getEffectiveRule(rows, rule.id);
+                try {
+                  await setRule.mutateAsync({ triggerType: rule.id, enabled: current.enabled, template });
+                  toast("Template saved", "success");
+                } catch (err) {
+                  toast(err instanceof Error ? err.message : "Could not save template", "danger");
+                }
+              }}
+            />
+          ))
+        )}
+
+        {/* Honestly labeled - not built yet */}
+        <div className="flex items-start gap-5 px-6 py-5 bg-white rounded-[var(--radius-2xl)] border border-[var(--color-border)] shadow-soft-sm opacity-60">
+          <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0" style={{ backgroundColor: "#DCFCE7" }}>
+            <Sparkles className="h-5 w-5" style={{ color: "#166534" }} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-body font-semibold">Weekly business summary</span>
+              <span className="text-tiny font-bold uppercase tracking-wider text-[var(--color-muted)] bg-[var(--color-border-light)] px-2 py-0.5 rounded-full">
+                Coming soon
+              </span>
             </div>
-          );
-        })}
+            <div className="text-small text-[var(--color-ink-light)] mt-0.5">Get a Monday-morning recap by email</div>
+          </div>
+        </div>
       </div>
+    </div>
+  );
+}
+
+function RuleCard({
+  rule, effective, onToggle, onSaveTemplate,
+}: {
+  rule: RuleMeta;
+  effective: { enabled: boolean; template: string | null };
+  onToggle: () => void;
+  onSaveTemplate: (template: string | null) => Promise<void>;
+}) {
+  const Icon = rule.icon;
+  const [draft, setDraft] = useState(effective.template ?? "");
+  const [saving, setSaving] = useState(false);
+  const dirty = draft !== (effective.template ?? "");
+
+  async function save() {
+    setSaving(true);
+    try {
+      await onSaveTemplate(draft.trim() || null);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="px-6 py-5 bg-white rounded-[var(--radius-2xl)] border border-[var(--color-border)] shadow-soft-sm">
+      <div className="flex items-start gap-5">
+        <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0" style={{ backgroundColor: rule.iconBg }}>
+          <Icon className="h-5 w-5" style={{ color: rule.iconColor }} />
+        </div>
+        <div className="flex-1 min-w-0">
+          <span className="text-body font-semibold">{rule.title}</span>
+          <div className="text-small text-[var(--color-ink-light)] mt-0.5">{rule.description}</div>
+          <div className="text-tiny text-[var(--color-muted)] mt-2 leading-relaxed">{rule.detail}</div>
+        </div>
+        <Toggle enabled={effective.enabled} onChange={onToggle} />
+      </div>
+
+      {rule.editableTemplate && (
+        <div className="mt-4 pt-4 border-t border-[var(--color-border)]">
+          <Textarea
+            label="Message"
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            placeholder={rule.templatePlaceholder}
+            rows={3}
+            hint="Leave blank to use Orbit's default wording. Use {{client_name}}, {{amount}} and {{days_overdue}}."
+          />
+          {dirty && (
+            <div className="flex justify-end mt-2">
+              <Button
+                size="sm"
+                onClick={save}
+                loading={saving}
+                leftIcon={saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+              >
+                Save template
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -200,18 +252,15 @@ function Stat({
   );
 }
 
-function Toggle({
-  enabled, onChange, disabled,
-}: { enabled: boolean; onChange: () => void; disabled?: boolean }) {
+function Toggle({ enabled, onChange }: { enabled: boolean; onChange: () => void }) {
   return (
     <button
       onClick={onChange}
-      disabled={disabled}
       role="switch"
       aria-checked={enabled}
-      className={`flex-shrink-0 relative w-12 h-7 rounded-full transition-colors duration-200 ${
+      className={`flex-shrink-0 relative w-12 h-7 rounded-full transition-colors duration-200 cursor-pointer ${
         enabled ? "bg-[var(--color-primary)]" : "bg-[var(--color-border)]"
-      } ${disabled ? "cursor-not-allowed" : "cursor-pointer"}`}
+      }`}
     >
       <span
         className={`absolute top-0.5 left-0.5 w-6 h-6 bg-white rounded-full shadow-soft-sm transition-transform duration-200 ${
