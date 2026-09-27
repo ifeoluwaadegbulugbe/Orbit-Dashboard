@@ -2,15 +2,17 @@
 
 import { useState, useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { X, Sparkles, Zap, CreditCard, BarChart3, Receipt, Wand2, Check, Lock } from "lucide-react";
+import { X, Sparkles, Zap, Wallet2, BarChart3, Receipt, Wand2, Check, Lock } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { useSubscription } from "@/hooks/useSubscription";
 import { PRO_PRICE_DISPLAY, PRO_PRICE_PERIOD, FREE_TRIAL_DAYS } from "@/lib/constants";
 
+// Orbit Wallet leads - it's the single biggest reason to upgrade (get paid
+// automatically instead of manually reconciling), per orbit-overhaul.md §10.
 const FEATURES = [
+  { icon: Wallet2,    label: "Get paid automatically with Orbit Wallet" },
   { icon: Sparkles,   label: "AI business assistant" },
-  { icon: CreditCard, label: "Online payment collection" },
-  { icon: BarChart3,  label: "Advanced analytics & reports" },
+  { icon: BarChart3,  label: "Advanced insights & reports" },
   { icon: Zap,        label: "Smart automations & reminders" },
   { icon: Receipt,    label: "Professional invoices & branding" },
   { icon: Wand2,      label: "Unlimited clients & exports" },
@@ -52,8 +54,8 @@ export function PaywallModal({ open, onClose, reason }: PaywallModalProps) {
         if (!res.ok) {
           throw new Error(
             res.status === 503
-              ? "Paystack isn't configured yet. Add your real Paystack keys to .env.local, or set NEXT_PUBLIC_FORCE_PRO=true to test Pro features without payment."
-              : `Server returned ${res.status}. Check your Paystack and Supabase env vars in .env.local.`,
+              ? "Checkout isn't set up yet in this environment. Set NEXT_PUBLIC_FORCE_PRO=true to test Pro features without payment."
+              : `Server returned ${res.status}. Please try again shortly.`,
           );
         }
       }
@@ -62,9 +64,9 @@ export function PaywallModal({ open, onClose, reason }: PaywallModalProps) {
         throw new Error(body.error ?? `Checkout failed (${res.status})`);
       }
       if (!body.authorization_url) {
-        throw new Error("Server didn't return a Paystack URL. Try again or check the server logs.");
+        throw new Error("Something went wrong starting checkout. Please try again.");
       }
-      // Redirect to Paystack-hosted checkout
+      // Redirect to the hosted checkout page
       window.location.href = body.authorization_url;
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not start checkout");

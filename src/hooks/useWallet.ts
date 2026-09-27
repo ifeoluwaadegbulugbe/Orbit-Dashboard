@@ -23,12 +23,12 @@ async function parseJsonError(res: Response): Promise<string> {
  * wallet, so no extra filtering is needed beyond the user_id match below
  * (kept for consistency with the rest of the app's hooks).
  */
-export function useWalletBalances() {
+export function useWalletBalances(options?: { enabled?: boolean }) {
   const userId = useAuthStore((s) => s.user?.id);
 
   return useQuery<WalletBalance[]>({
     queryKey: [KEY, "balances", userId],
-    enabled: !!userId,
+    enabled: !!userId && (options?.enabled ?? true),
     queryFn: async () => {
       const supabase = createClient();
       const { data, error } = await supabase

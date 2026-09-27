@@ -18,30 +18,15 @@ import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Dialog } from "@/components/ui/Dialog";
 import { Badge } from "@/components/ui/Badge";
+import { formatMinor } from "@/lib/wallet/format";
 import type { LedgerEntryWithTransaction, WithdrawalStatus } from "@/types";
 
-function formatMinor(amountMinor: number, currency: string): string {
-  try {
-    return new Intl.NumberFormat(undefined, { style: "currency", currency }).format(amountMinor / 100);
-  } catch {
-    return `${currency} ${(amountMinor / 100).toFixed(2)}`;
-  }
-}
-
-const PROVIDER_LABEL: Record<string, string> = {
-  paystack: "Paystack",
-  flutterwave: "Flutterwave",
-  stripe: "Stripe",
-};
-
+// Orbit's payment rail is internal infrastructure, never shown to the business
+// owner - see orbit-overhaul.md §9 ("the business owner should never see the
+// word 'Paystack'... inside the product experience").
 function describeTransaction(entry: LedgerEntryWithTransaction): string {
   const tx = entry.ledger_transactions;
-  const provider = typeof tx.metadata?.provider === "string" ? tx.metadata.provider : null;
-  const providerLabel = provider ? (PROVIDER_LABEL[provider] ?? provider) : null;
-
-  if (tx.type === "invoice_payment") {
-    return providerLabel ? `Invoice payment received via ${providerLabel}` : "Invoice payment received";
-  }
+  if (tx.type === "invoice_payment") return "Invoice payment received";
   if (tx.type === "withdrawal_hold") return "Withdrawal requested";
   if (tx.type === "withdrawal_settled") return "Withdrawal completed";
   if (tx.type === "withdrawal_reversed") return "Withdrawal reversed";
