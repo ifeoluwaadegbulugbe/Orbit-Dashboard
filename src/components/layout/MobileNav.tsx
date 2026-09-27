@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   X, Home, Users, Briefcase, Wallet2, LineChart, Settings, Sparkles,
+  Zap, MessageSquare, Bell, Download, BookOpen,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -22,6 +23,14 @@ const MAIN_NAV: NavItem[] = [
   { href: "/work",      label: "Work",     icon: Briefcase },
   { href: "/payments",  label: "Money",    icon: Wallet2 },
   { href: "/analytics", label: "Insights", icon: LineChart },
+];
+
+const FEATURE_NAV: NavItem[] = [
+  { href: "/automations", label: "Automations", icon: Zap },
+  { href: "/templates",   label: "Templates",   icon: MessageSquare },
+  { href: "/reminders",   label: "Reminders",   icon: Bell },
+  { href: "/export",      label: "Export Data", icon: Download },
+  { href: "/help",        label: "Help",        icon: BookOpen },
 ];
 
 export function MobileNav({ open, onClose }: { open: boolean; onClose: () => void }) {
@@ -58,6 +67,13 @@ export function MobileNav({ open, onClose }: { open: boolean; onClose: () => voi
             {MAIN_NAV.map((item) => (
               <Row key={item.href} item={item} pathname={pathname} onClose={onClose} />
             ))}
+          </div>
+          <div className="mt-5 pt-4 border-t border-[var(--color-border)]/60">
+            <div className="space-y-1">
+              {FEATURE_NAV.map((item) => (
+                <Row key={item.href} item={item} pathname={pathname} onClose={onClose} />
+              ))}
+            </div>
           </div>
           <div className="mt-5 pt-4 border-t border-[var(--color-border)]/60">
             <div className="space-y-1">

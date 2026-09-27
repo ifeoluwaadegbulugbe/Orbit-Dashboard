@@ -6,7 +6,6 @@ import Link from "next/link";
 import {
   Sparkles, Settings, Globe, CreditCard, FileText, LogOut, ExternalLink, Check,
   Camera, Edit2, X, Save, ChevronRight, Lock, Loader2,
-  Zap, Bell, MessageSquare, Download, BookOpen,
 } from "lucide-react";
 import { Avatar } from "@/components/ui/Avatar";
 import { Badge } from "@/components/ui/Badge";
@@ -355,23 +354,10 @@ function ProfileInner() {
         <ChangePasswordRow />
       </SectionCard>
 
-      {/* ─── Automation & messaging - grouped separately from the flat "More"
-           dump this used to be. Branding and Booking Link are deliberately
-           NOT here anymore - Booking Link is a Home quick action now, and
-           Branding is linked contextually from Booking Link + invoice
-           creation, so they don't need a third parallel entry point. ─── */}
-      <SectionCard title="Automation & messaging" icon={<Zap className="h-4 w-4 text-[var(--color-primary)]" />}>
-        <RowLink label="Automations"   href="/automations"  icon={<Zap className="h-4 w-4" />} />
-        <RowLink label="Templates"     href="/templates"    icon={<MessageSquare className="h-4 w-4" />} />
-        <RowLink label="Reminders"     href="/reminders"    icon={<Bell className="h-4 w-4" />} />
-        <RowLink label="AI Assistant"  href="/ai-assistant" icon={<Sparkles className="h-4 w-4" />} />
-      </SectionCard>
-
-      {/* ─── Data & support ─── */}
-      <SectionCard title="Data & support" icon={<Download className="h-4 w-4 text-[var(--color-primary)]" />}>
-        <RowLink label="Export Data"   href="/export"       icon={<Download className="h-4 w-4" />} />
-        <RowLink label="Help"          href="/help"         icon={<BookOpen className="h-4 w-4" />} />
-      </SectionCard>
+      {/* Automations, Templates, Reminders, Export Data and Help are now
+          their own sidebar tabs, not filed under Settings - see Sidebar.tsx.
+          AI Assistant is the one exception: embedded as a floating helper
+          on every page instead of either a tab or a Settings link. */}
 
       {/* ─── Legal ─── */}
       <SectionCard title="Legal" icon={<FileText className="h-4 w-4 text-[var(--color-primary)]" />}>

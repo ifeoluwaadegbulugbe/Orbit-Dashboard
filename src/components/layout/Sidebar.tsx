@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Home, Users, Briefcase, Wallet2, LineChart, Settings, Sparkles,
+  Zap, MessageSquare, Bell, Download, BookOpen,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -23,6 +24,16 @@ const MAIN_NAV: NavItem[] = [
   { href: "/work",      label: "Work",     icon: Briefcase },
   { href: "/payments",  label: "Money",    icon: Wallet2 },
   { href: "/analytics", label: "Insights", icon: LineChart },
+];
+
+/** Each of these gets its own tab, not a spot in a Settings dump - AI Assistant
+    is the one exception, embedded as a floating helper on every page instead. */
+const FEATURE_NAV: NavItem[] = [
+  { href: "/automations", label: "Automations", icon: Zap },
+  { href: "/templates",   label: "Templates",   icon: MessageSquare },
+  { href: "/reminders",   label: "Reminders",   icon: Bell },
+  { href: "/export",      label: "Export Data", icon: Download },
+  { href: "/help",        label: "Help",        icon: BookOpen },
 ];
 
 export function Sidebar() {
@@ -51,7 +62,16 @@ export function Sidebar() {
           ))}
         </div>
 
-        {/* Settings - separated from the main jobs above, not a peer destination */}
+        {/* Feature tabs - each one its own destination, not filed under Settings */}
+        <div className="mt-6 pt-5 border-t border-[var(--color-border)]/60">
+          <div className="space-y-1.5">
+            {FEATURE_NAV.map((item) => (
+              <NavLink key={item.href} item={item} pathname={pathname} />
+            ))}
+          </div>
+        </div>
+
+        {/* Settings - separated from everything above, not a peer destination */}
         <div className="mt-6 pt-5 border-t border-[var(--color-border)]/60">
           <div className="space-y-1.5">
             <NavLink item={{ href: "/profile", label: "Settings", icon: Settings }} pathname={pathname} />
