@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { completeChat } from "@/lib/ai/complete";
+import { getEffectiveRule, type MessageRuleRow, type TriggerType } from "@/lib/automations/rules";
 
 /**
  * Stateless AI suggestions embedded on Home/Clients/Money - a single
@@ -24,7 +25,13 @@ interface SuggestBody {
   };
 }
 
-function buildPrompt(kind: SuggestKind, context: SuggestBody["context"]): string | null {
+/** Maps an AI suggestion kind to the same trigger type its automation counterpart uses. */
+const KIND_TO_TRIGGER: Partial<Record<SuggestKind, TriggerType>> = {
+  invoice_chase: "payment_reminder",
+  client_followup: "client_followup",
+};
+
+function buildPrompt(kind: SuggestKind, context: SuggestBody["context"], savedTemplate: string | null): string | null {
   switch (kind) {
     case "invoice_chase": {
       const { clientName, amount, daysOverdue } = context ?? {};
@@ -32,11 +39,17 @@ function buildPrompt(kind: SuggestKind, context: SuggestBody["context"]): string
       const overdueLine = daysOverdue && daysOverdue > 0
         ? `It's ${daysOverdue} day${daysOverdue === 1 ? "" : "s"} overdue.`
         : "It's due soon.";
+      if (savedTemplate) {
+        return `I have a saved payment-reminder template I like to use: "${savedTemplate}". Personalize it for my client ${clientName}${amount ? ` (amount: ${amount})` : ""}. ${overdueLine} Keep the same tone and structure as my template, just adapt the specifics.`;
+      }
       return `Draft a short, friendly payment reminder message to send to my client ${clientName}${amount ? ` for ${amount}` : ""}. ${overdueLine} Keep it polite but clear, suitable to send over WhatsApp.`;
     }
     case "client_followup": {
       const { clientName, daysSinceContact } = context ?? {};
       if (!clientName) return null;
+      if (savedTemplate) {
+        return `I have a saved follow-up template I like to use: "${savedTemplate}". Personalize it for my client ${clientName}, who I haven't been in touch with in ${daysSinceContact ?? "a while"} days. Keep the same tone and structure as my template, just adapt the specifics.`;
+      }
       return `Draft a short, warm follow-up message to send to my client ${clientName}, who I haven't been in touch with in ${daysSinceContact ?? "a while"} days. I want to check in and see if they'd like to rebook, without being pushy.`;
     }
     case "home_digest": {
@@ -60,7 +73,20 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Missing kind" }, { status: 400 });
   }
 
-  const prompt = buildPrompt(body.kind, body.context);
+  // If this kind has a matching automation with a saved template, use it as
+  // the starting point so the AI draft and the automation's own copy agree.
+  let savedTemplate: string | null = null;
+  const triggerType = KIND_TO_TRIGGER[body.kind];
+  if (triggerType) {
+    const { data: ruleRows } = await supabase
+      .from("message_rules")
+      .select("trigger_type, enabled, template")
+      .eq("user_id", user.id)
+      .eq("trigger_type", triggerType);
+    savedTemplate = getEffectiveRule((ruleRows ?? []) as MessageRuleRow[], triggerType).template;
+  }
+
+  const prompt = buildPrompt(body.kind, body.context, savedTemplate);
   if (!prompt) {
     return NextResponse.json({ error: "Missing required context for this suggestion" }, { status: 400 });
   }

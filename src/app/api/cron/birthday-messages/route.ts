@@ -6,6 +6,7 @@ import {
   buildClientBirthdayEmail,
   buildOwnerBirthdayEmail,
 } from "@/lib/email/booking-templates";
+import { getEffectiveRule, type MessageRuleRow } from "@/lib/automations/rules";
 
 /**
  * Sends birthday wishes to clients whose birthday falls on today's date.
@@ -74,14 +75,27 @@ export async function GET(request: Request) {
 
   // Batch-load the owner profiles so we don't N+1
   const userIds = Array.from(new Set((clients as ClientRow[]).map((c) => c.user_id)));
-  const { data: profiles } = await supabase
-    .from("profiles")
-    .select("id, email, full_name, business_name")
-    .in("id", userIds);
+  const [{ data: profiles }, { data: ruleRows }] = await Promise.all([
+    supabase
+      .from("profiles")
+      .select("id, email, full_name, business_name")
+      .in("id", userIds),
+    supabase
+      .from("message_rules")
+      .select("user_id, trigger_type, enabled, template")
+      .in("user_id", userIds)
+      .eq("trigger_type", "birthday"),
+  ]);
 
   const profileMap = new Map<string, ProfileRow>(
     (profiles ?? []).map((p) => [p.id as string, p as ProfileRow]),
   );
+  const rulesByUser = new Map<string, MessageRuleRow[]>();
+  for (const row of (ruleRows ?? []) as (MessageRuleRow & { user_id: string })[]) {
+    const list = rulesByUser.get(row.user_id) ?? [];
+    list.push(row);
+    rulesByUser.set(row.user_id, list);
+  }
 
   let sent = 0;
   const errors: string[] = [];
@@ -89,6 +103,9 @@ export async function GET(request: Request) {
   for (const client of clients as ClientRow[]) {
     const profile = profileMap.get(client.user_id);
     if (!profile) continue;
+
+    const birthdayRule = getEffectiveRule(rulesByUser.get(client.user_id) ?? [], "birthday");
+    if (!birthdayRule.enabled) continue;
 
     const businessName =
       profile.business_name?.trim() || profile.full_name?.trim() || "your business";

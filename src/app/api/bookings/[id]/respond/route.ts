@@ -4,6 +4,7 @@ import { notify } from "@/lib/notifications/server";
 import { sendEmail } from "@/lib/email/server";
 import { syncBookingToGoogleCalendar } from "@/lib/google-calendar/server";
 import { maybeCreateInvoiceForBooking } from "@/lib/bookings/auto-invoice";
+import { getEffectiveRule, type MessageRuleRow } from "@/lib/automations/rules";
 import {
   buildConfirmEmail,
   buildCancelEmail,
@@ -162,10 +163,17 @@ export async function POST(
     clientPhone: client?.whatsapp_number || client?.phone || null,
   };
 
-  // ── Email the client if we have an address ─────────────────────────────
+  // ── Email the client if we have an address and this trigger is enabled ──
+  const { data: ruleRows } = await supabase
+    .from("message_rules")
+    .select("trigger_type, enabled, template")
+    .eq("user_id", userId)
+    .eq("trigger_type", "booking_confirmation");
+  const bookingConfirmationRule = getEffectiveRule((ruleRows ?? []) as MessageRuleRow[], "booking_confirmation");
+
   let emailSent = false;
   let emailError: string | null = null;
-  if (client?.email) {
+  if (client?.email && bookingConfirmationRule.enabled) {
     const { subject, html, text } =
       action === "confirmed"
         ? buildConfirmEmail(messageParams)
