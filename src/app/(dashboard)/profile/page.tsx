@@ -6,7 +6,7 @@ import Link from "next/link";
 import {
   Sparkles, Settings, Globe, CreditCard, FileText, LogOut, ExternalLink, Check,
   Camera, Edit2, X, Save, ChevronRight, Lock, Loader2,
-  Palette, Zap, Bell, Link2, MessageSquare, Download, BookOpen,
+  Zap, Bell, MessageSquare, Download, BookOpen,
 } from "lucide-react";
 import { Avatar } from "@/components/ui/Avatar";
 import { Badge } from "@/components/ui/Badge";
@@ -42,6 +42,8 @@ function ProfileInner() {
 
   const [paywallOpen, setPaywallOpen] = useState(search.get("upgrade") === "1");
   const [portalLoading, setPortalLoading] = useState(false);
+  const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
   const [banner, setBanner] = useState<{ tone: "success" | "danger"; text: string } | null>(null);
 
   // Editing state
@@ -166,6 +168,22 @@ function ProfileInner() {
     }
   }
 
+  async function handleCancelSubscription() {
+    setCancelling(true);
+    try {
+      const res = await fetch("/api/paystack/cancel", { method: "POST" });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error ?? "Could not cancel subscription");
+      setProfile(profile ? { ...profile, subscription_status: "free", trial_ends_at: null } : profile);
+      setCancelConfirmOpen(false);
+      setBanner({ tone: "success", text: "Your subscription has been cancelled. You're back on the Free plan." });
+    } catch (err) {
+      setBanner({ tone: "danger", text: err instanceof Error ? err.message : "Could not cancel subscription" });
+    } finally {
+      setCancelling(false);
+    }
+  }
+
   async function handleSignOut() {
     const supabase = createClient();
     await supabase.auth.signOut();
@@ -262,8 +280,14 @@ function ProfileInner() {
               rightIcon={<ExternalLink className="h-4 w-4" />}
               onClick={handleManageSubscription}
             >
-              Manage subscription
+              Update payment method
             </Button>
+            <button
+              onClick={() => setCancelConfirmOpen(true)}
+              className="w-full text-center text-small font-semibold text-[var(--color-danger)] hover:text-[var(--color-danger-deep)] transition-colors"
+            >
+              Cancel subscription
+            </button>
           </div>
         ) : (
           <div className="px-7 py-6 space-y-4">
@@ -331,15 +355,20 @@ function ProfileInner() {
         <ChangePasswordRow />
       </SectionCard>
 
-      {/* ─── More - everything that isn't a daily destination lives here, not
-           in the main nav (orbit-overhaul.md §7/§8) ─── */}
-      <SectionCard title="More" icon={<Settings className="h-4 w-4 text-[var(--color-primary)]" />}>
-        <RowLink label="AI Assistant"  href="/ai-assistant" icon={<Sparkles className="h-4 w-4" />} />
-        <RowLink label="Branding"      href="/branding"     icon={<Palette className="h-4 w-4" />} />
+      {/* ─── Automation & messaging - grouped separately from the flat "More"
+           dump this used to be. Branding and Booking Link are deliberately
+           NOT here anymore - Booking Link is a Home quick action now, and
+           Branding is linked contextually from Booking Link + invoice
+           creation, so they don't need a third parallel entry point. ─── */}
+      <SectionCard title="Automation & messaging" icon={<Zap className="h-4 w-4 text-[var(--color-primary)]" />}>
         <RowLink label="Automations"   href="/automations"  icon={<Zap className="h-4 w-4" />} />
-        <RowLink label="Reminders"     href="/reminders"    icon={<Bell className="h-4 w-4" />} />
-        <RowLink label="Booking Link"  href="/booking-link" icon={<Link2 className="h-4 w-4" />} />
         <RowLink label="Templates"     href="/templates"    icon={<MessageSquare className="h-4 w-4" />} />
+        <RowLink label="Reminders"     href="/reminders"    icon={<Bell className="h-4 w-4" />} />
+        <RowLink label="AI Assistant"  href="/ai-assistant" icon={<Sparkles className="h-4 w-4" />} />
+      </SectionCard>
+
+      {/* ─── Data & support ─── */}
+      <SectionCard title="Data & support" icon={<Download className="h-4 w-4 text-[var(--color-primary)]" />}>
         <RowLink label="Export Data"   href="/export"       icon={<Download className="h-4 w-4" />} />
         <RowLink label="Help"          href="/help"         icon={<BookOpen className="h-4 w-4" />} />
       </SectionCard>
@@ -362,6 +391,29 @@ function ProfileInner() {
       <p className="text-center text-tiny text-[var(--color-muted)] py-2">Orbit · v1.0.0</p>
 
       <PaywallModal open={paywallOpen} onClose={() => setPaywallOpen(false)} />
+
+      {/* Cancel subscription confirmation */}
+      <Dialog open={cancelConfirmOpen} onClose={() => setCancelConfirmOpen(false)} title="Cancel subscription?">
+        <div className="space-y-5">
+          <p className="text-body text-[var(--color-ink-light)] leading-relaxed">
+            You&apos;ll lose access to the Orbit Wallet, automations, AI tools and advanced insights,
+            and move to the Free plan at the end of your current billing period.
+          </p>
+          <div className="flex items-center gap-3">
+            <Button
+              variant="danger"
+              fullWidth
+              loading={cancelling}
+              onClick={handleCancelSubscription}
+            >
+              Yes, cancel
+            </Button>
+            <Button variant="secondary" fullWidth onClick={() => setCancelConfirmOpen(false)} disabled={cancelling}>
+              Keep Pro
+            </Button>
+          </div>
+        </div>
+      </Dialog>
 
       {/* Currency picker dialog */}
       <Dialog open={currencyPickerOpen} onClose={() => setCurrencyPickerOpen(false)} title="Pick your country">
