@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
 import { sendEmail } from "@/lib/email/server";
 import { notify } from "@/lib/notifications/server";
+import { zonedTimeToUtcMs, DEFAULT_TIMEZONE } from "@/lib/time/zonedTime";
 
 /**
  * Sends appointment-reminder emails 60 / 30 / 5 minutes before each upcoming
@@ -37,6 +38,7 @@ interface ProfileRow {
   id: string;
   email: string;
   full_name: string;
+  timezone: string | null;
 }
 
 interface ClientRow {
@@ -76,10 +78,24 @@ export async function GET(request: Request) {
     return NextResponse.json({ ok: true, sent: 0, message: "No upcoming bookings." });
   }
 
+  // Need each owner's timezone BEFORE we can tell how far away their booking
+  // really is - a naive date+time string means nothing without one. Fetched
+  // for every candidate booking's owner, not just matches, since we don't
+  // know which ones match until after this conversion.
+  const candidateUserIds = Array.from(new Set((bookings as BookingRow[]).map((b) => b.user_id)));
+  const { data: candidateProfiles } = await supabase
+    .from("profiles")
+    .select("id,email,full_name,timezone")
+    .in("id", candidateUserIds);
+  const profileMap = new Map<string, ProfileRow>(
+    (candidateProfiles ?? []).map((p) => [p.id as string, p as ProfileRow]),
+  );
+
   // Match each booking to a reminder window
   const toSend: { booking: BookingRow; minutesUntil: number }[] = [];
   for (const b of bookings as BookingRow[]) {
-    const eventMs = parseBookingStart(b.date, b.time);
+    const timezone = profileMap.get(b.user_id)?.timezone || DEFAULT_TIMEZONE;
+    const eventMs = zonedTimeToUtcMs(b.date, b.time, timezone);
     if (!eventMs) continue;
     const minutesUntil = Math.round((eventMs - now.getTime()) / 60000);
     // Match to the nearest lead-time window with a 2-minute slack
@@ -93,17 +109,9 @@ export async function GET(request: Request) {
     return NextResponse.json({ ok: true, sent: 0, message: "Nothing in the reminder windows." });
   }
 
-  // Look up the owner emails and client emails in one batch each
-  const userIds = Array.from(new Set(toSend.map((s) => s.booking.user_id)));
+  // Client emails for just the bookings we're actually sending for
   const clientIds = Array.from(new Set(toSend.map((s) => s.booking.client_id)));
-  const [{ data: profiles }, { data: clientRows }] = await Promise.all([
-    supabase.from("profiles").select("id,email,full_name").in("id", userIds),
-    supabase.from("clients").select("id,email").in("id", clientIds),
-  ]);
-
-  const profileMap = new Map<string, ProfileRow>(
-    (profiles ?? []).map((p) => [p.id as string, p as ProfileRow]),
-  );
+  const { data: clientRows } = await supabase.from("clients").select("id,email").in("id", clientIds);
   const clientMap = new Map<string, ClientRow>(
     (clientRows ?? []).map((c) => [c.id as string, c as ClientRow]),
   );
@@ -168,14 +176,6 @@ export async function GET(request: Request) {
     considered: toSend.length,
     errors: errors.length ? errors : undefined,
   });
-}
-
-function parseBookingStart(date: string, time: string): number | null {
-  if (!date || !time) return null;
-  const [year, month, day] = date.split("-").map(Number);
-  const [hour, minute] = time.split(":").map(Number);
-  if ([year, month, day, hour, minute].some((n) => Number.isNaN(n))) return null;
-  return new Date(year, month - 1, day, hour, minute).getTime();
 }
 
 function renderOwnerReminderHtml({
