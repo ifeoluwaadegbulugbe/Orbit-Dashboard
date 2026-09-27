@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import {
   Users, UserCheck, Wallet, TrendingUp,
-  Plus, Receipt, Briefcase, CalendarPlus,
+  Plus, Receipt, Briefcase, CalendarPlus, Link2,
   ChevronRight, Bell, Cake, Calendar, Sparkles,
 } from "lucide-react";
 import { StatCard } from "@/components/dashboard/StatCard";
@@ -156,6 +156,7 @@ export default function HomePage() {
           <QuickAction label="New Invoice" href="/payments/new"    icon={Receipt} />
           <QuickAction label="New Project" href="/work?new=1"      icon={Briefcase} />
           <QuickAction label="Schedule"    href="/work?cal=1"      icon={CalendarPlus} />
+          <QuickAction label="Share Booking Link" href="/booking-link" icon={Link2} />
         </div>
       </div>
 

@@ -166,11 +166,19 @@ function BookingLinkInner() {
 
   return (
     <div className="space-y-8 max-w-3xl">
-      <div>
-        <h1 className="text-page font-bold">Booking link</h1>
-        <p className="text-lead text-[var(--color-ink-light)] mt-2">
-          One public URL clients can use to book themselves in.
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-page font-bold">Booking link</h1>
+          <p className="text-lead text-[var(--color-ink-light)] mt-2">
+            One public URL clients can use to book themselves in.
+          </p>
+        </div>
+        <Link
+          href="/branding"
+          className="text-tiny font-semibold text-[var(--color-ink-light)] hover:text-[var(--color-primary)] whitespace-nowrap pt-1"
+        >
+          Customize appearance
+        </Link>
       </div>
 
       {/* URL card */}

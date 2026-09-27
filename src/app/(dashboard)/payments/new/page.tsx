@@ -105,12 +105,20 @@ function Inner() {
             Log a payment or create an invoice to send.
           </p>
         </div>
-        <Link
-          href="/services"
-          className="text-tiny font-semibold text-[var(--color-ink-light)] hover:text-[var(--color-primary)] whitespace-nowrap pt-1"
-        >
-          Manage services
-        </Link>
+        <div className="flex flex-col items-end gap-1 pt-1">
+          <Link
+            href="/services"
+            className="text-tiny font-semibold text-[var(--color-ink-light)] hover:text-[var(--color-primary)] whitespace-nowrap"
+          >
+            Manage services
+          </Link>
+          <Link
+            href="/branding"
+            className="text-tiny font-semibold text-[var(--color-ink-light)] hover:text-[var(--color-primary)] whitespace-nowrap"
+          >
+            Customize appearance
+          </Link>
+        </div>
       </div>
 
       {error && (

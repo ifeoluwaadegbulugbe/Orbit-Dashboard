@@ -447,10 +447,19 @@ function InvoicesTab() {
 
 function CalendarTab() {
   const { data: bookings = [] } = useBookings();
+  const { data: payments = [] } = usePayments();
   const [cursor, setCursor] = useState(() => {
     const d = new Date();
     return new Date(d.getFullYear(), d.getMonth(), 1);
   });
+
+  // booking_id -> payment status, so the calendar can show a paid/unpaid dot
+  // without a separate query (Money already has this data cached).
+  const paymentByBookingId = useMemo(() => {
+    const map = new Map<string, (typeof payments)[number]>();
+    payments.forEach((p) => { if (p.booking_id) map.set(p.booking_id, p); });
+    return map;
+  }, [payments]);
 
   const year = cursor.getFullYear();
   const month = cursor.getMonth();
@@ -528,15 +537,24 @@ function CalendarTab() {
                 {day}
               </div>
               <div className="mt-1 space-y-0.5 overflow-hidden">
-                {dayBookings.slice(0, 2).map((b) => (
-                  <div
-                    key={b.id}
-                    className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-[var(--color-primary-subtle)] text-[var(--color-primary-dark)] truncate"
-                    title={`${b.title} - ${b.client_name}`}
-                  >
-                    {b.client_name.split(" ")[0]}
-                  </div>
-                ))}
+                {dayBookings.slice(0, 2).map((b) => {
+                  const invoice = paymentByBookingId.get(b.id);
+                  const dotColor = invoice
+                    ? invoice.status === "paid" ? "var(--color-success)" : "var(--color-warning)"
+                    : null;
+                  return (
+                    <div
+                      key={b.id}
+                      className="flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded bg-[var(--color-primary-subtle)] text-[var(--color-primary-dark)] truncate"
+                      title={`${b.title} - ${b.client_name}${invoice ? ` - invoice ${invoice.status}` : ""}`}
+                    >
+                      {dotColor && (
+                        <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: dotColor }} />
+                      )}
+                      <span className="truncate">{b.client_name.split(" ")[0]}</span>
+                    </div>
+                  );
+                })}
                 {dayBookings.length > 2 && (
                   <div className="text-[10px] text-[var(--color-muted)]">+{dayBookings.length - 2} more</div>
                 )}

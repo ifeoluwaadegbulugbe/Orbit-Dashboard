@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Receipt, AlertCircle, Clock, CheckCircle2, Wallet2, Sparkles, ArrowRight } from "lucide-react";
+import { Receipt, AlertCircle, Clock, CheckCircle2, Wallet2, Sparkles, ArrowRight, CalendarClock } from "lucide-react";
 import { usePayments } from "@/hooks/usePayments";
 import { useWalletBalances } from "@/hooks/useWallet";
 import { useSubscription } from "@/hooks/useSubscription";
@@ -146,8 +146,15 @@ export default function PaymentsPage() {
                         <Receipt className="h-6 w-6 text-[var(--color-primary)]" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div className="text-body font-semibold text-[var(--color-ink)] truncate">
-                          {p.invoice_number ?? "Invoice"} · {p.client_name}
+                        <div className="flex items-center gap-1.5">
+                          <div className="text-body font-semibold text-[var(--color-ink)] truncate">
+                            {p.invoice_number ?? "Invoice"} · {p.client_name}
+                          </div>
+                          {p.booking_id && (
+                            <span title="Created from a booking">
+                              <CalendarClock className="h-3.5 w-3.5 text-[var(--color-muted)] flex-shrink-0" />
+                            </span>
+                          )}
                         </div>
                         <div className="text-small text-[var(--color-muted)] mt-1">
                           {p.status === "overdue" ? "Due " : ""}
