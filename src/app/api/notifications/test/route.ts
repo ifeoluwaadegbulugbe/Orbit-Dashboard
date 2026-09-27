@@ -65,7 +65,7 @@ export async function POST() {
     type: "booking_received",
     title: "Sample booking arrived",
     body: "This is a second test - it proves webhooks will also write to the bell.",
-    actionUrl: "/work?tab=calendar",
+    actionUrl: "/bookings",
     metadata: { source: "self_test_via_notify" },
   });
 

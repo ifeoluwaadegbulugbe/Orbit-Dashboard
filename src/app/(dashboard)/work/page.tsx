@@ -3,45 +3,36 @@
 import { Suspense, useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
-import { useForm } from "react-hook-form";
-import { Briefcase, Receipt, Calendar as CalendarIcon, Plus, ChevronLeft, ChevronRight, Bell, Eye } from "lucide-react";
+import { Briefcase, Receipt, Plus, Bell, Eye } from "lucide-react";
 import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/Input";
-import { Textarea } from "@/components/ui/Textarea";
-import { Select } from "@/components/ui/Select";
-import { Dialog } from "@/components/ui/Dialog";
 import { Badge } from "@/components/ui/Badge";
 import { Avatar } from "@/components/ui/Avatar";
-import { useBookings, useCreateBooking } from "@/hooks/useBookings";
+import { useBookings } from "@/hooks/useBookings";
 import { useAuthStore } from "@/stores/authStore";
 import { useClients } from "@/hooks/useClients";
-import { usePayments, useCreatePayment } from "@/hooks/usePayments";
-import { computeServiceAmount } from "@/lib/services/price";
-import { toast } from "@/stores/toastStore";
+import { usePayments } from "@/hooks/usePayments";
 import { cn, formatShortDate } from "@/lib/utils";
 import { useCurrency } from "@/hooks/useCurrency";
 import { BUSINESS_TYPE_LABELS, type BusinessType } from "@/types";
 import { useProjectStatus, PROJECT_STATUS_LABELS } from "@/hooks/useProjectStatus";
-import { BookingActions } from "@/components/bookings/BookingActions";
-import { useServices } from "@/hooks/useServices";
+import { NewBookingDialog } from "@/components/bookings/NewBookingDialog";
 
-type Tab = "projects" | "invoices" | "calendar";
+type Tab = "projects" | "invoices";
 
 const TABS: { key: Tab; label: string; icon: typeof Briefcase }[] = [
   { key: "projects", label: "Projects", icon: Briefcase },
   { key: "invoices", label: "Invoices", icon: Receipt },
-  { key: "calendar", label: "Calendar", icon: CalendarIcon },
 ];
 
 /**
  * Project-led businesses (fewer, higher-value engagements) land on Projects
- * by default; appointment-led businesses land on Calendar. Set once at mount
- * from the business type picked in onboarding - see orbit-overhaul.md §7/§11.
+ * by default; appointment-led businesses land on Invoices, since their
+ * schedule now lives on its own Bookings tab - see orbit-overhaul.md §7/§11.
  */
 const PROJECT_LED_TYPES = new Set<BusinessType>(["freelancer", "photographer", "event_planner"]);
 
 function defaultTabFor(businessType: BusinessType | undefined): Tab {
-  return businessType && PROJECT_LED_TYPES.has(businessType) ? "projects" : "calendar";
+  return businessType && PROJECT_LED_TYPES.has(businessType) ? "projects" : "invoices";
 }
 
 export default function WorkPage() {
@@ -59,8 +50,6 @@ function Inner() {
   const presetClientId = search.get("clientId") ?? "";
   const [tab, setTab] = useState<Tab>(() => defaultTabFor(profile?.business_type));
   const [bookingDialogOpen, setBookingDialogOpen] = useState(search.get("new") === "1");
-  const { data: allBookings = [] } = useBookings();
-  const pendingBookings = allBookings.filter((b) => b.status === "pending");
 
   useEffect(() => {
     if (presetClientId) setBookingDialogOpen(true);
@@ -70,7 +59,6 @@ function Inner() {
   const createCta = {
     projects: { label: "New project", onClick: () => setBookingDialogOpen(true) },
     invoices: { label: "New invoice", onClick: () => router.push("/payments/new") },
-    calendar: { label: "New booking", onClick: () => setBookingDialogOpen(true) },
   }[tab];
 
   return (
@@ -78,58 +66,12 @@ function Inner() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-page font-bold">Work</h1>
-          <p className="text-lead text-[var(--color-ink-light)] mt-2">Projects, invoices and your schedule.</p>
+          <p className="text-lead text-[var(--color-ink-light)] mt-2">Projects and invoices.</p>
         </div>
         <Button leftIcon={<Plus className="h-4 w-4" />} onClick={createCta.onClick}>
           {createCta.label}
         </Button>
       </div>
-
-      {/* Pending bookings rail - top of the page when there's anything to confirm */}
-      {pendingBookings.length > 0 && (
-        <div className="bg-white rounded-[var(--radius-2xl)] border-2 border-[var(--color-warning)]/30 shadow-soft-sm overflow-hidden">
-          <div className="px-6 py-4 flex items-center gap-3 border-b border-[var(--color-border)] bg-[var(--color-warning-light)]/30">
-            <div className="w-9 h-9 rounded-xl bg-[var(--color-warning-light)] flex items-center justify-center">
-              <CalendarIcon className="h-4 w-4 text-[var(--color-warning-deep)]" />
-            </div>
-            <div className="flex-1">
-              <h2 className="text-card-title font-semibold text-[var(--color-ink)]">
-                {pendingBookings.length} pending {pendingBookings.length === 1 ? "booking" : "bookings"}
-              </h2>
-              <p className="text-small text-[var(--color-ink-light)] mt-0.5">
-                Tap confirm or decline. Your client gets faster clarity.
-              </p>
-            </div>
-          </div>
-          <div className="overflow-x-auto">
-            <div className="flex gap-3 px-6 py-5 min-w-min">
-              {pendingBookings.map((b) => (
-                <div
-                  key={b.id}
-                  className="flex-shrink-0 w-[300px] flex flex-col gap-3 p-5 rounded-[var(--radius-xl)] bg-[var(--color-canvas)] border border-[var(--color-border)]"
-                >
-                  <div>
-                    <div className="text-body font-semibold text-[var(--color-ink)] truncate">
-                      {b.client_name}
-                    </div>
-                    <div className="text-small text-[var(--color-muted)] mt-1 truncate">
-                      {b.title}
-                    </div>
-                    <div className="text-small text-[var(--color-ink-light)] mt-2">
-                      {formatShortDate(b.date)} at {b.time}
-                    </div>
-                  </div>
-                  <BookingActions
-                    bookingId={b.id}
-                    status={b.status}
-                    clientName={b.client_name}
-                  />
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Tab bar */}
       <div className="flex gap-1 bg-white p-1 rounded-full border border-[var(--color-border)] w-fit">
@@ -154,7 +96,6 @@ function Inner() {
 
       {tab === "projects" && <ProjectsTab />}
       {tab === "invoices" && <InvoicesTab />}
-      {tab === "calendar" && <CalendarTab />}
 
       <NewBookingDialog
         open={bookingDialogOpen}
@@ -440,331 +381,6 @@ function InvoicesTab() {
         </Link>
       ))}
     </div>
-  );
-}
-
-// ─── Calendar tab - month view ───────────────────────────────────────────────
-
-function CalendarTab() {
-  const { data: bookings = [] } = useBookings();
-  const { data: payments = [] } = usePayments();
-  const [cursor, setCursor] = useState(() => {
-    const d = new Date();
-    return new Date(d.getFullYear(), d.getMonth(), 1);
-  });
-
-  // booking_id -> payment status, so the calendar can show a paid/unpaid dot
-  // without a separate query (Money already has this data cached).
-  const paymentByBookingId = useMemo(() => {
-    const map = new Map<string, (typeof payments)[number]>();
-    payments.forEach((p) => { if (p.booking_id) map.set(p.booking_id, p); });
-    return map;
-  }, [payments]);
-
-  const year = cursor.getFullYear();
-  const month = cursor.getMonth();
-  const firstWeekday = new Date(year, month, 1).getDay(); // 0=Sun
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
-  const today = new Date();
-  const isToday = (d: number) =>
-    today.getFullYear() === year && today.getMonth() === month && today.getDate() === d;
-
-  // Bookings indexed by `YYYY-MM-DD`
-  const byDay = useMemo(() => {
-    const map = new Map<string, typeof bookings>();
-    bookings.forEach((b) => {
-      map.set(b.date, [...(map.get(b.date) ?? []), b]);
-    });
-    return map;
-  }, [bookings]);
-
-  const monthLabel = cursor.toLocaleDateString("en-US", { month: "long", year: "numeric" });
-
-  return (
-    <div className="bg-white rounded-[var(--radius-xl)] border border-[var(--color-border)] shadow-soft-sm">
-      <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--color-border)]">
-        <h3 className="text-[15px] font-bold">{monthLabel}</h3>
-        <div className="flex gap-1">
-          <button
-            onClick={() => setCursor(new Date(year, month - 1, 1))}
-            className="p-1.5 rounded-lg hover:bg-[var(--color-border-light)]"
-          >
-            <ChevronLeft className="h-4 w-4 text-[var(--color-ink-mid)]" />
-          </button>
-          <button
-            onClick={() => setCursor(new Date())}
-            className="px-3 py-1.5 rounded-lg hover:bg-[var(--color-border-light)] text-xs font-semibold text-[var(--color-ink-mid)]"
-          >
-            Today
-          </button>
-          <button
-            onClick={() => setCursor(new Date(year, month + 1, 1))}
-            className="p-1.5 rounded-lg hover:bg-[var(--color-border-light)]"
-          >
-            <ChevronRight className="h-4 w-4 text-[var(--color-ink-mid)]" />
-          </button>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-7 border-b border-[var(--color-border)]">
-        {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => (
-          <div key={d} className="px-3 py-2 text-[11px] font-semibold uppercase tracking-wide text-[var(--color-muted)] text-center">
-            {d}
-          </div>
-        ))}
-      </div>
-
-      <div className="grid grid-cols-7">
-        {Array.from({ length: firstWeekday }).map((_, i) => (
-          <div key={`pad-${i}`} className="h-24 border-r border-b border-[var(--color-border)] last:border-r-0 bg-[var(--color-canvas)]/30" />
-        ))}
-        {Array.from({ length: daysInMonth }).map((_, i) => {
-          const day = i + 1;
-          const key = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-          const dayBookings = byDay.get(key) ?? [];
-          return (
-            <div
-              key={day}
-              className={cn(
-                "h-24 px-2 py-1.5 border-r border-b border-[var(--color-border)] last:border-r-0",
-                isToday(day) && "bg-[var(--color-primary-subtle)]/40",
-              )}
-            >
-              <div className={cn(
-                "text-xs font-semibold",
-                isToday(day) ? "text-[var(--color-primary)]" : "text-[var(--color-ink-light)]",
-              )}>
-                {day}
-              </div>
-              <div className="mt-1 space-y-0.5 overflow-hidden">
-                {dayBookings.slice(0, 2).map((b) => {
-                  const invoice = paymentByBookingId.get(b.id);
-                  const dotColor = invoice
-                    ? invoice.status === "paid" ? "var(--color-success)" : "var(--color-warning)"
-                    : null;
-                  return (
-                    <div
-                      key={b.id}
-                      className="flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded bg-[var(--color-primary-subtle)] text-[var(--color-primary-dark)] truncate"
-                      title={`${b.title} - ${b.client_name}${invoice ? ` - invoice ${invoice.status}` : ""}`}
-                    >
-                      {dotColor && (
-                        <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: dotColor }} />
-                      )}
-                      <span className="truncate">{b.client_name.split(" ")[0]}</span>
-                    </div>
-                  );
-                })}
-                {dayBookings.length > 2 && (
-                  <div className="text-[10px] text-[var(--color-muted)]">+{dayBookings.length - 2} more</div>
-                )}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-// ─── New booking dialog ──────────────────────────────────────────────────────
-
-interface BookingFormValues {
-  clientId: string;
-  title: string;
-  date: string;
-  time: string;
-  notes: string;
-  durationMinutes: number | null;
-}
-
-function NewBookingDialog({
-  open, onClose, presetClientId,
-}: { open: boolean; onClose: () => void; presetClientId: string }) {
-  const { data: clients = [] } = useClients();
-  const { data: services = [] } = useServices();
-  const profile = useAuthStore((s) => s.profile);
-  const create = useCreateBooking();
-  const createPayment = useCreatePayment();
-  const [error, setError] = useState<string | null>(null);
-
-  const tomorrow = new Date(Date.now() + 86400000);
-  const { register, handleSubmit, reset, formState, setValue, watch } = useForm<BookingFormValues>({
-    defaultValues: {
-      clientId: presetClientId,
-      date: tomorrow.toISOString().slice(0, 10),
-      time: "10:00",
-      durationMinutes: null,
-    },
-  });
-  const watchedTitle = watch("title");
-
-  useEffect(() => {
-    if (presetClientId) reset((prev) => ({ ...prev, clientId: presetClientId }));
-  }, [presetClientId, reset]);
-
-  async function onSubmit(values: BookingFormValues) {
-    setError(null);
-    const client = clients.find((c) => c.id === values.clientId);
-    if (!client) {
-      setError("Pick a client first.");
-      return;
-    }
-    if (!profile) {
-      setError("Your profile isn't loaded yet. Try again in a moment.");
-      return;
-    }
-    try {
-      const title = values.title.trim();
-      const booking = await create.mutateAsync({
-        client_id: client.id,
-        client_name: client.name,
-        title,
-        date: values.date,
-        time: values.time,
-        status: "confirmed",
-        notes: values.notes.trim() || null,
-        business_type: profile.business_type,
-        duration_minutes: values.durationMinutes,
-      });
-
-      // Dashboard bookings are already "confirmed" the moment they're
-      // saved, so try to invoice right away - quietly skips if the title
-      // doesn't cleanly resolve to a priced service (freehand title, "From
-      // N5,000"-style price, etc). See computeServiceAmount.
-      const amount = computeServiceAmount(services, title);
-      if (amount !== null) {
-        try {
-          const invoiceNumber = `INV-${Date.now().toString().slice(-6)}`;
-          await createPayment.mutateAsync({
-            client_id: client.id,
-            client_name: client.name,
-            amount,
-            paid_amount: null,
-            remaining_balance: amount,
-            type: "full",
-            status: "pending",
-            date: values.date,
-            notes: null,
-            invoice_number: invoiceNumber,
-            line_items: null,
-            payment_link: null,
-            transaction_reference: null,
-            payment_provider: null,
-            webhook_verified: null,
-            payment_completed_at: null,
-            booking_id: booking.id,
-          });
-          toast(`Booking saved. Invoice ${invoiceNumber} created.`, "success");
-        } catch {
-          // Booking itself already saved - a failed invoice attempt shouldn't
-          // block the flow or confuse the owner with an error here.
-        }
-      }
-
-      reset();
-      onClose();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not save booking.");
-    }
-  }
-
-  return (
-    <Dialog open={open} onClose={onClose} title="New booking">
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-        {error && (
-          <div className="px-3 py-2 rounded-md bg-[var(--color-danger-light)] text-xs text-[var(--color-danger-deep)]">
-            {error}
-          </div>
-        )}
-
-        <Select label="Client" {...register("clientId", { required: true })}>
-          <option value="">- Pick a client -</option>
-          {clients.map((c) => (
-            <option key={c.id} value={c.id}>{c.name}</option>
-          ))}
-        </Select>
-
-        {/* Service quick-pick. When the owner has services configured, show
-            them as chips above the Title field - tapping fills the title
-            instead of typing it manually. */}
-        {services.length > 0 ? (
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <label className="block text-small font-semibold text-[var(--color-ink)]">
-                Service
-              </label>
-              <Link
-                href="/services"
-                className="text-tiny font-semibold text-[var(--color-ink-light)] hover:text-[var(--color-primary)]"
-              >
-                Edit list
-              </Link>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {services.map((s, i) => {
-                const isSelected = watchedTitle === s.name;
-                return (
-                  <button
-                    key={i}
-                    type="button"
-                    onClick={() => {
-                      setValue("title", s.name, { shouldValidate: true });
-                      setValue("durationMinutes", s.duration_minutes ?? null);
-                    }}
-                    className={`px-3.5 py-2 rounded-full border text-small font-semibold transition-colors ${
-                      isSelected
-                        ? "border-[var(--color-primary)] bg-[var(--color-primary-subtle)] text-[var(--color-primary-dark)]"
-                        : "border-[var(--color-border)] bg-white text-[var(--color-ink-light)] hover:border-[var(--color-primary)]/40"
-                    }`}
-                  >
-                    {s.name || "Untitled"}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        ) : (
-          <Link
-            href="/services"
-            className="flex items-center gap-3 px-4 py-3 rounded-[var(--radius-lg)] bg-[var(--color-primary-subtle)]/60 hover:bg-[var(--color-primary-subtle)] transition-colors"
-          >
-            <div className="text-small">
-              <div className="font-semibold text-[var(--color-ink)]">Add services to pick from</div>
-              <div className="text-tiny text-[var(--color-ink-light)] mt-0.5">
-                Build your menu once, use it everywhere.
-              </div>
-            </div>
-          </Link>
-        )}
-
-        <Input
-          label={services.length > 0 ? "Or type a custom title" : "Title"}
-          placeholder="e.g. Hair appointment, Tutoring session"
-          {...register("title", { required: true })}
-        />
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Input
-            label="Date"
-            type="date"
-            {...register("date", { required: true })}
-          />
-          <Input
-            label="Time"
-            type="time"
-            {...register("time", { required: true })}
-          />
-        </div>
-
-        <Textarea label="Notes (optional)" {...register("notes")} />
-
-        <div className="flex items-center justify-end gap-3 pt-2 border-t border-[var(--color-border)]">
-          <Button type="button" variant="ghost" onClick={onClose}>Cancel</Button>
-          <Button type="submit" loading={formState.isSubmitting}>Add booking</Button>
-        </div>
-      </form>
-    </Dialog>
   );
 }
 

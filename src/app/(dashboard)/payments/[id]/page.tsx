@@ -167,7 +167,7 @@ export default function PaymentDetailPage({ params }: { params: Promise<{ id: st
 
         {sourceBooking && (
           <Link
-            href="/work?tab=calendar"
+            href="/bookings"
             className="mt-5 flex items-center gap-2 px-4 py-3 rounded-[var(--radius-lg)] bg-[var(--color-canvas)] hover:bg-[var(--color-border-light)] transition-colors text-small text-[var(--color-ink-light)]"
           >
             <Calendar className="h-3.5 w-3.5 flex-shrink-0" />

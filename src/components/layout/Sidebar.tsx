@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Home, Users, Briefcase, Wallet2, LineChart, Settings, Sparkles,
-  Zap, MessageSquare, Bell, Download, BookOpen,
+  Zap, MessageSquare, Bell, Download, BookOpen, CalendarDays,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -17,11 +17,12 @@ interface NavItem {
   icon: LucideIcon;
 }
 
-/** The five jobs a service-business owner actually does - see orbit-overhaul.md §7. */
+/** The core jobs a service-business owner actually does - see orbit-overhaul.md §7. */
 const MAIN_NAV: NavItem[] = [
   { href: "/home",      label: "Home",     icon: Home },
   { href: "/clients",   label: "Clients",  icon: Users },
   { href: "/work",      label: "Work",     icon: Briefcase },
+  { href: "/bookings",  label: "Bookings", icon: CalendarDays },
   { href: "/payments",  label: "Money",    icon: Wallet2 },
   { href: "/analytics", label: "Insights", icon: LineChart },
 ];

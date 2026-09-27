@@ -155,7 +155,7 @@ export default function HomePage() {
           <QuickAction label="Add Client"  href="/clients/new"     icon={Plus} />
           <QuickAction label="New Invoice" href="/payments/new"    icon={Receipt} />
           <QuickAction label="New Project" href="/work?new=1"      icon={Briefcase} />
-          <QuickAction label="Schedule"    href="/work?cal=1"      icon={CalendarPlus} />
+          <QuickAction label="Schedule"    href="/bookings?new=1"  icon={CalendarPlus} />
           <QuickAction label="Share Booking Link" href="/booking-link" icon={Link2} />
         </div>
       </div>
@@ -236,7 +236,7 @@ export default function HomePage() {
           <Section
             title="Today's schedule"
             loading={bookingsLoading}
-            viewAllHref="/work?cal=1"
+            viewAllHref="/bookings"
           >
             {todaysBookings.map((b) => (
               <div
