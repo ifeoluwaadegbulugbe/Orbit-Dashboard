@@ -3,9 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  Home, Users, Briefcase, CreditCard, BarChart3, Bell, Settings, Sparkles,
-  Zap, Palette, Link2, MessageSquare, Download, BookOpen, Scissors,
-  Wallet, type LucideIcon,
+  Home, Users, Briefcase, Wallet2, LineChart, Settings, Sparkles,
+  type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSubscription } from "@/hooks/useSubscription";
@@ -17,27 +16,13 @@ interface NavItem {
   icon: LucideIcon;
 }
 
+/** The five jobs a service-business owner actually does - see orbit-overhaul.md §7. */
 const MAIN_NAV: NavItem[] = [
-  { href: "/home",         label: "Home",         icon: Home },
-  { href: "/clients",      label: "Clients",      icon: Users },
-  { href: "/work",         label: "Work",         icon: Briefcase },
-  { href: "/services",     label: "Services",     icon: Scissors },
-  { href: "/payments",     label: "Payments",     icon: CreditCard },
-  { href: "/booking-link", label: "Booking Link", icon: Link2 },
-  { href: "/analytics",    label: "Analytics",    icon: BarChart3 },
-  { href: "/reminders",    label: "Reminders",    icon: Bell },
-  { href: "/help",         label: "Help",         icon: BookOpen },
-  { href: "/profile",      label: "Profile",      icon: Settings },
-];
-
-/** Pro feature shortcuts - only shown when subscription.isPro is true. */
-const PRO_NAV: NavItem[] = [
-  { href: "/ai-assistant",     label: "AI Assistant",    icon: Sparkles },
-  { href: "/wallet",           label: "Wallet",          icon: Wallet },
-  { href: "/automations",      label: "Automations",     icon: Zap },
-  { href: "/branding",         label: "Branding",        icon: Palette },
-  { href: "/templates",        label: "Templates",       icon: MessageSquare },
-  { href: "/export",           label: "Export Data",     icon: Download },
+  { href: "/home",      label: "Home",     icon: Home },
+  { href: "/clients",   label: "Clients",  icon: Users },
+  { href: "/work",      label: "Work",     icon: Briefcase },
+  { href: "/payments",  label: "Money",    icon: Wallet2 },
+  { href: "/analytics", label: "Insights", icon: LineChart },
 ];
 
 export function Sidebar() {
@@ -58,31 +43,20 @@ export function Sidebar() {
         </Link>
       </div>
 
-      {/* Scrollable nav region - main nav + Pro section */}
+      {/* Scrollable nav region */}
       <nav className="flex-1 px-4 overflow-y-auto pb-4">
-        {/* Main */}
         <div className="space-y-1.5">
           {MAIN_NAV.map((item) => (
             <NavLink key={item.href} item={item} pathname={pathname} />
           ))}
         </div>
 
-        {/* Pro section - only when Pro is active */}
-        {isPro && (
-          <div className="mt-6 pt-5 border-t border-[var(--color-border)]/60">
-            <div className="px-4 mb-2 flex items-center gap-2">
-              <Sparkles className="h-3 w-3 text-[var(--color-primary)]" />
-              <span className="text-tiny font-bold uppercase tracking-wider text-[var(--color-primary)]">
-                Pro Tools
-              </span>
-            </div>
-            <div className="space-y-1.5">
-              {PRO_NAV.map((item) => (
-                <NavLink key={item.href} item={item} pathname={pathname} />
-              ))}
-            </div>
+        {/* Settings - separated from the main jobs above, not a peer destination */}
+        <div className="mt-6 pt-5 border-t border-[var(--color-border)]/60">
+          <div className="space-y-1.5">
+            <NavLink item={{ href: "/profile", label: "Settings", icon: Settings }} pathname={pathname} />
           </div>
-        )}
+        </div>
       </nav>
 
       {/* Plan card */}

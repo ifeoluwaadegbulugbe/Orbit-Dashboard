@@ -20,7 +20,7 @@ import { computeServiceAmount } from "@/lib/services/price";
 import { toast } from "@/stores/toastStore";
 import { cn, formatShortDate } from "@/lib/utils";
 import { useCurrency } from "@/hooks/useCurrency";
-import { BUSINESS_TYPE_LABELS } from "@/types";
+import { BUSINESS_TYPE_LABELS, type BusinessType } from "@/types";
 import { useProjectStatus, PROJECT_STATUS_LABELS } from "@/hooks/useProjectStatus";
 import { BookingActions } from "@/components/bookings/BookingActions";
 import { useServices } from "@/hooks/useServices";
@@ -33,6 +33,17 @@ const TABS: { key: Tab; label: string; icon: typeof Briefcase }[] = [
   { key: "calendar", label: "Calendar", icon: CalendarIcon },
 ];
 
+/**
+ * Project-led businesses (fewer, higher-value engagements) land on Projects
+ * by default; appointment-led businesses land on Calendar. Set once at mount
+ * from the business type picked in onboarding - see orbit-overhaul.md §7/§11.
+ */
+const PROJECT_LED_TYPES = new Set<BusinessType>(["freelancer", "photographer", "event_planner"]);
+
+function defaultTabFor(businessType: BusinessType | undefined): Tab {
+  return businessType && PROJECT_LED_TYPES.has(businessType) ? "projects" : "calendar";
+}
+
 export default function WorkPage() {
   return (
     <Suspense fallback={<div className="h-40 rounded-[var(--radius-xl)] skeleton" />}>
@@ -44,8 +55,9 @@ export default function WorkPage() {
 function Inner() {
   const search = useSearchParams();
   const router = useRouter();
+  const profile = useAuthStore((s) => s.profile);
   const presetClientId = search.get("clientId") ?? "";
-  const [tab, setTab] = useState<Tab>("calendar");
+  const [tab, setTab] = useState<Tab>(() => defaultTabFor(profile?.business_type));
   const [bookingDialogOpen, setBookingDialogOpen] = useState(search.get("new") === "1");
   const { data: allBookings = [] } = useBookings();
   const pendingBookings = allBookings.filter((b) => b.status === "pending");

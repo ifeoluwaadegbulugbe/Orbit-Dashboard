@@ -6,6 +6,7 @@ import Link from "next/link";
 import {
   Sparkles, Settings, Globe, CreditCard, FileText, LogOut, ExternalLink, Check,
   Camera, Edit2, X, Save, ChevronRight, Lock, Loader2,
+  Palette, Zap, Bell, Link2, MessageSquare, Download, BookOpen,
 } from "lucide-react";
 import { Avatar } from "@/components/ui/Avatar";
 import { Badge } from "@/components/ui/Badge";
@@ -173,7 +174,7 @@ function ProfileInner() {
 
   return (
     <div className="space-y-8 max-w-3xl">
-      <h1 className="text-page font-bold">Profile</h1>
+      <h1 className="text-page font-bold">Settings</h1>
 
       {banner && (
         <div
@@ -249,7 +250,7 @@ function ProfileInner() {
                 <div className="text-small text-[var(--color-muted)] mt-1">
                   {isOnTrial
                     ? `Auto-renews to ${PRO_PRICE_DISPLAY}${PRO_PRICE_PERIOD} after trial ends.`
-                    : `${PRO_PRICE_DISPLAY}${PRO_PRICE_PERIOD} · billed monthly via Paystack`}
+                    : `${PRO_PRICE_DISPLAY}${PRO_PRICE_PERIOD} · billed monthly`}
                 </div>
               </div>
             </div>
@@ -328,6 +329,19 @@ function ProfileInner() {
       {/* ─── Security ─── */}
       <SectionCard title="Security" icon={<Lock className="h-4 w-4 text-[var(--color-primary)]" />}>
         <ChangePasswordRow />
+      </SectionCard>
+
+      {/* ─── More - everything that isn't a daily destination lives here, not
+           in the main nav (orbit-overhaul.md §7/§8) ─── */}
+      <SectionCard title="More" icon={<Settings className="h-4 w-4 text-[var(--color-primary)]" />}>
+        <RowLink label="AI Assistant"  href="/ai-assistant" icon={<Sparkles className="h-4 w-4" />} />
+        <RowLink label="Branding"      href="/branding"     icon={<Palette className="h-4 w-4" />} />
+        <RowLink label="Automations"   href="/automations"  icon={<Zap className="h-4 w-4" />} />
+        <RowLink label="Reminders"     href="/reminders"    icon={<Bell className="h-4 w-4" />} />
+        <RowLink label="Booking Link"  href="/booking-link" icon={<Link2 className="h-4 w-4" />} />
+        <RowLink label="Templates"     href="/templates"    icon={<MessageSquare className="h-4 w-4" />} />
+        <RowLink label="Export Data"   href="/export"       icon={<Download className="h-4 w-4" />} />
+        <RowLink label="Help"          href="/help"         icon={<BookOpen className="h-4 w-4" />} />
       </SectionCard>
 
       {/* ─── Legal ─── */}
@@ -462,13 +476,16 @@ function EditableRow({
   );
 }
 
-function RowLink({ label, href }: { label: string; href: string }) {
+function RowLink({ label, href, icon }: { label: string; href: string; icon?: React.ReactNode }) {
   return (
     <Link
       href={href}
       className="flex items-center justify-between px-7 py-4 hover:bg-[var(--color-canvas)] transition-colors"
     >
-      <span className="text-body text-[var(--color-ink)]">{label}</span>
+      <span className="flex items-center gap-3 text-body text-[var(--color-ink)]">
+        {icon && <span className="text-[var(--color-ink-light)]">{icon}</span>}
+        {label}
+      </span>
       <ExternalLink className="h-4 w-4 text-[var(--color-muted)]" />
     </Link>
   );

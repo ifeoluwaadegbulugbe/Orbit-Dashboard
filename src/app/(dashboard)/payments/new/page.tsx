@@ -98,11 +98,19 @@ function Inner() {
         <ChevronLeft className="h-4 w-4" /> All invoices
       </Link>
 
-      <div>
-        <h1 className="text-page font-bold">New invoice</h1>
-        <p className="text-lead text-[var(--color-ink-light)] mt-2">
-          Log a payment or create an invoice to send.
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-page font-bold">New invoice</h1>
+          <p className="text-lead text-[var(--color-ink-light)] mt-2">
+            Log a payment or create an invoice to send.
+          </p>
+        </div>
+        <Link
+          href="/services"
+          className="text-tiny font-semibold text-[var(--color-ink-light)] hover:text-[var(--color-primary)] whitespace-nowrap pt-1"
+        >
+          Manage services
+        </Link>
       </div>
 
       {error && (

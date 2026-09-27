@@ -4,12 +4,10 @@ import { useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  X, Home, Users, Briefcase, CreditCard, BarChart3, Bell, Settings, Sparkles,
-  Zap, Palette, Link2, MessageSquare, Download, BookOpen, Scissors,
-  Wallet, type LucideIcon,
+  X, Home, Users, Briefcase, Wallet2, LineChart, Settings, Sparkles,
+  type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useSubscription } from "@/hooks/useSubscription";
 
 interface NavItem {
   href: string;
@@ -17,31 +15,17 @@ interface NavItem {
   icon: LucideIcon;
 }
 
+/** The five jobs a service-business owner actually does - see orbit-overhaul.md §7. */
 const MAIN_NAV: NavItem[] = [
-  { href: "/home",      label: "Home",       icon: Home },
-  { href: "/clients",   label: "Clients",    icon: Users },
-  { href: "/work",      label: "Work",       icon: Briefcase },
-  { href: "/services",  label: "Services",   icon: Scissors },
-  { href: "/payments",  label: "Payments",   icon: CreditCard },
-  { href: "/analytics", label: "Analytics",  icon: BarChart3 },
-  { href: "/reminders", label: "Reminders",  icon: Bell },
-  { href: "/help",      label: "Help",       icon: BookOpen },
-  { href: "/profile",   label: "Profile",    icon: Settings },
-];
-
-const PRO_NAV: NavItem[] = [
-  { href: "/ai-assistant",     label: "AI Assistant",    icon: Sparkles },
-  { href: "/wallet",           label: "Wallet",          icon: Wallet },
-  { href: "/automations",      label: "Automations",     icon: Zap },
-  { href: "/branding",         label: "Branding",        icon: Palette },
-  { href: "/booking-link",     label: "Booking Link",    icon: Link2 },
-  { href: "/templates",        label: "Templates",       icon: MessageSquare },
-  { href: "/export",           label: "Export Data",     icon: Download },
+  { href: "/home",      label: "Home",     icon: Home },
+  { href: "/clients",   label: "Clients",  icon: Users },
+  { href: "/work",      label: "Work",     icon: Briefcase },
+  { href: "/payments",  label: "Money",    icon: Wallet2 },
+  { href: "/analytics", label: "Insights", icon: LineChart },
 ];
 
 export function MobileNav({ open, onClose }: { open: boolean; onClose: () => void }) {
   const pathname = usePathname();
-  const { isPro } = useSubscription();
 
   useEffect(() => {
     document.body.style.overflow = open ? "hidden" : "";
@@ -75,21 +59,15 @@ export function MobileNav({ open, onClose }: { open: boolean; onClose: () => voi
               <Row key={item.href} item={item} pathname={pathname} onClose={onClose} />
             ))}
           </div>
-          {isPro && (
-            <div className="mt-5 pt-4 border-t border-[var(--color-border)]/60">
-              <div className="px-3 mb-2 flex items-center gap-2">
-                <Sparkles className="h-3 w-3 text-[var(--color-primary)]" />
-                <span className="text-tiny font-bold uppercase tracking-wider text-[var(--color-primary)]">
-                  Pro Tools
-                </span>
-              </div>
-              <div className="space-y-1">
-                {PRO_NAV.map((item) => (
-                  <Row key={item.href} item={item} pathname={pathname} onClose={onClose} />
-                ))}
-              </div>
+          <div className="mt-5 pt-4 border-t border-[var(--color-border)]/60">
+            <div className="space-y-1">
+              <Row
+                item={{ href: "/profile", label: "Settings", icon: Settings }}
+                pathname={pathname}
+                onClose={onClose}
+              />
             </div>
-          )}
+          </div>
         </nav>
       </aside>
     </div>
