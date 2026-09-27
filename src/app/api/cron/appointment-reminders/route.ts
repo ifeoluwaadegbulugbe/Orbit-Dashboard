@@ -4,25 +4,28 @@ import { sendEmail } from "@/lib/email/server";
 import { notify } from "@/lib/notifications/server";
 
 /**
- * Sends appointment-reminder emails to Orbit users 30 / 15 / 5 minutes before
- * each upcoming booking. Designed to be hit by a cron job every 5 minutes.
+ * Sends appointment-reminder emails 60 / 30 / 5 minutes before each upcoming
+ * booking - to the CLIENT (to cut no-shows, if they have an email on file)
+ * and to the owner (their own heads-up). Designed to be hit by a cron job
+ * every 5 minutes - see vercel.json. A 5-minute tick with the ±2-minute
+ * match window below means every booking gets caught reliably regardless of
+ * exactly when in the tick its window falls.
  *
  * Vercel Cron config (vercel.json):
- *   {
- *     "crons": [
- *       { "path": "/api/cron/appointment-reminders", "schedule": "*\/5 * * * *" }
- *     ]
- *   }
+ *   { "path": "/api/cron/appointment-reminders", "schedule": "*\/5 * * * *" }
  *
- * Or hit it from any cron service. Protect it with a Bearer token:
- *   curl -H "Authorization: Bearer $CRON_SECRET" https://.../api/cron/appointment-reminders
+ * Note: Vercel's Hobby plan only supports daily cron schedules - frequent
+ * ticks like this need a Pro/Team plan, or an external scheduler (e.g. a
+ * GitHub Actions cron, or cron-job.org) hitting this URL every 5 minutes
+ * with `Authorization: Bearer $CRON_SECRET` instead.
  */
 
-const LEAD_TIMES_MINUTES = [30, 15, 5];
+const LEAD_TIMES_MINUTES = [60, 30, 5];
 
 interface BookingRow {
   id: string;
   user_id: string;
+  client_id: string;
   client_name: string;
   date: string;
   time: string;
@@ -34,6 +37,11 @@ interface ProfileRow {
   id: string;
   email: string;
   full_name: string;
+}
+
+interface ClientRow {
+  id: string;
+  email: string | null;
 }
 
 export async function GET(request: Request) {
@@ -57,7 +65,7 @@ export async function GET(request: Request) {
 
   const { data: bookings, error } = await supabase
     .from("bookings")
-    .select("id,user_id,client_name,date,time,title,status")
+    .select("id,user_id,client_id,client_name,date,time,title,status")
     .in("date", [today, tomorrow])
     .in("status", ["pending", "confirmed"]);
 
@@ -85,15 +93,19 @@ export async function GET(request: Request) {
     return NextResponse.json({ ok: true, sent: 0, message: "Nothing in the reminder windows." });
   }
 
-  // Look up the owner emails in one batch
+  // Look up the owner emails and client emails in one batch each
   const userIds = Array.from(new Set(toSend.map((s) => s.booking.user_id)));
-  const { data: profiles } = await supabase
-    .from("profiles")
-    .select("id,email,full_name")
-    .in("id", userIds);
+  const clientIds = Array.from(new Set(toSend.map((s) => s.booking.client_id)));
+  const [{ data: profiles }, { data: clientRows }] = await Promise.all([
+    supabase.from("profiles").select("id,email,full_name").in("id", userIds),
+    supabase.from("clients").select("id,email").in("id", clientIds),
+  ]);
 
   const profileMap = new Map<string, ProfileRow>(
     (profiles ?? []).map((p) => [p.id as string, p as ProfileRow]),
+  );
+  const clientMap = new Map<string, ClientRow>(
+    (clientRows ?? []).map((c) => [c.id as string, c as ClientRow]),
   );
 
   // Send emails + log in-app notifications so the bell dropdown shows them too
@@ -101,20 +113,34 @@ export async function GET(request: Request) {
   const errors: string[] = [];
   for (const { booking, minutesUntil } of toSend) {
     const profile = profileMap.get(booking.user_id);
+    const client = clientMap.get(booking.client_id);
+    const businessName = profile?.full_name || "the business";
 
-    // Email the OWNER (their reminder, "with X at Y")
+    // Remind the CLIENT - the higher-value reminder, cuts no-shows.
+    if (client?.email) {
+      const result = await sendEmail({
+        to: client.email,
+        subject: `Reminder: ${booking.title} in ${minutesUntil} minutes`,
+        html: renderClientReminderHtml({ businessName, booking, minutesUntil }),
+        text: renderClientReminderText({ businessName, booking, minutesUntil }),
+      });
+      if (result.ok) sent++;
+      else if (!result.skipped) errors.push(`client ${booking.id}: ${result.error}`);
+    }
+
+    // Remind the OWNER - their own heads-up.
     if (profile?.email) {
       const result = await sendEmail({
         to: profile.email,
         subject: `Reminder: ${booking.title} in ${minutesUntil} minutes`,
-        html: renderReminderHtml({ profile, booking, minutesUntil }),
-        text: renderReminderText({ profile, booking, minutesUntil }),
+        html: renderOwnerReminderHtml({ profile, booking, minutesUntil }),
+        text: renderOwnerReminderText({ profile, booking, minutesUntil }),
       });
 
       if (result.ok) {
         sent++;
       } else if (!result.skipped) {
-        errors.push(`${booking.id}: ${result.error}`);
+        errors.push(`owner ${booking.id}: ${result.error}`);
       }
     }
 
@@ -126,7 +152,7 @@ export async function GET(request: Request) {
       type: "reminder_due",
       title: `${booking.title} in ${minutesUntil} min`,
       body: `With ${booking.client_name} at ${booking.time}.`,
-      actionUrl: `/work?tab=calendar`,
+      actionUrl: `/bookings`,
       metadata: {
         booking_id: booking.id,
         minutes_until: minutesUntil,
@@ -152,7 +178,7 @@ function parseBookingStart(date: string, time: string): number | null {
   return new Date(year, month - 1, day, hour, minute).getTime();
 }
 
-function renderReminderHtml({
+function renderOwnerReminderHtml({
   profile, booking, minutesUntil,
 }: {
   profile: ProfileRow;
@@ -172,7 +198,7 @@ function renderReminderHtml({
 </body></html>`;
 }
 
-function renderReminderText({
+function renderOwnerReminderText({
   profile, booking, minutesUntil,
 }: {
   profile: ProfileRow;
@@ -187,6 +213,38 @@ Reminder: "${booking.title}" with ${booking.client_name} starts in ${minutesUnti
 Good luck.
 
 - Orbit`;
+}
+
+function renderClientReminderHtml({
+  businessName, booking, minutesUntil,
+}: {
+  businessName: string;
+  booking: BookingRow;
+  minutesUntil: number;
+}): string {
+  return `<!DOCTYPE html>
+<html><body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 560px; margin: 0 auto; padding: 24px; color: #1A1A1A; background: #F2F1EF;">
+  <div style="background: white; border-radius: 16px; padding: 32px; border: 1px solid #E5E3DF;">
+    <div style="font-size: 12px; font-weight: 700; color: #E8557A; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">Coming up in ${minutesUntil} minutes</div>
+    <h1 style="font-size: 24px; font-weight: 800; margin: 0 0 8px;">${escapeHtml(booking.title)}</h1>
+    <p style="font-size: 16px; color: #3D3D3D; margin: 0 0 24px;">With <strong>${escapeHtml(businessName)}</strong> at ${formatTime(booking.time)}</p>
+    <p style="font-size: 14px; color: #6B6B6B; margin: 0;">Hi ${escapeHtml(booking.client_name)}, just a friendly reminder about your upcoming appointment. See you soon!</p>
+  </div>
+</body></html>`;
+}
+
+function renderClientReminderText({
+  businessName, booking, minutesUntil,
+}: {
+  businessName: string;
+  booking: BookingRow;
+  minutesUntil: number;
+}): string {
+  return `Hi ${booking.client_name},
+
+Just a friendly reminder: "${booking.title}" with ${businessName} starts in ${minutesUntil} minutes (${formatTime(booking.time)}).
+
+See you soon!`;
 }
 
 function formatTime(time: string): string {

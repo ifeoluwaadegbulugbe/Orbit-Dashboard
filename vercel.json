@@ -2,7 +2,7 @@
   "crons": [
     {
       "path": "/api/cron/appointment-reminders",
-      "schedule": "0 6 * * *"
+      "schedule": "*/5 * * * *"
     },
     {
       "path": "/api/cron/birthday-messages",
