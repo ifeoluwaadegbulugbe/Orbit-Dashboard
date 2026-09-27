@@ -72,6 +72,40 @@ export default function HomePage() {
         </p>
       </div>
 
+      {/* ─── Today's schedule - full width, top of the page ─── */}
+      {(bookingsLoading || todaysBookings.length > 0) && (
+        <Section
+          title="Today's schedule"
+          loading={bookingsLoading}
+          viewAllHref="/bookings"
+        >
+          {todaysBookings.map((b) => (
+            <div
+              key={b.id}
+              className="flex items-center gap-4 px-5 py-3.5 rounded-[var(--radius-lg)] hover:bg-[var(--color-border-light)] transition-colors"
+            >
+              <Link href={`/clients/${b.client_id}`} className="flex items-center gap-4 flex-1 min-w-0">
+                <div className="w-11 h-11 rounded-xl bg-[var(--color-info-light)] flex items-center justify-center flex-shrink-0">
+                  <span className="text-[11px] font-bold text-[var(--color-info)]">
+                    {formatBookingTime(b.time)}
+                  </span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-body font-semibold text-[var(--color-ink)] truncate">{b.client_name}</div>
+                  <div className="text-small text-[var(--color-muted)] mt-0.5">{b.title}</div>
+                </div>
+              </Link>
+              <BookingActions
+                bookingId={b.id}
+                status={b.status}
+                clientName={b.client_name}
+                compact
+              />
+            </div>
+          ))}
+        </Section>
+      )}
+
       {/* ─── Stat cards ─── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
         <StatCard label="Total Clients" value={clients.length} icon={Users} tone="primary" />
@@ -225,40 +259,6 @@ export default function HomePage() {
                   }}
                   locked={!isPro}
                   onLocked={() => setPaywallOpen(true)}
-                />
-              </div>
-            ))}
-          </Section>
-        )}
-
-        {/* Today's schedule */}
-        {(bookingsLoading || todaysBookings.length > 0) && (
-          <Section
-            title="Today's schedule"
-            loading={bookingsLoading}
-            viewAllHref="/bookings"
-          >
-            {todaysBookings.map((b) => (
-              <div
-                key={b.id}
-                className="flex items-center gap-4 px-5 py-3.5 rounded-[var(--radius-lg)] hover:bg-[var(--color-border-light)] transition-colors"
-              >
-                <Link href={`/clients/${b.client_id}`} className="flex items-center gap-4 flex-1 min-w-0">
-                  <div className="w-11 h-11 rounded-xl bg-[var(--color-info-light)] flex items-center justify-center flex-shrink-0">
-                    <span className="text-[11px] font-bold text-[var(--color-info)]">
-                      {formatBookingTime(b.time)}
-                    </span>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-body font-semibold text-[var(--color-ink)] truncate">{b.client_name}</div>
-                    <div className="text-small text-[var(--color-muted)] mt-0.5">{b.title}</div>
-                  </div>
-                </Link>
-                <BookingActions
-                  bookingId={b.id}
-                  status={b.status}
-                  clientName={b.client_name}
-                  compact
                 />
               </div>
             ))}
