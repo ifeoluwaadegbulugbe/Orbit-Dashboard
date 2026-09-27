@@ -52,24 +52,31 @@ export async function GET(request: Request) {
 
   const supabase = createServiceClient();
 
-  // Build today's month-day suffix e.g. "-05-24"
+  // Build today's month-day suffix e.g. "05-24"
   const today = new Date();
   const monthDay = `${String(today.getMonth() + 1).padStart(2, "0")}-${String(
     today.getDate(),
   ).padStart(2, "0")}`;
 
-  // Find all clients whose birthday month-day matches today (any birth year)
-  const { data: clients, error } = await supabase
+  // `birthday` is a DATE column - Postgres's LIKE (~~) operator doesn't work
+  // on dates at all (this previously errored on every single run: "operator
+  // does not exist: date ~~ unknown"). Fetch everyone with a birthday set and
+  // match month-day in JS instead - the birthday column comes back as an
+  // ISO "YYYY-MM-DD" string, so slicing out characters 5-10 gives "MM-DD".
+  const { data: allBirthdays, error } = await supabase
     .from("clients")
-    .select("id, user_id, name, email, phone, whatsapp_number")
-    .like("birthday", `%-${monthDay}`)
+    .select("id, user_id, name, email, phone, whatsapp_number, birthday")
     .not("birthday", "is", null);
 
   if (error) {
     console.error("[birthday-messages] client query failed:", error.message);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
-  if (!clients || clients.length === 0) {
+
+  const clients = (allBirthdays ?? []).filter(
+    (c) => typeof c.birthday === "string" && c.birthday.slice(5, 10) === monthDay,
+  );
+  if (clients.length === 0) {
     return NextResponse.json({ ok: true, sent: 0, message: "No birthdays today." });
   }
 
