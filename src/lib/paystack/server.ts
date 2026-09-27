@@ -152,6 +152,23 @@ export async function generateManageLink(subscriptionCode: string) {
   );
 }
 
+interface DisableSubscriptionResponse {
+  status: true;
+  message: string;
+}
+
+/**
+ * Cancels a subscription directly via the API - no redirect to a
+ * Paystack-hosted page needed. `token` is the subscription's `email_token`
+ * from listCustomerSubscriptions(), not the customer's login/session token.
+ */
+export async function disableSubscription(subscriptionCode: string, emailToken: string) {
+  return paystackFetch<DisableSubscriptionResponse>("/subscription/disable", {
+    method: "POST",
+    body: JSON.stringify({ code: subscriptionCode, token: emailToken }),
+  });
+}
+
 // ─── Webhook signature ──────────────────────────────────────────────────────
 
 /**

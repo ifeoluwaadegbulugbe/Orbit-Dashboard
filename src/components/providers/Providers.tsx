@@ -26,32 +26,43 @@ export function Providers({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const supabase = createClient();
+    // Guards against a stale async result winning a race against a newer
+    // one - e.g. React Strict Mode double-invoking this effect in dev (each
+    // invocation fires its own getUser() + onAuthStateChange "INITIAL_SESSION"
+    // pair), or two profile fetches simply resolving out of order. Without
+    // this, an in-flight fetch from a torn-down effect instance can call
+    // setProfile() after a newer, correct one already did - silently
+    // reverting the UI to a stale profile with no error anywhere.
+    let cancelled = false;
 
     // Hydrate from current session - wrap in catch so DNS / network errors
     // don't break the whole app shell. The middleware logs a clear message.
     supabase.auth
       .getUser()
       .then(({ data: { user } }) => {
+        if (cancelled) return;
         setUser(user);
         if (user) {
-          loadProfile(user.id).then((p) => setProfile(p));
+          loadProfile(user.id).then((p) => { if (!cancelled) setProfile(p); });
         }
       })
       .catch((err) => {
+        if (cancelled) return;
         // Most commonly: Supabase URL typo → DNS resolution failure
         console.warn("[Orbit] Could not reach Supabase from the browser.", err?.message ?? err);
         setUser(null);
       })
-      .finally(() => setLoading(false));
+      .finally(() => { if (!cancelled) setLoading(false); });
 
     // Track auth changes
     const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
+      if (cancelled) return;
       const u = session?.user ?? null;
       setUser(u);
       if (event === "SIGNED_OUT") {
         reset();
       } else if (u) {
-        loadProfile(u.id).then((p) => setProfile(p));
+        loadProfile(u.id).then((p) => { if (!cancelled) setProfile(p); });
       }
     });
 
@@ -89,7 +100,10 @@ export function Providers({ children }: { children: ReactNode }) {
       }
     }
 
-    return () => listener.subscription.unsubscribe();
+    return () => {
+      cancelled = true;
+      listener.subscription.unsubscribe();
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
