@@ -1,32 +1,24 @@
-# Pings Orbit's /api/cron/appointment-reminders endpoint every 5 minutes.
+# Pings Orbit's /api/cron/appointment-reminders endpoint.
 #
-# Why this exists:
-#   Vercel's Hobby plan only allows one cron run per day, which isn't enough
-#   for 30/15/5-minute appointment alerts. GitHub Actions gives us free,
-#   unmetered scheduling, so we ping our own API endpoint on a schedule
-#   from here instead.
+# SUPERSEDED as the automatic trigger by Supabase pg_cron (see
+# supabase/migrations/015_appointment_reminder_pgcron.sql) - GitHub's
+# scheduled-workflow trigger turned out to fire hours apart instead of every
+# 5 minutes (confirmed via this workflow's own run history), which is
+# useless for catching 60/30/5-minute-before windows. pg_cron runs inside
+# Postgres itself and isn't subject to that throttling.
 #
-# Setup (one-time):
-#   1. Go to your repo on GitHub -> Settings -> Secrets and variables ->
-#      Actions -> "New repository secret"
-#   2. Add APP_URL = https://your-production-domain.vercel.app
-#      (no trailing slash, no /api on the end)
-#   3. Add CRON_SECRET = any long random string, e.g. 32 hex chars
-#   4. Add the SAME CRON_SECRET value to your Vercel env vars:
-#      Vercel project -> Settings -> Environment Variables -> CRON_SECRET
-#   5. Push this workflow. GitHub starts firing it on its own.
+# The `schedule` trigger below is intentionally removed so this doesn't
+# double-send reminders alongside pg_cron. Kept only for manual testing via
+# the "Actions" tab -> this workflow -> "Run workflow" button.
 #
-# Manual trigger:
-#   You can also run this on demand via the "Actions" tab -> this workflow
-#   -> "Run workflow" button. Handy for testing without waiting 5 minutes.
+# (Original one-time setup, still relevant for manual runs: APP_URL and
+# CRON_SECRET repo secrets, with CRON_SECRET matching Vercel's env var of
+# the same name.)
 
 name: Appointment reminders
 
 on:
-  schedule:
-    # GitHub cron uses UTC. Every 5 minutes around the clock.
-    - cron: "*/5 * * * *"
-  workflow_dispatch: {}   # allow manual runs from the Actions tab
+  workflow_dispatch: {}   # manual runs only - see note above
 
 # Keep the workflow lightweight; we don't need permissions to anything in the repo
 permissions: {}
