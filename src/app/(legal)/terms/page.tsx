@@ -108,7 +108,7 @@ const SECTIONS: LegalSection[] = [
       {
         type: "p",
         text:
-          "Payment processing is handled by third-party providers (such as Paystack, Stripe, or Flutterwave). Their terms also apply to those transactions.",
+          "Payments, including subscriptions and invoice payments made through Orbit payment links, are processed by Paystack. Paystack's terms also apply to those transactions.",
       },
     ],
   },
@@ -177,5 +177,5 @@ const SECTIONS: LegalSection[] = [
 ];
 
 export default function TermsPage() {
-  return <LegalDoc title="Terms of Service" lastUpdated="May 13, 2026" sections={SECTIONS} />;
+  return <LegalDoc title="Terms of Service" lastUpdated="September 28, 2026" sections={SECTIONS} />;
 }

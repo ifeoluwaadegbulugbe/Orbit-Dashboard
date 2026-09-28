@@ -42,7 +42,7 @@ const SECTIONS: LegalSection[] = [
           {
             bold: "Information from third-party services:",
             text:
-              "when you connect a payment provider (such as Paystack, Stripe, or Flutterwave), we may receive transaction status, settlement details, and a verification reference - but never card numbers or banking credentials.",
+              "when you subscribe to Orbit or your clients pay through an Orbit payment link, our payment processor Paystack shares transaction status, settlement details, and a verification reference with us - but never card numbers or banking credentials. If you connect Google Calendar, we receive the calendar access needed to sync your bookings.",
           },
         ],
       },
@@ -76,7 +76,7 @@ const SECTIONS: LegalSection[] = [
           {
             bold: "Service providers:",
             text:
-              "we share information with vendors that operate parts of the Service for us - including Supabase (database and authentication) and payment providers (Paystack, Stripe, Flutterwave).",
+              "we share information with vendors that operate parts of the Service for us - Supabase (database and authentication), Paystack (payment processing), our email delivery provider (account and client emails), Groq (AI features such as drafted messages, only when you use them), and Google (calendar sync, only if you connect it).",
           },
           {
             bold: "Legal requirements:",
@@ -225,7 +225,7 @@ export default function PrivacyPage() {
   return (
     <LegalDoc
       title="Privacy Policy"
-      lastUpdated="May 13, 2026"
+      lastUpdated="September 28, 2026"
       intro="Your business data is yours. This policy explains what we collect, how we use it, and your rights."
       sections={SECTIONS}
     />
