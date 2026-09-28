@@ -4,7 +4,6 @@ import { useState } from "react";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { Mail, ArrowLeft, CheckCircle2 } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 
@@ -15,13 +14,12 @@ interface FormValues {
 /**
  * Step 1 of the password-reset flow.
  *
- * Asks for the email, calls supabase.auth.resetPasswordForEmail() which sends
- * the user a Supabase-templated email with a recovery link. That link routes
- * back to /auth/callback?type=recovery, which lands them on /reset-password
- * where they set a new password.
+ * Asks for the email and POSTs it to /api/auth/forgot-password, which emails
+ * a single-use link to /reset-password (same flow as the login page's inline
+ * "Forgot password" form).
  *
- * Always shows the "check your inbox" success state - even if the email
- * doesn't exist - so attackers can't probe for valid accounts.
+ * The API answers the same way whether or not the email exists, so this page
+ * shows "check your inbox" either way and attackers can't probe for accounts.
  */
 export default function ForgotPasswordPage() {
   const [sent, setSent] = useState(false);
@@ -31,15 +29,16 @@ export default function ForgotPasswordPage() {
   async function onSubmit(values: FormValues) {
     setError(null);
     try {
-      const supabase = createClient();
-      const appUrl =
-        process.env.NEXT_PUBLIC_APP_URL ||
-        (typeof window !== "undefined" ? window.location.origin : "");
-      const { error: err } = await supabase.auth.resetPasswordForEmail(values.email, {
-        redirectTo: `${appUrl}/auth/callback?type=recovery`,
+      const res = await fetch("/api/auth/forgot-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: values.email }),
       });
-      // Even on error, we show success to avoid leaking which emails are real
-      if (err) console.warn("[forgot-password] reset request error:", err.message);
+      const json = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
+      if (!res.ok || !json.ok) {
+        setError(json.error ?? "Could not send reset email. Please try again.");
+        return;
+      }
       setSent(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not send reset email");
@@ -65,7 +64,7 @@ export default function ForgotPasswordPage() {
             <p className="font-semibold text-[var(--color-ink)] mb-1">Not seeing it?</p>
             <ul className="list-disc pl-4 space-y-0.5">
               <li>Check spam / promotions folder</li>
-              <li>Wait 60 seconds (Supabase sometimes throttles)</li>
+              <li>Give it a minute — you can request a new link after 60 seconds</li>
               <li>Make sure you used the right email address</li>
             </ul>
           </div>

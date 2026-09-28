@@ -22,16 +22,22 @@ interface FormValues {
 /**
  * Step 2 of password reset.
  *
- * The user arrived here from /auth/callback after clicking the reset link in
- * their email. The callback already established a recovery session, so
- * updateUser({ password }) will work immediately.
+ * The emailed link lands here as /reset-password?token_hash=…&type=recovery.
+ * The token is NOT redeemed on page load — only when the user submits a new
+ * password (verifyOtp → updateUser). That way email security scanners that
+ * pre-open links can't burn the single-use token before the user clicks.
+ * The token is stripped from the address bar immediately so it doesn't sit
+ * in browser history or leak via the Referer header.
  *
- * If there's no valid session (link expired / used twice) we show a friendly
- * message with a link back to the login page's forgot-password flow.
+ * Older links that went through /auth/callback arrive with a recovery
+ * session already established instead; that path still works.
+ *
+ * After the password changes, every session on every device is signed out.
  */
 export default function ResetPasswordPage() {
   const router = useRouter();
   const [hasSession, setHasSession] = useState<boolean | null>(null);
+  const [tokenHash, setTokenHash]   = useState<string | null>(null);
   const [error, setError]           = useState<string | null>(null);
   const [done, setDone]             = useState(false);
   const [showPw, setShowPw]         = useState(false);
@@ -43,6 +49,16 @@ export default function ResetPasswordPage() {
   /* ── Check a recovery session is present ─────────────────────────────── */
   useEffect(() => {
     let cancelled = false;
+
+    const url = new URL(window.location.href);
+    const hash = url.searchParams.get("token_hash");
+    if (hash && url.searchParams.get("type") === "recovery") {
+      setTokenHash(hash);
+      window.history.replaceState(null, "", url.pathname);
+      setHasSession(true); // the token stands in for a session until submit
+      return;
+    }
+
     createClient().auth.getSession().then(({ data }) => {
       if (!cancelled) setHasSession(!!data.session);
     });
@@ -57,13 +73,30 @@ export default function ResetPasswordPage() {
     }
     setError(null);
     try {
-      const { error: err } = await createClient().auth.updateUser({
+      const supabase = createClient();
+
+      // Redeem the single-use token now that the user has actually acted.
+      if (tokenHash) {
+        const { error: otpErr } = await supabase.auth.verifyOtp({
+          type: "recovery",
+          token_hash: tokenHash,
+        });
+        if (otpErr) {
+          setTokenHash(null);
+          setHasSession(false); // expired or already used → "Link expired" screen
+          return;
+        }
+        setTokenHash(null); // consumed; a retry uses the session it created
+      }
+
+      const { error: err } = await supabase.auth.updateUser({
         password: values.password,
       });
       if (err) { setError(err.message); return; }
 
-      // Sign out cleanly so the user re-authenticates with their new password
-      await createClient().auth.signOut();
+      // Standard practice: a password change ends every existing session, so
+      // anyone who had access with the old password is kicked out too.
+      await supabase.auth.signOut({ scope: "global" });
       setDone(true);
       setTimeout(() => router.replace("/login?reset=1"), 2000);
     } catch (err) {
