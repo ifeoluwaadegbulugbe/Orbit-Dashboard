@@ -1,15 +1,15 @@
 // app/(dashboard)/help/page.tsx
 //
-// The help / guides page. Contains accordion sections covering Orbit Wallet
-// and invoice management.
+// The help / guides page: accordion guides plus common questions.
 
 "use client";
 
 import { useState, useMemo } from "react";
 import Link from "next/link";
+import { PLATFORM_FEE_PERCENT } from "@/lib/wallet/fees";
 import {
-  BookOpen, CreditCard, Receipt, MessageCircle, Search,
-  ChevronDown, ExternalLink, Sparkles, ShieldCheck, AlertCircle,
+  CreditCard, Receipt, MessageCircle, Search, Users,
+  ChevronDown, ExternalLink, AlertCircle,
   type LucideIcon,
 } from "lucide-react";
 
@@ -35,102 +35,135 @@ interface GuideSection {
 // ─── Guide content ───────────────────────────────────────────────────────────
 
 const SECTIONS: GuideSection[] = [
-
-  // ── Orbit Wallet (replaces the old Stripe/Flutterwave connect flow) ──────
   {
-    id: "wallet",
-    icon: CreditCard,
-    iconColor: "#4F46E5",
-    iconBg: "#EEF2FF",
-    title: "Getting paid with Orbit Wallet",
-    intro:
-      "Orbit no longer requires you to connect your own Stripe or Flutterwave account. " +
-      "It's moving to a built-in wallet instead — here's where that stands.",
+    id: "getting-started",
+    icon: Users,
+    iconColor: "#E8557A",
+    iconBg: "#FAEDF1",
+    title: "Getting started",
+    intro: "Add your clients, take bookings and let people book you themselves.",
     steps: [
       {
-        title: "What changed",
+        title: "Add your clients",
         body: (
           <>
-            Connecting your own payment provider is gone. Every Orbit account now gets a
-            built-in{" "}
-            <Link href="/wallet" className="underline font-semibold text-[var(--color-primary)]">
-              Wallet
+            Go to{" "}
+            <Link href="/clients/new" className="underline font-semibold text-[var(--color-primary)]">
+              Clients → Add client
             </Link>{" "}
-            — no API keys, no separate merchant account to set up.
+            and save their name, phone number and email. Bookings, invoices and reminders all
+            link back to the client.
           </>
         ),
       },
       {
-        title: "How it will work once live",
+        title: "Schedule a booking",
         body: (
           <>
-            Create an invoice, generate a payment link, your client pays it, and the money
-            lands directly in your Orbit Wallet. Withdraw to your bank whenever you want —
-            no gateway to configure in between.
+            From{" "}
+            <Link href="/bookings" className="underline font-semibold text-[var(--color-primary)]">
+              Bookings
+            </Link>
+            , tap <strong>New booking</strong> and pick the client, service, date and time.
+            Today&apos;s bookings show at the top of your Home screen.
           </>
         ),
       },
       {
-        title: "Right now",
+        title: "Share your booking link",
         body: (
           <>
-            Online payment collection is temporarily unavailable while the wallet is being
-            built out. Mark invoices as{" "}
-            <strong>Paid</strong> manually when a client pays you by cash or bank transfer,
-            and check back here for updates.
+            Your{" "}
+            <Link href="/booking-link" className="underline font-semibold text-[var(--color-primary)]">
+              booking link
+            </Link>{" "}
+            lets clients book themselves in. Put it in your Instagram bio, WhatsApp status or
+            anywhere clients find you. New requests appear on Home for you to confirm or decline.
           </>
         ),
-        note: {
-          tone: "warning",
-          text: "This is a known, temporary gap while Orbit Wallet is being built — not a bug.",
-        },
       },
     ],
   },
-
-  // ── Invoices (UNCHANGED from original) ───────────────────────────────────
   {
     id: "invoices",
     icon: Receipt,
     iconColor: "#0EA5E9",
     iconBg: "#E0F2FE",
-    title: "Creating and managing invoices",
-    intro:
-      "Orbit lets you log any payment or create a formal invoice. Here's how to stay on top of " +
-      "what you're owed.",
+    title: "Invoices and getting paid",
+    intro: "Create invoices, send a payment link, and keep track of what you're owed.",
     steps: [
       {
-        title: "Create a new invoice",
+        title: "Create an invoice",
         body: (
           <>
-            Click <Link href="/payments/new" className="underline font-semibold text-[var(--color-primary)]">New invoice</Link> from
-            the Payments page. Fill in the client name, amount, and due date. The invoice number
-            is auto-generated but you can edit it.
+            Tap{" "}
+            <Link href="/payments/new" className="underline font-semibold text-[var(--color-primary)]">
+              New invoice
+            </Link>
+            , choose the client and enter the amount and due date. The invoice number is filled
+            in for you.
           </>
         ),
       },
       {
-        title: "Understand invoice statuses",
+        title: "Send a payment link",
         body: (
           <>
-            <ul className="mt-1 ml-4 space-y-1 list-disc">
-              <li><strong>Pending</strong> — created, not yet paid</li>
-              <li><strong>Overdue</strong> — past the due date and still unpaid</li>
-              <li><strong>Partial</strong> — client paid part of the amount</li>
-              <li><strong>Paid</strong> — fully settled</li>
-              <li><strong>Failed</strong> — payment was attempted but declined</li>
-            </ul>
+            Open the invoice and tap <strong>Generate payment link</strong>. Send it to your client
+            on WhatsApp or email. They can pay by card, bank transfer or USSD, and the invoice is
+            marked paid automatically.
           </>
         ),
       },
       {
-        title: "Mark an invoice as paid manually",
+        title: "Record a payment you received directly",
         body: (
           <>
-            Open the invoice and click <strong>Mark as paid</strong>. Use this when
-            a client pays you by cash or bank transfer outside of Orbit&apos;s payment links.
+            If a client pays you in cash or by direct transfer, open the invoice and tap{" "}
+            <strong>Mark paid</strong>.
           </>
         ),
+      },
+      {
+        title: "Invoice statuses",
+        body: (
+          <ul className="mt-1 ml-4 space-y-1 list-disc">
+            <li><strong>Pending</strong> - sent, not yet paid</li>
+            <li><strong>Overdue</strong> - past the due date and still unpaid</li>
+            <li><strong>Partial</strong> - the client has paid part of the amount</li>
+            <li><strong>Paid</strong> - fully settled</li>
+          </ul>
+        ),
+      },
+    ],
+  },
+  {
+    id: "wallet",
+    icon: CreditCard,
+    iconColor: "#4F46E5",
+    iconBg: "#EEF2FF",
+    title: "Your Orbit Wallet",
+    intro: "Payments your clients make through payment links land here. Withdraw to your bank anytime.",
+    steps: [
+      {
+        title: "Check your balance",
+        body: (
+          <>
+            Open{" "}
+            <Link href="/wallet" className="underline font-semibold text-[var(--color-primary)]">
+              Wallet
+            </Link>{" "}
+            to see your balance and every payment that has come in.
+          </>
+        ),
+      },
+      {
+        title: "Add your bank account",
+        body: <>In Wallet, tap <strong>Add bank account</strong> and enter your account details.</>,
+      },
+      {
+        title: "Withdraw",
+        body: <>Tap <strong>Withdraw</strong>, then choose your bank account and the amount.</>,
       },
     ],
   },
@@ -140,20 +173,32 @@ const SECTIONS: GuideSection[] = [
 
 const FAQS: { q: string; a: React.ReactNode }[] = [
   {
-    q: "Where did Online Payments (Stripe/Flutterwave) go?",
-    a: "It's been replaced by Orbit Wallet, a built-in payment system with no separate provider account to connect. Wallet is being built out now - online payment collection is temporarily unavailable in the meantime.",
+    q: "How can my clients pay me?",
+    a: "Send them a payment link from any invoice - they can pay by card, bank transfer or USSD. You can also mark an invoice as paid when a client pays you directly.",
   },
   {
-    q: "Will Orbit take a cut of my payments?",
-    a: "Not decided yet. Orbit Wallet is still being built - if a fee is introduced, it'll be shown clearly before it ever applies to a payment.",
+    q: "Are there any fees?",
+    a: `Payments collected through an Orbit payment link have a ${PLATFORM_FEE_PERCENT}% processing fee. Invoices you mark as paid yourself are free.`,
   },
   {
-    q: "How do I get paid right now?",
-    a: "Mark invoices as paid manually when your client pays you directly (cash, bank transfer, etc.) - open the invoice and click Mark as paid.",
+    q: "How do I get money out of my Wallet?",
+    a: "Add your bank account in Wallet, then tap Withdraw and choose how much to send.",
   },
   {
     q: "Can I invoice in my local currency?",
     a: "Yes. Orbit uses your account's currency setting for all invoice amounts.",
+  },
+  {
+    q: "Can I get a copy of my data?",
+    a: (
+      <>
+        Yes - go to{" "}
+        <Link href="/export" className="underline font-semibold text-[var(--color-primary)]">
+          Export Data
+        </Link>{" "}
+        to download your clients, invoices and bookings.
+      </>
+    ),
   },
 ];
 
@@ -182,7 +227,7 @@ export default function HelpPage() {
       <div>
         <h1 className="text-page font-bold">Help &amp; guides</h1>
         <p className="text-lead text-[var(--color-ink-light)] mt-2">
-          Everything you need to set up payments and get paid.
+          Quick guides to running your business on Orbit.
         </p>
       </div>
 
@@ -198,25 +243,20 @@ export default function HelpPage() {
       </div>
 
       {/* Quick links */}
-      <div id="payments" className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <QuickLink
-          icon={CreditCard}
-          color="#4F46E5"
-          label="About Orbit Wallet"
-          onClick={() => {
-            setOpenSection("wallet");
-            document.getElementById("section-wallet")?.scrollIntoView({ behavior: "smooth", block: "start" });
-          }}
-        />
-        <QuickLink
-          icon={Receipt}
-          color="#0EA5E9"
-          label="Managing invoices"
-          onClick={() => {
-            setOpenSection("invoices");
-            document.getElementById("section-invoices")?.scrollIntoView({ behavior: "smooth", block: "start" });
-          }}
-        />
+      <div className="hidden sm:grid grid-cols-3 gap-3">
+        {SECTIONS.map((section) => (
+          <QuickLink
+            key={section.id}
+            icon={section.icon}
+            color={section.iconColor}
+            label={section.title}
+            onClick={() => {
+              setQuery("");
+              setOpenSection(section.id);
+              document.getElementById(`section-${section.id}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
+            }}
+          />
+        ))}
       </div>
 
       {/* Accordion sections */}
@@ -311,25 +351,6 @@ export default function HelpPage() {
             );
           })}
         </div>
-      </div>
-
-      {/* Bottom CTA */}
-      <div className="flex items-center gap-4 px-4 sm:px-6 py-5 rounded-[var(--radius-2xl)] bg-[var(--color-primary-subtle)] border border-[var(--color-primary)]/20">
-        <div className="w-11 h-11 rounded-xl bg-white flex items-center justify-center flex-shrink-0">
-          <Sparkles className="h-5 w-5 text-[var(--color-primary)]" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="text-body font-bold text-[var(--color-ink)]">Want to see the wallet?</div>
-          <div className="text-small text-[var(--color-ink-mid)] mt-0.5">
-            Check your balance and activity in the meantime.
-          </div>
-        </div>
-        <Link
-          href="/wallet"
-          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-small font-bold bg-[var(--color-primary)] text-white hover:bg-[var(--color-primary-dark)] transition-colors"
-        >
-          Go to Wallet
-        </Link>
       </div>
     </div>
   );
