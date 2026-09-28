@@ -83,7 +83,7 @@ export function GlobalSearch() {
   }
 
   return (
-    <div ref={containerRef} className="relative flex-1 max-w-md">
+    <div ref={containerRef} className="relative flex-1 min-w-0 max-w-md">
       {/* Input */}
       <div className="relative">
         <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--color-muted)] pointer-events-none" />
@@ -100,7 +100,8 @@ export function GlobalSearch() {
               (e.target as HTMLInputElement).blur();
             }
           }}
-          placeholder="Search clients, invoices, bookings…"
+          placeholder="Search…"
+          aria-label="Search clients, invoices and bookings"
           className="w-full h-10 pl-10 pr-9 rounded-full bg-white border border-[var(--color-border)] text-sm placeholder:text-[var(--color-muted)] focus:outline-none focus:border-[var(--color-primary)]/40 focus:ring-2 focus:ring-[var(--color-primary)]/10 transition-colors"
         />
         {query && (
@@ -116,7 +117,7 @@ export function GlobalSearch() {
 
       {/* Results dropdown */}
       {open && q && (
-        <div className="absolute top-12 left-0 right-0 z-40 bg-white rounded-[var(--radius-xl)] border border-[var(--color-border)] shadow-soft-lg overflow-hidden max-h-[480px] overflow-y-auto">
+        <div className="absolute top-12 left-0 right-0 z-40 bg-white rounded-[var(--radius-xl)] border border-[var(--color-border)] shadow-soft-lg overflow-hidden max-h-[min(480px,70dvh)] overflow-y-auto">
           {totalResults === 0 ? (
             <div className="px-5 py-8 text-center text-sm text-[var(--color-muted)]">
               No results for <span className="font-semibold text-[var(--color-ink)]">&ldquo;{query}&rdquo;</span>

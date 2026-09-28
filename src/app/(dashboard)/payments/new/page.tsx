@@ -98,14 +98,14 @@ function Inner() {
         <ChevronLeft className="h-4 w-4" /> All invoices
       </Link>
 
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4">
         <div>
           <h1 className="text-page font-bold">New invoice</h1>
           <p className="text-lead text-[var(--color-ink-light)] mt-2">
             Log a payment or create an invoice to send.
           </p>
         </div>
-        <div className="flex flex-col items-end gap-1 pt-1">
+        <div className="flex flex-row sm:flex-col sm:items-end gap-4 sm:gap-1 sm:pt-1">
           <Link
             href="/services"
             className="text-tiny font-semibold text-[var(--color-ink-light)] hover:text-[var(--color-primary)] whitespace-nowrap"
@@ -127,7 +127,7 @@ function Inner() {
         </div>
       )}
 
-      <form onSubmit={handleSubmit(onSubmit)} className="bg-white rounded-[var(--radius-2xl)] border border-[var(--color-border)] shadow-soft-sm p-8 space-y-6">
+      <form onSubmit={handleSubmit(onSubmit)} className="bg-white rounded-[var(--radius-2xl)] border border-[var(--color-border)] shadow-soft-sm p-5 sm:p-8 space-y-6">
         <Select label="Client" {...register("clientId", { required: true })}>
           <option value="">- Pick a client -</option>
           {clients.map((c) => (

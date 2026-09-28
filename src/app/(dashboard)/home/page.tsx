@@ -86,17 +86,13 @@ export default function HomePage() {
           {todaysBookings.map((b) => (
             <div
               key={b.id}
-              className="flex items-center gap-4 px-5 py-3.5 rounded-[var(--radius-lg)] hover:bg-[var(--color-border-light)] transition-colors"
+              className="flex items-center gap-3 sm:gap-4 px-3 sm:px-5 py-3 mx-2 rounded-[var(--radius-lg)] hover:bg-[var(--color-border-light)] transition-colors"
             >
-              <Link href={`/clients/${b.client_id}`} className="flex items-center gap-4 flex-1 min-w-0">
-                <div className="w-11 h-11 rounded-xl bg-[var(--color-info-light)] flex items-center justify-center flex-shrink-0">
-                  <span className="text-[11px] font-bold text-[var(--color-info)]">
-                    {formatBookingTime(b.time)}
-                  </span>
-                </div>
+              <Link href={`/clients/${b.client_id}`} className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0">
+                <TimeChip time={b.time} />
                 <div className="flex-1 min-w-0">
                   <div className="text-body font-semibold text-[var(--color-ink)] truncate">{b.client_name}</div>
-                  <div className="text-small text-[var(--color-muted)] mt-0.5">{b.title}</div>
+                  <div className="text-small text-[var(--color-muted)] mt-0.5 truncate">{b.title}</div>
                 </div>
               </Link>
               <BookingActions
@@ -111,7 +107,7 @@ export default function HomePage() {
       )}
 
       {/* ─── Stat cards ─── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+      <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-5">
         <StatCard label="Total Clients" value={clients.length} icon={Users} tone="primary" />
         <StatCard label="Active" value={activeClients} icon={UserCheck} tone="success" />
         <StatCard label="Outstanding" value={formatCurrency(outstandingTotal)} icon={Wallet} tone="warning" />
@@ -120,7 +116,7 @@ export default function HomePage() {
 
       {/* ─── Orbit AI - embedded suggestion layer, not a standalone destination ─── */}
       {(followUps.length > 0 || overdueInvoices.length > 0) && (
-        <div className="bg-white rounded-[var(--radius-2xl)] border border-[var(--color-border)] shadow-soft-sm p-6 flex items-start gap-4">
+        <div className="bg-white rounded-[var(--radius-2xl)] border border-[var(--color-border)] shadow-soft-sm p-5 sm:p-6 flex items-start gap-3 sm:gap-4">
           <div className="w-10 h-10 rounded-xl bg-[var(--color-primary-subtle)] flex items-center justify-center flex-shrink-0">
             <Sparkles className="h-5 w-5 text-[var(--color-primary)]" />
           </div>
@@ -146,9 +142,9 @@ export default function HomePage() {
       {/* ─── Pending bookings - confirm-or-decline in one tap ─── */}
       {pendingBookings.length > 0 && (
         <div className="bg-white rounded-[var(--radius-2xl)] border-2 border-[var(--color-warning)]/30 shadow-soft-sm overflow-hidden">
-          <div className="px-7 py-5 flex items-center justify-between border-b border-[var(--color-border)] bg-[var(--color-warning-light)]/30">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-[var(--color-warning-light)] flex items-center justify-center">
+          <div className="px-5 sm:px-7 py-5 flex items-center justify-between border-b border-[var(--color-border)] bg-[var(--color-warning-light)]/30">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-10 h-10 rounded-xl bg-[var(--color-warning-light)] flex items-center justify-center flex-shrink-0">
                 <Calendar className="h-5 w-5 text-[var(--color-warning-deep)]" />
               </div>
               <div>
@@ -163,14 +159,14 @@ export default function HomePage() {
           </div>
           <div className="divide-y divide-[var(--color-border)]">
             {pendingBookings.map((b) => (
-              <div key={b.id} className="flex items-center gap-4 px-7 py-4">
+              <div key={b.id} className="flex flex-wrap items-center gap-x-4 gap-y-3 px-5 sm:px-7 py-4">
                 <Avatar name={b.client_name} size={40} />
-                <div className="flex-1 min-w-0">
+                <div className="flex-1 min-w-[140px]">
                   <div className="text-body font-semibold text-[var(--color-ink)] truncate">
                     {b.client_name}
                   </div>
                   <div className="text-small text-[var(--color-muted)] mt-0.5 truncate">
-                    {b.title} - {formatShortDate(b.date)} at {b.time}
+                    {b.title} · {formatShortDate(b.date)} at {formatBookingTime(b.time)}
                   </div>
                 </div>
                 <BookingActions
@@ -217,7 +213,7 @@ export default function HomePage() {
                       Last contacted {c.last_contacted ? relativeDate(c.last_contacted) : "never"}
                     </div>
                   </div>
-                  <Badge tone="warning">Follow up</Badge>
+                  <Badge tone="warning" className="flex-shrink-0">Follow up</Badge>
                 </Link>
                 <SuggestButton
                   label="Draft follow-up"
@@ -253,7 +249,7 @@ export default function HomePage() {
                     <div className="text-body font-semibold text-[var(--color-ink)] truncate">{p.client_name}</div>
                     <div className="text-small text-[var(--color-muted)] mt-0.5">Due {relativeDate(p.date)}</div>
                   </div>
-                  <div className="text-body font-bold text-[var(--color-danger-deep)]">{formatCurrency(p.amount)}</div>
+                  <div className="text-body font-bold text-[var(--color-danger-deep)] tabular-nums whitespace-nowrap flex-shrink-0">{formatCurrency(p.amount)}</div>
                 </Link>
                 <SuggestButton
                   label="Draft reminder"
@@ -325,12 +321,12 @@ function Section({
 }) {
   return (
     <div className="bg-white rounded-[var(--radius-2xl)] border border-[var(--color-border)] shadow-soft-sm">
-      <div className="flex items-center justify-between px-7 py-5 border-b border-[var(--color-border)]">
-        <h3 className="text-card-title font-semibold text-[var(--color-ink)]">{title}</h3>
+      <div className="flex items-center justify-between gap-3 px-5 sm:px-7 py-4 sm:py-5 border-b border-[var(--color-border)]">
+        <h3 className="text-card-title font-semibold text-[var(--color-ink)] min-w-0 truncate">{title}</h3>
         {viewAllHref && (
           <Link
             href={viewAllHref}
-            className="text-small font-semibold text-[var(--color-primary)] hover:text-[var(--color-primary-dark)] inline-flex items-center gap-0.5"
+            className="text-small font-semibold text-[var(--color-primary)] hover:text-[var(--color-primary-dark)] inline-flex items-center gap-0.5 whitespace-nowrap flex-shrink-0"
           >
             View all <ChevronRight className="h-3.5 w-3.5" />
           </Link>
@@ -345,6 +341,23 @@ function Section({
           children
         )}
       </div>
+    </div>
+  );
+}
+
+/**
+ * Fixed-width time column for schedule rows: "12:30" over "PM", tabular
+ * digits so every row lines up. Sized for the longest value ("12:30 PM"),
+ * so it can never overflow its box.
+ */
+function TimeChip({ time }: { time: string }) {
+  const formatted = formatBookingTime(time); // e.g. "12:30pm"
+  const clock = formatted.slice(0, -2);
+  const period = formatted.slice(-2).toUpperCase();
+  return (
+    <div className="w-14 flex-shrink-0 flex flex-col items-center justify-center py-1.5 rounded-xl bg-[var(--color-info-light)] text-[var(--color-info)] leading-none">
+      <span className="text-small font-bold tabular-nums">{clock || "-"}</span>
+      {period && <span className="mt-1 text-[10px] font-semibold tracking-wider opacity-80">{period}</span>}
     </div>
   );
 }

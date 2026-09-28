@@ -68,7 +68,7 @@ export default function ToolsPage() {
             <Link
               key={t.href}
               href={t.href}
-              className="group flex flex-col gap-4 p-7 bg-white rounded-[var(--radius-2xl)] border border-[var(--color-border)] shadow-soft-sm transition-all hover:shadow-soft hover:-translate-y-0.5"
+              className="group flex flex-col gap-4 p-5 sm:p-7 bg-white rounded-[var(--radius-2xl)] border border-[var(--color-border)] shadow-soft-sm transition-all hover:shadow-soft hover:-translate-y-0.5"
             >
               <div className="flex items-center justify-between">
                 <div
@@ -77,7 +77,7 @@ export default function ToolsPage() {
                 >
                   <Icon className="h-6 w-6" style={{ color: t.iconColor }} />
                 </div>
-                <ChevronRight className="h-4 w-4 text-[var(--color-muted)] opacity-0 group-hover:opacity-100 transition-opacity" />
+                <ChevronRight className="h-4 w-4 text-[var(--color-muted)] sm:opacity-0 sm:group-hover:opacity-100 transition-opacity" />
               </div>
               <div>
                 <h3 className="text-card-title font-semibold mb-1.5">{t.title}</h3>

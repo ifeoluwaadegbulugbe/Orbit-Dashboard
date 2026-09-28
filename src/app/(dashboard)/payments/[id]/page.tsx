@@ -47,7 +47,7 @@ export default function PaymentDetailPage({ params }: { params: Promise<{ id: st
   if (isLoading) return <div className="h-40 rounded-[var(--radius-xl)] skeleton" />;
   if (!payment) {
     return (
-      <div className="bg-white rounded-[var(--radius-xl)] border border-[var(--color-border)] p-10 text-center">
+      <div className="bg-white rounded-[var(--radius-xl)] border border-[var(--color-border)] p-6 sm:p-10 text-center">
         <p className="text-body text-[var(--color-ink-light)]">Invoice not found.</p>
         <Link href="/payments" className="inline-block mt-3 text-small font-semibold text-[var(--color-primary)]">
           Back to invoices
@@ -137,13 +137,13 @@ export default function PaymentDetailPage({ params }: { params: Promise<{ id: st
       )}
 
       {/* Hero */}
-      <div className="bg-white rounded-[var(--radius-2xl)] border border-[var(--color-border)] shadow-soft-sm p-8">
-        <div className="flex items-start justify-between gap-4">
+      <div className="bg-white rounded-[var(--radius-2xl)] border border-[var(--color-border)] shadow-soft-sm p-5 sm:p-8">
+        <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="min-w-0">
             <div className="text-tiny font-semibold uppercase tracking-wider text-[var(--color-muted)]">
               {payment.invoice_number ?? "Invoice"}
             </div>
-            <div className="mt-1 text-stat font-extrabold tracking-tight">{formatCurrency(payment.amount)}</div>
+            <div className="mt-1 text-stat font-extrabold tracking-tight tabular-nums break-words">{formatCurrency(payment.amount)}</div>
             <div className="mt-3">
               <Badge tone={TONE[payment.status]}>{payment.status}</Badge>
             </div>
@@ -180,7 +180,7 @@ export default function PaymentDetailPage({ params }: { params: Promise<{ id: st
       {client && (
         <Link
           href={`/clients/${client.id}`}
-          className="flex items-center gap-4 px-6 py-5 bg-white rounded-[var(--radius-2xl)] border border-[var(--color-border)] shadow-soft-sm hover:shadow-soft transition-all"
+          className="flex items-center gap-4 px-4 sm:px-6 py-5 bg-white rounded-[var(--radius-2xl)] border border-[var(--color-border)] shadow-soft-sm hover:shadow-soft transition-all"
         >
           <Avatar name={client.name} size={48} />
           <div className="flex-1 min-w-0">
@@ -194,7 +194,7 @@ export default function PaymentDetailPage({ params }: { params: Promise<{ id: st
       {/* ── Payment link section ── */}
       {payment.status !== "paid" && (
         <div className="bg-white rounded-[var(--radius-2xl)] border border-[var(--color-border)] shadow-soft-sm overflow-hidden">
-          <div className="px-7 pt-6 pb-4 flex items-start gap-3">
+          <div className="px-5 sm:px-7 pt-6 pb-4 flex items-start gap-3">
             <div className="w-10 h-10 rounded-xl bg-[var(--color-primary-subtle)] flex items-center justify-center flex-shrink-0">
               <Link2 className="h-5 w-5 text-[var(--color-primary)]" />
             </div>
@@ -206,7 +206,7 @@ export default function PaymentDetailPage({ params }: { params: Promise<{ id: st
             </div>
           </div>
 
-          <div className="px-7 pb-7">
+          <div className="px-5 sm:px-7 pb-7">
             {payment.payment_link ? (
               <div className="space-y-4">
                 <div className="flex items-center gap-3 px-4 py-3 rounded-[var(--radius-lg)] bg-[var(--color-canvas)] border border-[var(--color-border)]">
@@ -292,7 +292,7 @@ export default function PaymentDetailPage({ params }: { params: Promise<{ id: st
 
       {/* Notes */}
       {payment.notes && (
-        <div className="bg-white rounded-[var(--radius-2xl)] border border-[var(--color-border)] shadow-soft-sm p-7">
+        <div className="bg-white rounded-[var(--radius-2xl)] border border-[var(--color-border)] shadow-soft-sm p-5 sm:p-7">
           <h3 className="text-tiny font-semibold uppercase tracking-wider text-[var(--color-muted)] mb-2">Notes</h3>
           <p className="text-body whitespace-pre-wrap text-[var(--color-ink-mid)] leading-relaxed">{payment.notes}</p>
         </div>

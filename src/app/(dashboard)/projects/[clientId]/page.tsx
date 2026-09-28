@@ -77,7 +77,7 @@ export default function ProjectDetailPage({
 
   if (!client) {
     return (
-      <div className="bg-white rounded-[var(--radius-xl)] border border-[var(--color-border)] p-10 text-center">
+      <div className="bg-white rounded-[var(--radius-xl)] border border-[var(--color-border)] p-6 sm:p-10 text-center">
         <p className="text-body text-[var(--color-ink-light)]">Client not found.</p>
         <Link href="/work" className="inline-block mt-3 text-small font-semibold text-[var(--color-primary)]">
           Back to Work
@@ -95,7 +95,7 @@ export default function ProjectDetailPage({
         >
           <ChevronLeft className="h-4 w-4" /> Back to Work
         </Link>
-        <div className="bg-white rounded-[var(--radius-xl)] border border-[var(--color-border)] p-10 text-center">
+        <div className="bg-white rounded-[var(--radius-xl)] border border-[var(--color-border)] p-6 sm:p-10 text-center">
           <Sparkles className="h-10 w-10 text-[var(--color-muted)] mx-auto mb-3" />
           <h3 className="text-card-title font-bold mb-1">No project yet</h3>
           <p className="text-small text-[var(--color-ink-light)] max-w-sm mx-auto">
@@ -125,13 +125,13 @@ export default function ProjectDetailPage({
       </Link>
 
       {/* ─── Header ─── */}
-      <div className="bg-white rounded-[var(--radius-2xl)] border border-[var(--color-border)] shadow-soft-sm p-7 lg:p-8">
+      <div className="bg-white rounded-[var(--radius-2xl)] border border-[var(--color-border)] shadow-soft-sm p-5 sm:p-7 lg:p-8">
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div className="min-w-0 flex-1">
             <div className="text-tiny font-bold uppercase tracking-wider text-[var(--color-muted)]">
               Project
             </div>
-            <h1 className="text-section font-bold tracking-tight text-[var(--color-ink)] mt-1">
+            <h1 className="text-section font-bold tracking-tight text-[var(--color-ink)] mt-1 break-words">
               {project.title}
             </h1>
             {/* Clickable client breadcrumb */}
@@ -147,7 +147,7 @@ export default function ProjectDetailPage({
             </Link>
           </div>
 
-          <div className="flex flex-col items-end gap-2">
+          <div className="flex flex-row-reverse sm:flex-col items-center sm:items-end justify-between w-full sm:w-auto gap-2">
             <span
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-tiny font-bold"
               style={{ backgroundColor: pill.bg, color: pill.color }}
@@ -178,7 +178,7 @@ export default function ProjectDetailPage({
         <div className="space-y-6 min-w-0">
           {/* Overview */}
           <Section title="Overview" icon={<FileText className="h-4 w-4 text-[var(--color-primary)]" />}>
-            <div className="grid grid-cols-2 gap-5 px-6 py-5">
+            <div className="grid grid-cols-2 gap-4 sm:gap-5 px-4 sm:px-6 py-5">
               <DateField label="Started" value={formatShortDate(project.startDate)} sub={relativeDate(project.startDate)} />
               <DateField label="Due" value={formatShortDate(project.dueDate)} sub={relativeDate(project.dueDate)} />
               {project.serviceType && (
@@ -196,7 +196,7 @@ export default function ProjectDetailPage({
             actionHref={`/payments/new?clientId=${client.id}`}
           >
             {totalAmount > 0 && (
-              <div className="px-6 py-5 grid grid-cols-3 gap-4 border-b border-[var(--color-border)]">
+              <div className="px-4 sm:px-6 py-5 grid grid-cols-3 gap-2 sm:gap-4 border-b border-[var(--color-border)]">
                 <Money label="Total" value={format(totalAmount)} />
                 <Money label="Paid" value={format(amountPaid)} tone="success" />
                 <Money label="Balance" value={format(balanceDue)} tone={balanceDue > 0 ? "danger" : undefined} />
@@ -204,7 +204,7 @@ export default function ProjectDetailPage({
             )}
 
             {payments.length === 0 ? (
-              <div className="px-6 py-8 text-center text-small text-[var(--color-muted)]">
+              <div className="px-4 sm:px-6 py-8 text-center text-small text-[var(--color-muted)]">
                 No invoices yet. Send one to start getting paid.
               </div>
             ) : (
@@ -213,7 +213,7 @@ export default function ProjectDetailPage({
                   <Link
                     key={p.id}
                     href={`/payments/${p.id}`}
-                    className="flex items-center gap-4 px-6 py-4 hover:bg-[var(--color-border-light)] transition-colors"
+                    className="flex items-center gap-4 px-4 sm:px-6 py-4 hover:bg-[var(--color-border-light)] transition-colors"
                   >
                     <div className="w-9 h-9 rounded-lg bg-[var(--color-primary-subtle)] flex items-center justify-center flex-shrink-0">
                       <Receipt className="h-4 w-4 text-[var(--color-primary)]" />
@@ -242,13 +242,13 @@ export default function ProjectDetailPage({
             actionHref={`/reminders?clientId=${client.id}&new=1`}
           >
             {pendingReminders.length === 0 ? (
-              <div className="px-6 py-8 text-center text-small text-[var(--color-muted)]">
+              <div className="px-4 sm:px-6 py-8 text-center text-small text-[var(--color-muted)]">
                 No active reminders for this project.
               </div>
             ) : (
               <div className="divide-y divide-[var(--color-border)]">
                 {pendingReminders.map((r) => (
-                  <div key={r.id} className="flex items-start gap-4 px-6 py-4">
+                  <div key={r.id} className="flex items-start gap-4 px-4 sm:px-6 py-4">
                     <div className="w-9 h-9 rounded-lg bg-[var(--color-primary-subtle)] flex items-center justify-center flex-shrink-0">
                       <BellPlus className="h-4 w-4 text-[var(--color-primary)]" />
                     </div>
@@ -273,7 +273,7 @@ export default function ProjectDetailPage({
           >
             <div className="divide-y divide-[var(--color-border)]">
               {bookings.map((b) => (
-                <div key={b.id} className="flex items-start gap-4 px-6 py-4">
+                <div key={b.id} className="flex items-start gap-4 px-4 sm:px-6 py-4">
                   <div className="w-9 h-9 rounded-lg bg-[var(--color-info-light)] flex items-center justify-center flex-shrink-0">
                     <Calendar className="h-4 w-4 text-[var(--color-info)]" />
                   </div>
@@ -305,7 +305,7 @@ export default function ProjectDetailPage({
               title="Notes about the client"
               icon={<FileText className="h-4 w-4 text-[var(--color-primary)]" />}
             >
-              <div className="px-6 py-5 text-small text-[var(--color-ink-mid)] leading-relaxed whitespace-pre-wrap">
+              <div className="px-4 sm:px-6 py-5 text-small text-[var(--color-ink-mid)] leading-relaxed whitespace-pre-wrap">
                 {client.notes}
               </div>
             </Section>
@@ -407,7 +407,7 @@ function Section({
 }) {
   return (
     <div className="bg-white rounded-[var(--radius-2xl)] border border-[var(--color-border)] shadow-soft-sm overflow-hidden">
-      <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--color-border)]">
+      <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-[var(--color-border)]">
         <div className="flex items-center gap-2">
           {icon}
           <h3 className="text-body font-bold text-[var(--color-ink)]">{title}</h3>
@@ -450,7 +450,7 @@ function Money({
       <div className="text-tiny font-semibold uppercase tracking-wider text-[var(--color-muted)]">
         {label}
       </div>
-      <div className="text-body font-bold mt-0.5 tabular-nums" style={{ color }}>
+      <div className="text-small sm:text-body font-bold mt-0.5 tabular-nums break-words" style={{ color }}>
         {value}
       </div>
     </div>

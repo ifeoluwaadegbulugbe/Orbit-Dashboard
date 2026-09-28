@@ -166,7 +166,7 @@ function BookingLinkInner() {
 
   return (
     <div className="space-y-8 max-w-3xl">
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4">
         <div>
           <h1 className="text-page font-bold">Booking link</h1>
           <p className="text-lead text-[var(--color-ink-light)] mt-2">
@@ -182,19 +182,19 @@ function BookingLinkInner() {
       </div>
 
       {/* URL card */}
-      <div className="bg-white rounded-[var(--radius-2xl)] border border-[var(--color-border)] shadow-soft-sm p-7">
+      <div className="bg-white rounded-[var(--radius-2xl)] border border-[var(--color-border)] shadow-soft-sm p-5 sm:p-7">
         <div className="flex items-center gap-3 mb-3">
           <Link2 className="h-5 w-5 text-[var(--color-primary)]" />
           <h3 className="text-card-title font-semibold">Your public link</h3>
         </div>
-        <div className="flex items-center gap-3 px-5 py-4 rounded-[var(--radius-lg)] bg-[var(--color-canvas)] border border-[var(--color-border)]">
-          <span className="flex-1 text-body font-mono text-[var(--color-ink-mid)] truncate">
+        <div className="flex items-center gap-2 sm:gap-3 pl-4 pr-2 sm:px-5 py-2 sm:py-4 rounded-[var(--radius-lg)] bg-[var(--color-canvas)] border border-[var(--color-border)]">
+          <span className="flex-1 min-w-0 text-small sm:text-body font-mono text-[var(--color-ink-mid)] truncate">
             {url || "Loading..."}
           </span>
           <button
             onClick={handleCopy}
             disabled={!config.slug}
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-small font-semibold bg-white border border-[var(--color-border)] hover:border-[var(--color-primary)]/40 transition-colors disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-full text-small font-semibold bg-white border border-[var(--color-border)] hover:border-[var(--color-primary)]/40 transition-colors disabled:opacity-50 flex-shrink-0"
           >
             {copied ? <><Check className="h-4 w-4 text-[var(--color-success)]" /> Copied</> : <><Copy className="h-4 w-4" /> Copy</>}
           </button>
@@ -202,7 +202,7 @@ function BookingLinkInner() {
             href={url}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-[var(--color-primary)] text-white hover:bg-[var(--color-primary-dark)] transition-colors"
+            className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-[var(--color-primary)] text-white hover:bg-[var(--color-primary-dark)] transition-colors flex-shrink-0"
             aria-label="Open link"
           >
             <ExternalLink className="h-4 w-4" />
@@ -218,7 +218,7 @@ function BookingLinkInner() {
       </Suspense>
 
       {/* Configuration */}
-      <div className="bg-white rounded-[var(--radius-2xl)] border border-[var(--color-border)] shadow-soft-sm p-8 space-y-6">
+      <div className="bg-white rounded-[var(--radius-2xl)] border border-[var(--color-border)] shadow-soft-sm p-5 sm:p-8 space-y-6">
         <Input
           label="URL slug"
           placeholder="e.g. glam-by-amaka"
@@ -277,7 +277,7 @@ function BookingLinkInner() {
           </Link>
           <div className="space-y-3">
             {config.services.map((s, i) => (
-              <div key={i} className="grid grid-cols-1 sm:grid-cols-[1fr_auto_auto_auto] gap-3 items-end px-5 py-4 rounded-[var(--radius-lg)] bg-[var(--color-canvas)] border border-[var(--color-border)]">
+              <div key={i} className="grid grid-cols-1 sm:grid-cols-[1fr_auto_auto_auto] gap-3 items-end px-4 sm:px-5 py-4 rounded-[var(--radius-lg)] bg-[var(--color-canvas)] border border-[var(--color-border)]">
                 <Input
                   label={i === 0 ? "Service name" : undefined}
                   placeholder="e.g. Full bridal makeup"

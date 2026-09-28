@@ -25,7 +25,7 @@ export function AiLauncherButton() {
     <>
       <button
         onClick={() => (isPro ? openPanel() : setPaywallOpen(true))}
-        className="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full bg-[var(--color-primary)] hover:bg-[var(--color-primary-dark)] text-white shadow-soft-lg flex items-center justify-center transition-all hover:scale-105 active:scale-95"
+        className="fixed bottom-[max(1rem,env(safe-area-inset-bottom))] right-4 sm:bottom-6 sm:right-6 z-40 w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-[var(--color-primary)] hover:bg-[var(--color-primary-dark)] text-white shadow-soft-lg flex items-center justify-center transition-all hover:scale-105 active:scale-95"
         aria-label="Ask Orbit AI"
         title="Ask Orbit AI"
       >

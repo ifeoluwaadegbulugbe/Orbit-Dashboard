@@ -35,7 +35,7 @@ export function ProGate({ title, description, children }: ProGateProps) {
 
         {/* Centered upgrade card overlaid on top */}
         <div className="absolute inset-0 flex items-center justify-center px-5">
-          <div className="bg-white rounded-[var(--radius-2xl)] border border-[var(--color-border)] shadow-soft-lg p-8 max-w-md w-full text-center">
+          <div className="bg-white rounded-[var(--radius-2xl)] border border-[var(--color-border)] shadow-soft-lg p-5 sm:p-8 max-w-md w-full text-center">
             <div className="w-14 h-14 rounded-2xl bg-[var(--color-primary-subtle)] flex items-center justify-center mx-auto mb-4">
               <Lock className="h-6 w-6 text-[var(--color-primary)]" />
             </div>

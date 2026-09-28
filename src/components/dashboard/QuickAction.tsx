@@ -19,7 +19,7 @@ export function QuickAction({ label, href, icon: Icon, color }: QuickActionProps
   return (
     <Link
       href={href}
-      className="group flex items-center gap-4 px-6 py-4 bg-white rounded-full border border-[var(--color-border)] shadow-soft-sm transition-all hover:shadow-soft hover:-translate-y-px"
+      className="group flex items-center gap-3 sm:gap-4 px-4 sm:px-6 py-3 sm:py-4 bg-white rounded-full border border-[var(--color-border)] shadow-soft-sm transition-all hover:shadow-soft hover:-translate-y-px"
     >
       <div
         className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 transition-colors"
@@ -33,7 +33,7 @@ export function QuickAction({ label, href, icon: Icon, color }: QuickActionProps
         />
       </div>
       <span className="flex-1 text-body font-semibold text-[var(--color-ink)]">{label}</span>
-      <ChevronRight className="h-4 w-4 text-[var(--color-muted)] opacity-0 group-hover:opacity-100 transition-opacity" />
+      <ChevronRight className="h-4 w-4 flex-shrink-0 text-[var(--color-muted)] sm:opacity-0 sm:group-hover:opacity-100 transition-opacity" />
     </Link>
   );
 }

@@ -77,7 +77,7 @@ export default function ClientsPage() {
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div className="flex items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-page font-bold text-[var(--color-ink)]">
             {count} {count === 1 ? "Person" : "People"}
@@ -104,7 +104,7 @@ export default function ClientsPage() {
       {(nearLimit || atLimit) && (
         <button
           onClick={() => setPaywallOpen(true)}
-          className="w-full flex items-center gap-4 px-6 py-5 bg-[var(--color-primary-subtle)] border border-[var(--color-primary)]/20 rounded-[var(--radius-2xl)] text-left transition-all hover:shadow-soft hover:-translate-y-px"
+          className="w-full flex items-center gap-4 px-4 sm:px-6 py-5 bg-[var(--color-primary-subtle)] border border-[var(--color-primary)]/20 rounded-[var(--radius-2xl)] text-left transition-all hover:shadow-soft hover:-translate-y-px"
         >
           <div className="w-11 h-11 rounded-full bg-white flex items-center justify-center flex-shrink-0">
             {atLimit ? (
@@ -162,7 +162,7 @@ export default function ClientsPage() {
           {[0, 1, 2, 3].map((i) => <div key={i} className="h-20 rounded-[var(--radius-xl)] skeleton" />)}
         </div>
       ) : filtered.length === 0 ? (
-        <div className="bg-white rounded-[var(--radius-xl)] border border-[var(--color-border)] p-10 text-center">
+        <div className="bg-white rounded-[var(--radius-xl)] border border-[var(--color-border)] p-6 sm:p-10 text-center">
           <p className="text-sm text-[var(--color-muted)]">
             {search ? "No clients found." : "No clients yet - tap Add client to get started."}
           </p>
@@ -172,9 +172,9 @@ export default function ClientsPage() {
           {filtered.map((c) => (
             <div
               key={c.id}
-              className="px-6 py-5 bg-white rounded-[var(--radius-2xl)] border border-[var(--color-border)] shadow-soft-sm hover:shadow-soft hover:-translate-y-px transition-all"
+              className="px-4 sm:px-6 py-5 bg-white rounded-[var(--radius-2xl)] border border-[var(--color-border)] shadow-soft-sm hover:shadow-soft hover:-translate-y-px transition-all"
             >
-              <Link href={`/clients/${c.id}`} className="flex items-center gap-5">
+              <Link href={`/clients/${c.id}`} className="flex items-center gap-3 sm:gap-5">
                 <Avatar name={c.name} size={52} />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-3 flex-wrap">

@@ -109,7 +109,7 @@ export function PaywallModal({ open, onClose, reason }: PaywallModalProps) {
             {/* Scrollable inner area */}
             <div className="overflow-y-auto flex-1 min-h-0">
               {/* Header - tighter padding */}
-              <div className="px-6 pt-6 pb-3 text-center">
+              <div className="px-4 sm:px-6 pt-6 pb-3 text-center">
                 <div className="w-12 h-12 rounded-2xl bg-[var(--color-primary-subtle)] flex items-center justify-center mx-auto mb-3">
                   <Sparkles className="h-5 w-5 text-[var(--color-primary)]" />
                 </div>
@@ -127,7 +127,7 @@ export function PaywallModal({ open, onClose, reason }: PaywallModalProps) {
               </div>
 
               {/* Features - tighter rows */}
-              <div className="px-6 pb-3">
+              <div className="px-4 sm:px-6 pb-3">
                 <div className="space-y-1.5">
                   {FEATURES.map((f) => {
                     const Icon = f.icon;
@@ -145,7 +145,7 @@ export function PaywallModal({ open, onClose, reason }: PaywallModalProps) {
               </div>
 
               {/* Price */}
-              <div className="px-6 pt-2 pb-1 flex items-baseline justify-center gap-1.5 flex-wrap">
+              <div className="px-4 sm:px-6 pt-2 pb-1 flex items-baseline justify-center gap-1.5 flex-wrap">
                 <span className="text-2xl font-extrabold tracking-tight text-[var(--color-ink)]">
                   {PRO_PRICE_DISPLAY}
                 </span>
@@ -165,7 +165,7 @@ export function PaywallModal({ open, onClose, reason }: PaywallModalProps) {
             </div>
 
             {/* Sticky CTAs - never scroll away */}
-            <div className="border-t border-[var(--color-border)] px-6 py-4 space-y-2 flex-shrink-0">
+            <div className="border-t border-[var(--color-border)] px-4 sm:px-6 py-4 space-y-2 flex-shrink-0">
               {trialUsed ? (
                 <Button
                   size="lg"

@@ -86,6 +86,8 @@
     }
   }
 
+  body { overflow-x: clip; }
+
   ::selection {
     background: var(--color-primary-subtle);
     color: var(--color-primary-dark);
@@ -122,6 +124,17 @@
     .text-hero   { font-size: 2.5rem; }    /* 64 → 40 */
   }
 
+  /* iOS Safari zooms the whole page when a field under 16px gets focus,
+     which knocks the layout sideways on phones. 16px on small screens
+     prevents it without changing the desktop look. */
+  @media (max-width: 640px) {
+    input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+    select,
+    textarea {
+      font-size: 16px;
+    }
+  }
+
   /* Subtle skeleton shimmer */
   .skeleton {
     background: linear-gradient(90deg, var(--color-border-light) 25%, #F6F5F2 50%, var(--color-border-light) 75%);
@@ -132,4 +145,12 @@
     0%   { background-position: 200% 0; }
     100% { background-position: -200% 0; }
   }
+}
+
+/* Swipeable strips (tab bars) - scroll by touch, no visible scrollbar.
+   Declared with @utility so Tailwind v4 always emits it. */
+@utility no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  &::-webkit-scrollbar { display: none; }
 }

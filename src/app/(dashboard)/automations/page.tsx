@@ -144,7 +144,7 @@ function AutomationsInner() {
         )}
 
         {/* Honestly labeled - not built yet */}
-        <div className="flex items-start gap-5 px-6 py-5 bg-white rounded-[var(--radius-2xl)] border border-[var(--color-border)] shadow-soft-sm opacity-60">
+        <div className="flex items-start gap-5 px-4 sm:px-6 py-5 bg-white rounded-[var(--radius-2xl)] border border-[var(--color-border)] shadow-soft-sm opacity-60">
           <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0" style={{ backgroundColor: "#DCFCE7" }}>
             <Sparkles className="h-5 w-5" style={{ color: "#166534" }} />
           </div>
@@ -186,7 +186,7 @@ function RuleCard({
   }
 
   return (
-    <div className="px-6 py-5 bg-white rounded-[var(--radius-2xl)] border border-[var(--color-border)] shadow-soft-sm">
+    <div className="px-4 sm:px-6 py-5 bg-white rounded-[var(--radius-2xl)] border border-[var(--color-border)] shadow-soft-sm">
       <div className="flex items-start gap-5">
         <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0" style={{ backgroundColor: rule.iconBg }}>
           <Icon className="h-5 w-5" style={{ color: rule.iconColor }} />

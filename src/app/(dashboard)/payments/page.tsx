@@ -51,7 +51,7 @@ export default function PaymentsPage() {
 
   return (
     <div className="space-y-8">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-page font-bold">Money</h1>
           <p className="text-lead text-[var(--color-ink-light)] mt-2">Invoices, payments, and your Orbit Wallet.</p>
@@ -79,7 +79,7 @@ export default function PaymentsPage() {
       {tab === "invoices" ? (
         <div className="space-y-8">
           {/* Headline totals */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-5 [&>*:first-child]:col-span-2 sm:[&>*:first-child]:col-span-1">
             <SummaryCard
               tone="warning"
               icon={<Clock className="h-5 w-5" />}
@@ -107,7 +107,7 @@ export default function PaymentsPage() {
           {!isPro && unpaidCount > 0 && (
             <button
               onClick={() => setPaywallOpen(true)}
-              className="w-full flex items-center gap-4 px-6 py-5 bg-[var(--color-primary-subtle)] rounded-[var(--radius-2xl)] border border-[var(--color-primary)]/20 text-left hover:border-[var(--color-primary)]/40 transition-colors"
+              className="w-full flex items-center gap-4 px-4 sm:px-6 py-5 bg-[var(--color-primary-subtle)] rounded-[var(--radius-2xl)] border border-[var(--color-primary)]/20 text-left hover:border-[var(--color-primary)]/40 transition-colors"
             >
               <div className="w-11 h-11 rounded-xl bg-white text-[var(--color-primary)] flex items-center justify-center flex-shrink-0">
                 <Sparkles className="h-5 w-5" />
@@ -134,7 +134,7 @@ export default function PaymentsPage() {
                 {[0, 1, 2].map((i) => <div key={i} className="h-20 rounded-[var(--radius-xl)] skeleton" />)}
               </div>
             ) : payments.length === 0 ? (
-              <div className="bg-white rounded-[var(--radius-xl)] border border-[var(--color-border)] p-10 text-center">
+              <div className="bg-white rounded-[var(--radius-xl)] border border-[var(--color-border)] p-6 sm:p-10 text-center">
                 <Receipt className="h-8 w-8 text-[var(--color-muted)] mx-auto mb-3" />
                 <p className="text-sm text-[var(--color-ink-light)]">No invoices yet.</p>
               </div>
@@ -143,9 +143,9 @@ export default function PaymentsPage() {
                 {payments.slice(0, 20).map((p) => (
                   <div
                     key={p.id}
-                    className="px-6 py-5 bg-white rounded-[var(--radius-2xl)] border border-[var(--color-border)] shadow-soft-sm hover:shadow-soft hover:-translate-y-px transition-all"
+                    className="px-4 sm:px-6 py-5 bg-white rounded-[var(--radius-2xl)] border border-[var(--color-border)] shadow-soft-sm hover:shadow-soft hover:-translate-y-px transition-all"
                   >
-                    <Link href={`/payments/${p.id}`} className="flex items-center gap-5">
+                    <Link href={`/payments/${p.id}`} className="flex items-center gap-3 sm:gap-5">
                       <div className="w-12 h-12 rounded-xl bg-[var(--color-primary-subtle)] flex items-center justify-center flex-shrink-0">
                         <Receipt className="h-6 w-6 text-[var(--color-primary)]" />
                       </div>
@@ -166,7 +166,7 @@ export default function PaymentsPage() {
                         </div>
                       </div>
                       <div className="text-right flex-shrink-0">
-                        <div className="text-body font-bold text-[var(--color-ink)]">{formatCurrency(p.amount)}</div>
+                        <div className="text-body font-bold text-[var(--color-ink)] tabular-nums whitespace-nowrap">{formatCurrency(p.amount)}</div>
                         <Badge tone={STATUS_STYLE[p.status].tone} className="mt-1.5">
                           {STATUS_STYLE[p.status].label}
                         </Badge>
@@ -211,7 +211,7 @@ function WalletTab({ isPro, onUpgrade }: { isPro: boolean; onUpgrade: () => void
 
   if (!isPro) {
     return (
-      <div className="bg-white rounded-[var(--radius-2xl)] border border-[var(--color-border)] shadow-soft-sm p-10 text-center">
+      <div className="bg-white rounded-[var(--radius-2xl)] border border-[var(--color-border)] shadow-soft-sm p-6 sm:p-10 text-center">
         <div className="w-12 h-12 rounded-2xl bg-[var(--color-primary-subtle)] flex items-center justify-center mx-auto mb-4">
           <Wallet2 className="h-5 w-5 text-[var(--color-primary)]" />
         </div>
@@ -235,7 +235,7 @@ function WalletTab({ isPro, onUpgrade }: { isPro: boolean; onUpgrade: () => void
   return (
     <div className="space-y-4">
       {balances.length === 0 ? (
-        <div className="bg-white rounded-[var(--radius-2xl)] border border-[var(--color-border)] p-8 text-center">
+        <div className="bg-white rounded-[var(--radius-2xl)] border border-[var(--color-border)] p-5 sm:p-8 text-center">
           <Wallet2 className="h-8 w-8 text-[var(--color-muted)] mx-auto mb-3" />
           <p className="text-small text-[var(--color-ink-light)]">No wallet activity yet.</p>
         </div>
@@ -243,7 +243,7 @@ function WalletTab({ isPro, onUpgrade }: { isPro: boolean; onUpgrade: () => void
         balances.map((b) => (
           <div
             key={b.wallet_id}
-            className="bg-white rounded-[var(--radius-2xl)] border border-[var(--color-border)] shadow-soft-sm p-8"
+            className="bg-white rounded-[var(--radius-2xl)] border border-[var(--color-border)] shadow-soft-sm p-5 sm:p-8"
           >
             <span className="text-tiny font-semibold uppercase tracking-wider text-[var(--color-muted)]">
               {b.currency} balance
@@ -254,7 +254,7 @@ function WalletTab({ isPro, onUpgrade }: { isPro: boolean; onUpgrade: () => void
       )}
       <Link
         href="/wallet"
-        className="flex items-center justify-between px-6 py-4 bg-white rounded-[var(--radius-xl)] border border-[var(--color-border)] hover:border-[var(--color-ink-light)] transition-colors"
+        className="flex items-center justify-between px-4 sm:px-6 py-4 bg-white rounded-[var(--radius-xl)] border border-[var(--color-border)] hover:border-[var(--color-ink-light)] transition-colors"
       >
         <span className="text-body font-semibold text-[var(--color-ink)]">
           Bank accounts &amp; withdrawals
@@ -271,14 +271,14 @@ function SummaryCard({
   const bg = { warning: "var(--color-warning-light)", danger: "var(--color-danger-light)", success: "var(--color-success-light)" }[tone];
   const fg = { warning: "var(--color-warning-deep)", danger: "var(--color-danger-deep)", success: "var(--color-success-deep)" }[tone];
   return (
-    <div className="bg-white rounded-[var(--radius-2xl)] border border-[var(--color-border)] shadow-soft-sm p-7">
-      <div className="flex items-center justify-between mb-5">
-        <span className="text-tiny font-semibold uppercase tracking-wider text-[var(--color-muted)]">{label}</span>
-        <div className="w-11 h-11 rounded-xl flex items-center justify-center" style={{ backgroundColor: bg, color: fg }}>
+    <div className="bg-white rounded-[var(--radius-2xl)] border border-[var(--color-border)] shadow-soft-sm p-5 sm:p-7">
+      <div className="flex flex-col-reverse items-start gap-2 sm:flex-row sm:justify-between mb-3 sm:mb-5">
+        <span className="text-tiny font-semibold uppercase tracking-wider text-[var(--color-muted)] min-w-0 pt-1">{label}</span>
+        <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-xl flex items-center justify-center flex-shrink-0" style={{ backgroundColor: bg, color: fg }}>
           {icon}
         </div>
       </div>
-      <div className="text-stat font-bold">{value}</div>
+      <div className="text-[1.375rem] sm:text-stat leading-tight font-bold tabular-nums truncate" title={String(value)}>{value}</div>
       <div className="mt-2 text-small text-[var(--color-muted)]">{hint}</div>
     </div>
   );

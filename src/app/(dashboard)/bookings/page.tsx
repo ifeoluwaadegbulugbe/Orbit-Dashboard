@@ -9,6 +9,7 @@ import { usePayments } from "@/hooks/usePayments";
 import { formatShortDate, cn } from "@/lib/utils";
 import { BookingActions } from "@/components/bookings/BookingActions";
 import { NewBookingDialog } from "@/components/bookings/NewBookingDialog";
+import type { Booking } from "@/types";
 
 export default function BookingsPage() {
   return (
@@ -27,7 +28,7 @@ function Inner() {
 
   return (
     <div className="space-y-8">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-page font-bold">Bookings</h1>
           <p className="text-lead text-[var(--color-ink-light)] mt-2">Your schedule, at a glance.</p>
@@ -40,7 +41,7 @@ function Inner() {
       {/* Pending bookings rail - top of the page when there's anything to confirm */}
       {pendingBookings.length > 0 && (
         <div className="bg-white rounded-[var(--radius-2xl)] border-2 border-[var(--color-warning)]/30 shadow-soft-sm overflow-hidden">
-          <div className="px-6 py-4 flex items-center gap-3 border-b border-[var(--color-border)] bg-[var(--color-warning-light)]/30">
+          <div className="px-4 sm:px-6 py-4 flex items-center gap-3 border-b border-[var(--color-border)] bg-[var(--color-warning-light)]/30">
             <div className="w-9 h-9 rounded-xl bg-[var(--color-warning-light)] flex items-center justify-center">
               <CalendarIcon className="h-4 w-4 text-[var(--color-warning-deep)]" />
             </div>
@@ -54,11 +55,11 @@ function Inner() {
             </div>
           </div>
           <div className="overflow-x-auto">
-            <div className="flex gap-3 px-6 py-5 min-w-min">
+            <div className="flex gap-3 px-4 sm:px-6 py-5 min-w-min">
               {pendingBookings.map((b) => (
                 <div
                   key={b.id}
-                  className="flex-shrink-0 w-[300px] flex flex-col gap-3 p-5 rounded-[var(--radius-xl)] bg-[var(--color-canvas)] border border-[var(--color-border)]"
+                  className="flex-shrink-0 w-[260px] sm:w-[300px] flex flex-col gap-3 p-5 rounded-[var(--radius-xl)] bg-[var(--color-canvas)] border border-[var(--color-border)]"
                 >
                   <div>
                     <div className="text-body font-semibold text-[var(--color-ink)] truncate">
@@ -68,7 +69,7 @@ function Inner() {
                       {b.title}
                     </div>
                     <div className="text-small text-[var(--color-ink-light)] mt-2">
-                      {formatShortDate(b.date)} at {b.time}
+                      {formatShortDate(b.date)} at {b.time?.slice(0, 5)}
                     </div>
                   </div>
                   <BookingActions
@@ -103,6 +104,9 @@ function BookingsCalendar() {
     const d = new Date();
     return new Date(d.getFullYear(), d.getMonth(), 1);
   });
+  // Tapping a day lists its bookings under the grid - the only way to see
+  // details on phones, where cells are too narrow for names.
+  const [selectedKey, setSelectedKey] = useState(() => dayKey(new Date()));
 
   // booking_id -> payment status, so the calendar can show a paid/unpaid dot
   // without a separate query (Money already has this data cached).
@@ -159,26 +163,34 @@ function BookingsCalendar() {
 
       <div className="grid grid-cols-7 border-b border-[var(--color-border)]">
         {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => (
-          <div key={d} className="px-3 py-2 text-[11px] font-semibold uppercase tracking-wide text-[var(--color-muted)] text-center">
-            {d}
+          <div key={d} className="px-1 sm:px-3 py-2 text-[11px] font-semibold uppercase tracking-wide text-[var(--color-muted)] text-center">
+            <span className="sm:hidden">{d.charAt(0)}</span>
+            <span className="hidden sm:inline">{d}</span>
           </div>
         ))}
       </div>
 
       <div className="grid grid-cols-7">
         {Array.from({ length: firstWeekday }).map((_, i) => (
-          <div key={`pad-${i}`} className="h-24 border-r border-b border-[var(--color-border)] last:border-r-0 bg-[var(--color-canvas)]/30" />
+          <div key={`pad-${i}`} className="h-14 sm:h-24 border-r border-b border-[var(--color-border)] last:border-r-0 bg-[var(--color-canvas)]/30" />
         ))}
         {Array.from({ length: daysInMonth }).map((_, i) => {
           const day = i + 1;
           const key = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
           const dayBookings = byDay.get(key) ?? [];
+          const selected = key === selectedKey;
           return (
             <div
               key={day}
+              role="button"
+              tabIndex={0}
+              aria-pressed={selected}
+              onClick={() => setSelectedKey(key)}
+              onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), setSelectedKey(key))}
               className={cn(
-                "h-24 px-2 py-1.5 border-r border-b border-[var(--color-border)] last:border-r-0",
+                "h-14 sm:h-24 px-1 sm:px-2 py-1 sm:py-1.5 border-r border-b border-[var(--color-border)] last:border-r-0 min-w-0 cursor-pointer transition-colors hover:bg-[var(--color-canvas)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--color-primary)]",
                 isToday(day) && "bg-[var(--color-primary-subtle)]/40",
+                selected && "ring-2 ring-inset ring-[var(--color-primary)]/50",
               )}
             >
               <div className={cn(
@@ -187,7 +199,15 @@ function BookingsCalendar() {
               )}>
                 {day}
               </div>
-              <div className="mt-1 space-y-0.5 overflow-hidden">
+              {/* Phones: one dot per booking - names don't fit in a ~50px cell */}
+              {dayBookings.length > 0 && (
+                <div className="sm:hidden mt-1 flex flex-wrap gap-0.5" aria-label={`${dayBookings.length} booking${dayBookings.length === 1 ? "" : "s"}`}>
+                  {dayBookings.slice(0, 4).map((b) => (
+                    <span key={b.id} className="w-1.5 h-1.5 rounded-full bg-[var(--color-primary)]" />
+                  ))}
+                </div>
+              )}
+              <div className="hidden sm:block mt-1 space-y-0.5 overflow-hidden">
                 {dayBookings.slice(0, 2).map((b) => {
                   const invoice = paymentByBookingId.get(b.id);
                   const dotColor = invoice
@@ -214,6 +234,39 @@ function BookingsCalendar() {
           );
         })}
       </div>
+
+      <DayAgenda dateKey={selectedKey} bookings={byDay.get(selectedKey) ?? []} />
+    </div>
+  );
+}
+
+function dayKey(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+function DayAgenda({ dateKey, bookings }: { dateKey: string; bookings: Booking[] }) {
+  const [y, m, d] = dateKey.split("-").map(Number);
+  const label = new Date(y, m - 1, d).toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" });
+  const sorted = [...bookings].sort((a, b) => (a.time ?? "").localeCompare(b.time ?? ""));
+  return (
+    <div className="border-t border-[var(--color-border)] px-4 sm:px-5 py-4">
+      <h4 className="text-small font-semibold text-[var(--color-ink)] mb-2">{label}</h4>
+      {sorted.length === 0 ? (
+        <p className="text-small text-[var(--color-muted)]">Nothing booked.</p>
+      ) : (
+        <ul className="divide-y divide-[var(--color-border)]">
+          {sorted.map((b) => (
+            <li key={b.id} className="flex items-center gap-3 py-2.5">
+              <span className="w-12 flex-shrink-0 text-small font-bold tabular-nums text-[var(--color-info)]">{b.time?.slice(0, 5)}</span>
+              <div className="flex-1 min-w-0">
+                <div className="text-small font-semibold text-[var(--color-ink)] truncate">{b.client_name}</div>
+                <div className="text-tiny text-[var(--color-muted)] truncate">{b.title}</div>
+              </div>
+              <BookingActions bookingId={b.id} status={b.status} clientName={b.client_name} compact />
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }

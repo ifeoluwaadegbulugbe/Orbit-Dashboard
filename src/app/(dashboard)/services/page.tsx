@@ -145,7 +145,7 @@ export default function ServicesPage() {
       {/* List */}
       {!isEmpty && (
         <div className="bg-white rounded-[var(--radius-2xl)] border border-[var(--color-border)] shadow-soft-sm overflow-hidden">
-          <div className="px-6 py-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-[var(--color-border)]">
+          <div className="px-4 sm:px-6 py-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-[var(--color-border)]">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-[var(--color-primary-subtle)] flex items-center justify-center">
                 <Scissors className="h-4 w-4 text-[var(--color-primary)]" />
@@ -183,7 +183,7 @@ export default function ServicesPage() {
               {services.map((s, i) => (
                 <div
                   key={i}
-                  className="grid grid-cols-1 sm:grid-cols-[1fr_140px_140px_auto] gap-3 sm:gap-4 items-end px-6 py-4"
+                  className="grid grid-cols-1 sm:grid-cols-[1fr_140px_140px_auto] gap-3 sm:gap-4 items-end px-4 sm:px-6 py-4"
                 >
                   <Input
                     label={i === 0 ? "Service name" : undefined}
@@ -217,7 +217,7 @@ export default function ServicesPage() {
                 </div>
               ))}
 
-              <div className="px-6 py-4">
+              <div className="px-4 sm:px-6 py-4">
                 <button
                   type="button"
                   onClick={addService}
@@ -230,7 +230,7 @@ export default function ServicesPage() {
           )}
 
           {/* Footer actions */}
-          <div className="px-6 py-5 border-t border-[var(--color-border)] flex items-center justify-end gap-3 bg-[var(--color-canvas)]/40">
+          <div className="px-4 sm:px-6 py-5 border-t border-[var(--color-border)] flex items-center justify-end gap-3 bg-[var(--color-canvas)]/40">
             <Button
               onClick={handleSave}
               loading={update.isPending}
@@ -245,7 +245,7 @@ export default function ServicesPage() {
       )}
 
       {/* Helper card */}
-      <div className="rounded-[var(--radius-2xl)] border border-dashed border-[var(--color-border)] bg-white/60 px-6 py-5">
+      <div className="rounded-[var(--radius-2xl)] border border-dashed border-[var(--color-border)] bg-white/60 px-4 sm:px-6 py-5">
         <h3 className="text-card-title font-semibold mb-1.5">Where these show up</h3>
         <ul className="text-small text-[var(--color-ink-light)] leading-relaxed space-y-1.5">
           <li>· Your public booking link (<Link href="/booking-link" className="text-[var(--color-primary)] font-semibold">manage link</Link>)</li>

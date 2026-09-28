@@ -96,7 +96,7 @@ function ExportInner() {
         {exports.map((e) => (
           <div
             key={e.kind}
-            className="flex items-center gap-5 px-6 py-5 bg-white rounded-[var(--radius-2xl)] border border-[var(--color-border)] shadow-soft-sm"
+            className="flex items-center gap-3 sm:gap-5 px-4 sm:px-6 py-5 bg-white rounded-[var(--radius-2xl)] border border-[var(--color-border)] shadow-soft-sm"
           >
             <div className="w-12 h-12 rounded-xl bg-[var(--color-canvas)] flex items-center justify-center flex-shrink-0">
               {e.icon}

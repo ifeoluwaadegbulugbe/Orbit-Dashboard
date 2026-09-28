@@ -25,11 +25,11 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
 
   return (
     <header className="sticky top-0 z-30 bg-[var(--color-canvas)]/85 backdrop-blur-md border-b border-[var(--color-border)]/60">
-      <div className="flex items-center gap-3 px-5 lg:px-8 py-3.5">
+      <div className="flex items-center gap-2 sm:gap-3 px-3 sm:px-5 lg:px-8 py-3">
         {/* Mobile menu */}
         <button
           onClick={onMenuClick}
-          className="lg:hidden -ml-1 p-1.5 rounded-lg hover:bg-[var(--color-border-light)]"
+          className="lg:hidden p-2 rounded-lg hover:bg-[var(--color-border-light)] flex-shrink-0"
           aria-label="Open menu"
         >
           <Menu className="h-5 w-5 text-[var(--color-ink-mid)]" />
@@ -39,7 +39,7 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
         <GlobalSearch />
 
         {/* Right side */}
-        <div className="ml-auto flex items-center gap-2">
+        <div className="ml-auto flex items-center gap-1 sm:gap-2 flex-shrink-0">
           {/* Notifications */}
           <NotificationBell />
 
@@ -58,7 +58,7 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
                 onClick={() => setMenuOpen(false)}
                 aria-hidden
               />
-              <div className="absolute right-0 top-12 z-20 w-56 rounded-[var(--radius-lg)] bg-white border border-[var(--color-border)] shadow-soft-lg overflow-hidden">
+              <div className="absolute right-0 top-12 z-20 w-56 max-w-[calc(100vw-1.5rem)] rounded-[var(--radius-lg)] bg-white border border-[var(--color-border)] shadow-soft-lg overflow-hidden">
                 <div className="px-4 py-3 border-b border-[var(--color-border)]">
                   <p className="text-sm font-semibold text-[var(--color-ink)] truncate">{displayName}</p>
                   <p className="text-xs text-[var(--color-muted)] truncate">{user?.email}</p>

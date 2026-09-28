@@ -407,7 +407,7 @@ function ConversationRow({
           e.stopPropagation();
           setMenuOpen((v) => !v);
         }}
-        className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-[var(--color-border-light)] transition-opacity flex-shrink-0"
+        className="lg:opacity-0 lg:group-hover:opacity-100 p-1 rounded hover:bg-[var(--color-border-light)] transition-opacity flex-shrink-0"
         aria-label="More actions"
       >
         <MoreHorizontal className="h-3.5 w-3.5 text-[var(--color-ink-light)]" />

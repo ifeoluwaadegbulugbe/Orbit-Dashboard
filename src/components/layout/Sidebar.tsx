@@ -44,7 +44,7 @@ export function Sidebar() {
   return (
     <aside className="hidden lg:flex flex-col w-64 h-screen sticky top-0 border-r border-[var(--color-border)] bg-white">
       {/* Brand */}
-      <div className="px-7 pt-8 pb-6 flex-shrink-0">
+      <div className="px-5 sm:px-7 pt-8 pb-6 flex-shrink-0">
         <Link href="/home" className="flex items-center gap-2.5">
           <div className="w-9 h-9 rounded-xl bg-[var(--color-primary)] flex items-center justify-center">
             <Sparkles className="h-5 w-5 text-white" />

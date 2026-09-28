@@ -159,7 +159,7 @@ export async function GET(request: Request) {
       userId: booking.user_id,
       type: "reminder_due",
       title: `${booking.title} in ${minutesUntil} min`,
-      body: `With ${booking.client_name} at ${booking.time}.`,
+      body: `With ${booking.client_name} at ${formatTime(booking.time)}.`,
       actionUrl: `/bookings`,
       metadata: {
         booking_id: booking.id,

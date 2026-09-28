@@ -55,7 +55,7 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
   }
   if (!client) {
     return (
-      <div className="bg-white rounded-[var(--radius-xl)] border border-[var(--color-border)] p-10 text-center">
+      <div className="bg-white rounded-[var(--radius-xl)] border border-[var(--color-border)] p-6 sm:p-10 text-center">
         <p className="text-sm text-[var(--color-ink-light)]">Client not found.</p>
         <Link href="/clients" className="inline-block mt-3 text-sm font-semibold text-[var(--color-primary)]">
           Back to clients
@@ -85,10 +85,10 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
 
       {/* Hero */}
       <div className="bg-white rounded-[var(--radius-2xl)] border border-[var(--color-border)] shadow-soft-sm p-6 lg:p-7">
-        <div className="flex items-start gap-5">
-          <Avatar name={client.name} size={72} />
-          <div className="flex-1 min-w-0">
-            <h1 className="text-2xl font-extrabold tracking-tight truncate">{client.name}</h1>
+        <div className="flex flex-wrap items-start gap-4 sm:gap-5">
+          <Avatar name={client.name} size={64} />
+          <div className="flex-1 min-w-[180px]">
+            <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight break-words">{client.name}</h1>
             <div className="mt-1.5 flex items-center gap-3 flex-wrap">
               <Badge tone={STATUS_TONE[client.status]}>
                 {client.status.replace("_", " ")}
@@ -104,7 +104,7 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
             </div>
             <div className="mt-3 flex items-center gap-4 flex-wrap text-sm text-[var(--color-ink-mid)]">
               <span className="inline-flex items-center gap-1.5"><Phone className="h-3.5 w-3.5" /> {client.phone}</span>
-              {client.email && <span className="inline-flex items-center gap-1.5"><Mail className="h-3.5 w-3.5" /> {client.email}</span>}
+              {client.email && <span className="inline-flex items-center gap-1.5 min-w-0 max-w-full"><Mail className="h-3.5 w-3.5 flex-shrink-0" /> <span className="truncate">{client.email}</span></span>}
               {client.birthday && <span className="inline-flex items-center gap-1.5"><Cake className="h-3.5 w-3.5" /> {formatShortDate(client.birthday)}</span>}
             </div>
           </div>
@@ -130,14 +130,14 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
       </div>
 
       {/* Tab bar */}
-      <div className="flex gap-1 overflow-x-auto bg-white rounded-full border border-[var(--color-border)] p-1 w-fit">
+      <div className="flex gap-1 bg-white rounded-full border border-[var(--color-border)] p-1 w-fit max-w-full overflow-x-auto no-scrollbar">
         {TABS.map((t) => {
           const active = tab === t.key;
           return (
             <button
               key={t.key}
               onClick={() => setTab(t.key)}
-              className={`px-4 py-2 rounded-full text-sm font-semibold transition-colors flex items-center gap-2 ${
+              className={`px-3 sm:px-4 py-2 rounded-full text-sm font-semibold transition-colors flex items-center gap-2 whitespace-nowrap flex-shrink-0 ${
                 active
                   ? "bg-[var(--color-primary)] text-white"
                   : "text-[var(--color-ink-light)] hover:text-[var(--color-ink)]"
@@ -224,7 +224,7 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
                 <div className="flex-1 min-w-0">
                   <div className="text-sm font-semibold truncate">{b.title}</div>
                   <div className="text-xs text-[var(--color-muted)] mt-0.5">
-                    {formatShortDate(b.date)}{b.time ? ` at ${b.time}` : ""}
+                    {formatShortDate(b.date)}{b.time ? ` at ${b.time.slice(0, 5)}` : ""}
                   </div>
                 </div>
                 <BookingActions

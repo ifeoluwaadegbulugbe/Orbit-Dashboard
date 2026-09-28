@@ -293,7 +293,7 @@ export default function HelpPage() {
               >
                 <button
                   onClick={() => setOpenFaq(isOpen ? null : i)}
-                  className="w-full px-6 py-4 flex items-center gap-3 text-left hover:bg-[var(--color-canvas)] transition-colors"
+                  className="w-full px-4 sm:px-6 py-4 flex items-center gap-3 text-left hover:bg-[var(--color-canvas)] transition-colors"
                 >
                   <span className="flex-1 text-body font-semibold">{faq.q}</span>
                   <ChevronDown
@@ -303,7 +303,7 @@ export default function HelpPage() {
                   />
                 </button>
                 {isOpen && (
-                  <div className="px-6 pb-5 text-body text-[var(--color-ink-mid)] leading-relaxed border-t border-[var(--color-border)] pt-4">
+                  <div className="px-4 sm:px-6 pb-5 text-body text-[var(--color-ink-mid)] leading-relaxed border-t border-[var(--color-border)] pt-4">
                     {faq.a}
                   </div>
                 )}
@@ -314,7 +314,7 @@ export default function HelpPage() {
       </div>
 
       {/* Bottom CTA */}
-      <div className="flex items-center gap-4 px-6 py-5 rounded-[var(--radius-2xl)] bg-[var(--color-primary-subtle)] border border-[var(--color-primary)]/20">
+      <div className="flex items-center gap-4 px-4 sm:px-6 py-5 rounded-[var(--radius-2xl)] bg-[var(--color-primary-subtle)] border border-[var(--color-primary)]/20">
         <div className="w-11 h-11 rounded-xl bg-white flex items-center justify-center flex-shrink-0">
           <Sparkles className="h-5 w-5 text-[var(--color-primary)]" />
         </div>

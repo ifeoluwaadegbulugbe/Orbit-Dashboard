@@ -75,7 +75,7 @@ function AnalyticsContent() {
         <p className="text-lead text-[var(--color-ink-light)] mt-2">A clear picture of your business.</p>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
+      <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-5">
         <MetricCard label="Revenue this month" value={formatCurrency(revenueThisMonth)} icon={<DollarSign className="h-4 w-4" />} />
         <MetricCard label="Total Clients"      value={clients.length}                  icon={<Users className="h-4 w-4" />} />
         {isPro ? (
@@ -91,21 +91,21 @@ function AnalyticsContent() {
       {/* Revenue chart + top clients - Pro only */}
       {isPro ? (
         <>
-          <div className="bg-white rounded-[var(--radius-2xl)] border border-[var(--color-border)] shadow-soft-sm p-7">
-            <div className="flex items-center justify-between mb-6">
-              <div>
+          <div className="bg-white rounded-[var(--radius-2xl)] border border-[var(--color-border)] shadow-soft-sm p-5 sm:p-7">
+            <div className="flex items-start justify-between gap-3 mb-6">
+              <div className="min-w-0">
                 <h3 className="text-card-title font-semibold">Revenue · last 6 months</h3>
                 <p className="text-small text-[var(--color-muted)] mt-1">
                   {formatCurrency(monthlyRevenue.reduce((s, m) => s + m.value, 0))} collected in this window
                 </p>
               </div>
-              <BarChart3 className="h-5 w-5 text-[var(--color-primary)]" />
+              <BarChart3 className="h-5 w-5 text-[var(--color-primary)] flex-shrink-0" />
             </div>
             <BarChart data={monthlyRevenue} format={formatCurrency} />
           </div>
 
           <div className="bg-white rounded-[var(--radius-2xl)] border border-[var(--color-border)] shadow-soft-sm overflow-hidden">
-            <div className="px-7 py-5 border-b border-[var(--color-border)]">
+            <div className="px-5 sm:px-7 py-5 border-b border-[var(--color-border)]">
               <h3 className="text-card-title font-semibold">Top clients by revenue</h3>
             </div>
             {topClients.length === 0 ? (
@@ -115,13 +115,13 @@ function AnalyticsContent() {
             ) : (
               <div className="divide-y divide-[var(--color-border)]">
                 {topClients.map((c, i) => (
-                  <div key={c.id} className="flex items-center gap-4 px-5 py-3.5">
+                  <div key={c.id} className="flex items-center gap-3 sm:gap-4 px-5 sm:px-7 py-3.5">
                     <span className="w-6 text-xs font-bold text-[var(--color-muted)]">#{i + 1}</span>
                     <Avatar name={c.name} size={36} />
                     <div className="flex-1 min-w-0">
                       <div className="text-sm font-semibold truncate">{c.name}</div>
                     </div>
-                    <div className="text-sm font-bold text-[var(--color-success-deep)]">
+                    <div className="text-sm font-bold text-[var(--color-success-deep)] tabular-nums whitespace-nowrap">
                       {formatCurrency(c.total_paid)}
                     </div>
                   </div>
@@ -131,7 +131,7 @@ function AnalyticsContent() {
           </div>
         </>
       ) : (
-        <div className="bg-white rounded-[var(--radius-2xl)] border border-[var(--color-border)] shadow-soft-sm p-10 text-center">
+        <div className="bg-white rounded-[var(--radius-2xl)] border border-[var(--color-border)] shadow-soft-sm p-6 sm:p-10 text-center">
           <div className="w-12 h-12 rounded-2xl bg-[var(--color-primary-subtle)] flex items-center justify-center mx-auto mb-4">
             <Sparkles className="h-5 w-5 text-[var(--color-primary)]" />
           </div>
@@ -156,10 +156,10 @@ function LockedMetricCard({ onUnlock }: { onUnlock: () => void }) {
   return (
     <button
       onClick={onUnlock}
-      className="col-span-2 bg-[var(--color-canvas)] rounded-[var(--radius-2xl)] border border-dashed border-[var(--color-border)] p-7 text-left hover:border-[var(--color-primary)] transition-colors"
+      className="col-span-2 bg-[var(--color-canvas)] rounded-[var(--radius-2xl)] border border-dashed border-[var(--color-border)] p-5 sm:p-7 text-left hover:border-[var(--color-primary)] transition-colors"
     >
-      <div className="flex items-center justify-between mb-5">
-        <span className="text-tiny font-semibold uppercase tracking-wider text-[var(--color-muted)]">
+      <div className="flex flex-col-reverse items-start gap-2 sm:flex-row sm:justify-between mb-3 sm:mb-5">
+        <span className="text-tiny font-semibold uppercase tracking-wider text-[var(--color-muted)] min-w-0 pt-1">
           Total Revenue &amp; Collection Rate
         </span>
         <div className="w-11 h-11 rounded-xl bg-white text-[var(--color-muted)] flex items-center justify-center">
@@ -173,14 +173,14 @@ function LockedMetricCard({ onUnlock }: { onUnlock: () => void }) {
 
 function MetricCard({ label, value, icon }: { label: string; value: string | number; icon: React.ReactNode }) {
   return (
-    <div className="bg-white rounded-[var(--radius-2xl)] border border-[var(--color-border)] shadow-soft-sm p-7">
-      <div className="flex items-center justify-between mb-5">
-        <span className="text-tiny font-semibold uppercase tracking-wider text-[var(--color-muted)]">{label}</span>
-        <div className="w-11 h-11 rounded-xl bg-[var(--color-primary-subtle)] text-[var(--color-primary)] flex items-center justify-center">
+    <div className="bg-white rounded-[var(--radius-2xl)] border border-[var(--color-border)] shadow-soft-sm p-5 sm:p-7">
+      <div className="flex flex-col-reverse items-start gap-2 sm:flex-row sm:justify-between mb-3 sm:mb-5">
+        <span className="text-tiny font-semibold uppercase tracking-wider text-[var(--color-muted)] min-w-0 pt-1">{label}</span>
+        <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-xl bg-[var(--color-primary-subtle)] text-[var(--color-primary)] flex items-center justify-center flex-shrink-0">
           {icon}
         </div>
       </div>
-      <div className="text-stat font-bold">{value}</div>
+      <div className="text-[1.375rem] sm:text-stat leading-tight font-bold tabular-nums truncate" title={String(value)}>{value}</div>
     </div>
   );
 }

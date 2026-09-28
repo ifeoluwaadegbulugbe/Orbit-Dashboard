@@ -26,7 +26,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <MobileNav open={mobileOpen} onClose={() => setMobileOpen(false)} />
       <div className="flex-1 min-w-0 flex flex-col">
         <TopBar onMenuClick={() => setMobileOpen(true)} />
-        <main className="flex-1 px-6 lg:px-10 py-8 lg:py-10 max-w-[1440px] w-full mx-auto">
+        <main className="flex-1 min-w-0 px-4 sm:px-6 lg:px-10 pt-6 sm:pt-8 lg:pt-10 pb-28 lg:pb-10 max-w-[1440px] w-full mx-auto">
           {children}
         </main>
       </div>

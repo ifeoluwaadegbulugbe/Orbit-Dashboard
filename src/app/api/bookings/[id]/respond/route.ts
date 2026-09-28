@@ -214,7 +214,7 @@ export async function POST(
       action === "confirmed"
         ? `You confirmed ${booking.client_name}'s booking`
         : `You cancelled ${booking.client_name}'s booking`,
-    body: `${booking.title} on ${booking.date} at ${booking.time}.${emailSent ? " Email sent to client." : ""}${autoInvoice.created ? ` Invoice ${autoInvoice.invoiceNumber} created.` : ""}`,
+    body: `${booking.title} on ${booking.date} at ${String(booking.time).slice(0, 5)}.${emailSent ? " Email sent to client." : ""}${autoInvoice.created ? ` Invoice ${autoInvoice.invoiceNumber} created.` : ""}`,
     actionUrl: `/clients/${booking.client_id}`,
     metadata: {
       booking_id: booking.id,

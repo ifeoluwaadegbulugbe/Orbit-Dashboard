@@ -93,10 +93,10 @@ function BrandingForm() {
 
       {/* Preview */}
       <div className="bg-white rounded-[var(--radius-2xl)] border border-[var(--color-border)] shadow-soft-sm overflow-hidden">
-        <div className="px-7 py-5 border-b border-[var(--color-border)]">
+        <div className="px-5 sm:px-7 py-5 border-b border-[var(--color-border)]">
           <h3 className="text-card-title font-semibold">Preview</h3>
         </div>
-        <div className="p-8" style={{ backgroundColor: branding.accent_color + "0D" }}>
+        <div className="p-5 sm:p-8" style={{ backgroundColor: branding.accent_color + "0D" }}>
           <div className="flex items-center gap-4">
             {branding.logo_url ? (
               <img
@@ -125,7 +125,7 @@ function BrandingForm() {
       </div>
 
       {/* Form */}
-      <div className="bg-white rounded-[var(--radius-2xl)] border border-[var(--color-border)] shadow-soft-sm p-8 space-y-6">
+      <div className="bg-white rounded-[var(--radius-2xl)] border border-[var(--color-border)] shadow-soft-sm p-5 sm:p-8 space-y-6">
         <Input
           label="Business name"
           placeholder="e.g. Glam by Amaka"
@@ -188,7 +188,7 @@ function BrandingForm() {
           hint="Appears at the bottom of every invoice you send."
         />
 
-        <div className="flex items-center justify-between pt-2 border-t border-[var(--color-border)]">
+        <div className="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-3 pt-4 border-t border-[var(--color-border)]">
           <div className="inline-flex items-center gap-2 text-small text-[var(--color-muted)]">
             <Palette className="h-4 w-4" />
             Saved locally on this device

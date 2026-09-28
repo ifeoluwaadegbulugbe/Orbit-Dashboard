@@ -206,9 +206,9 @@ function ProfileInner() {
       )}
 
       {/* ─── Hero card with editable avatar ─── */}
-      <div className="bg-white rounded-[var(--radius-2xl)] border border-[var(--color-border)] shadow-soft-sm p-8 flex items-center gap-6">
+      <div className="bg-white rounded-[var(--radius-2xl)] border border-[var(--color-border)] shadow-soft-sm p-5 sm:p-8 flex items-center gap-4 sm:gap-6">
         <div className="relative flex-shrink-0">
-          <Avatar name={displayName} imageUrl={profile?.avatar_url} size={84} />
+          <Avatar name={displayName} imageUrl={profile?.avatar_url} size={72} />
           <button
             onClick={handleAvatarClick}
             disabled={savingField === "avatar"}
@@ -255,7 +255,7 @@ function ProfileInner() {
       {/* ─── Subscription card ─── */}
       <SectionCard title="Subscription" icon={<CreditCard className="h-4 w-4 text-[var(--color-primary)]" />}>
         {isPro ? (
-          <div className="px-7 py-6 space-y-5">
+          <div className="px-5 sm:px-7 py-6 space-y-5">
             <div className="flex items-start gap-4">
               <div className="w-11 h-11 rounded-xl bg-[var(--color-success-light)] flex items-center justify-center flex-shrink-0">
                 <Check className="h-5 w-5 text-[var(--color-success-deep)]" />
@@ -289,7 +289,7 @@ function ProfileInner() {
             </button>
           </div>
         ) : (
-          <div className="px-7 py-6 space-y-4">
+          <div className="px-5 sm:px-7 py-6 space-y-4">
             <p className="text-body text-[var(--color-ink-light)] leading-relaxed">
               You&apos;re on the Free plan. Upgrade to unlock unlimited clients, AI tools, automations, online payments and more.
             </p>
@@ -337,7 +337,7 @@ function ProfileInner() {
       <SectionCard title="Currency & region" icon={<Globe className="h-4 w-4 text-[var(--color-primary)]" />}>
         <button
           onClick={() => setCurrencyPickerOpen(true)}
-          className="w-full flex items-center justify-between px-7 py-4 hover:bg-[var(--color-canvas)] transition-colors text-left"
+          className="w-full flex items-center justify-between px-5 sm:px-7 py-4 hover:bg-[var(--color-canvas)] transition-colors text-left"
         >
           <span className="text-body text-[var(--color-ink-light)]">Country & currency</span>
           <span className="inline-flex items-center gap-2 text-body font-medium">
@@ -409,7 +409,7 @@ function ProfileInner() {
               <button
                 key={c.code}
                 onClick={() => handleCountrySelect(c)}
-                className="w-full flex items-center gap-4 px-6 py-3.5 hover:bg-[var(--color-canvas)] transition-colors text-left"
+                className="w-full flex items-center gap-4 px-4 sm:px-6 py-3.5 hover:bg-[var(--color-canvas)] transition-colors text-left"
               >
                 <span className="text-2xl flex-shrink-0">{c.flag}</span>
                 <div className="flex-1 min-w-0">
@@ -435,7 +435,7 @@ function ProfileInner() {
 function SectionCard({ title, icon, children }: { title: string; icon: React.ReactNode; children: React.ReactNode }) {
   return (
     <div className="bg-white rounded-[var(--radius-2xl)] border border-[var(--color-border)] shadow-soft-sm overflow-hidden">
-      <div className="flex items-center gap-2 px-7 py-5 border-b border-[var(--color-border)]">
+      <div className="flex items-center gap-2 px-5 sm:px-7 py-5 border-b border-[var(--color-border)]">
         {icon}
         <h3 className="text-card-title font-semibold text-[var(--color-ink)]">{title}</h3>
       </div>
@@ -446,9 +446,9 @@ function SectionCard({ title, icon, children }: { title: string; icon: React.Rea
 
 function Row({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex items-center justify-between px-7 py-4">
-      <span className="text-body text-[var(--color-ink-light)]">{label}</span>
-      <span className="text-body font-medium text-[var(--color-ink)] truncate ml-4">{value}</span>
+    <div className="flex items-center justify-between gap-4 px-5 sm:px-7 py-4">
+      <span className="text-body text-[var(--color-ink-light)] flex-shrink-0">{label}</span>
+      <span className="text-body font-medium text-[var(--color-ink)] truncate min-w-0 text-right">{value}</span>
     </div>
   );
 }
@@ -469,8 +469,8 @@ function EditableRow({
 }) {
   if (editing) {
     return (
-      <div className="px-7 py-4 flex items-center gap-3">
-        <span className="text-body text-[var(--color-ink-light)] w-24 flex-shrink-0">{label}</span>
+      <div className="px-5 sm:px-7 py-4 flex flex-wrap sm:flex-nowrap items-center gap-x-3 gap-y-2">
+        <span className="text-small sm:text-body text-[var(--color-ink-light)] w-full sm:w-24 flex-shrink-0">{label}</span>
         <Input
           value={draft}
           onChange={(e) => onDraftChange(e.target.value)}
@@ -479,7 +479,7 @@ function EditableRow({
             if (e.key === "Enter") onSave();
             if (e.key === "Escape") onCancel();
           }}
-          className="flex-1"
+          className="flex-1 min-w-0"
         />
         <button
           onClick={onSave}
@@ -503,12 +503,13 @@ function EditableRow({
   return (
     <button
       onClick={onEdit}
-      className="w-full flex items-center justify-between px-7 py-4 hover:bg-[var(--color-canvas)] transition-colors text-left group"
+      className="w-full flex items-center justify-between gap-4 px-5 sm:px-7 py-4 hover:bg-[var(--color-canvas)] transition-colors text-left group"
     >
-      <span className="text-body text-[var(--color-ink-light)]">{label}</span>
-      <span className="inline-flex items-center gap-2">
+      <span className="text-body text-[var(--color-ink-light)] flex-shrink-0">{label}</span>
+      <span className="inline-flex items-center gap-2 min-w-0">
         <span className="text-body font-medium text-[var(--color-ink)] truncate">{value}</span>
-        <Edit2 className="h-3.5 w-3.5 text-[var(--color-muted)] opacity-0 group-hover:opacity-100 transition-opacity" />
+        {/* Always visible on touch screens - there's no hover to reveal it */}
+        <Edit2 className="h-3.5 w-3.5 flex-shrink-0 text-[var(--color-muted)] sm:opacity-0 sm:group-hover:opacity-100 transition-opacity" />
       </span>
     </button>
   );
@@ -518,7 +519,7 @@ function RowLink({ label, href, icon }: { label: string; href: string; icon?: Re
   return (
     <Link
       href={href}
-      className="flex items-center justify-between px-7 py-4 hover:bg-[var(--color-canvas)] transition-colors"
+      className="flex items-center justify-between px-5 sm:px-7 py-4 hover:bg-[var(--color-canvas)] transition-colors"
     >
       <span className="flex items-center gap-3 text-body text-[var(--color-ink)]">
         {icon && <span className="text-[var(--color-ink-light)]">{icon}</span>}
@@ -604,7 +605,7 @@ function ChangePasswordRow() {
     return (
       <button
         onClick={() => { setOpen(true); setFeedback(null); }}
-        className="w-full flex items-center justify-between px-7 py-4 hover:bg-[var(--color-canvas)] transition-colors text-left"
+        className="w-full flex items-center justify-between px-5 sm:px-7 py-4 hover:bg-[var(--color-canvas)] transition-colors text-left"
       >
         <div>
           <div className="text-body text-[var(--color-ink)]">Password</div>
@@ -616,7 +617,7 @@ function ChangePasswordRow() {
   }
 
   return (
-    <div className="px-7 py-5 space-y-3">
+    <div className="px-5 sm:px-7 py-5 space-y-3">
       <div className="flex items-center justify-between">
         <div>
           <div className="text-body font-semibold text-[var(--color-ink)]">Change password</div>

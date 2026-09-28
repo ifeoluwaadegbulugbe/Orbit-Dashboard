@@ -63,7 +63,7 @@ function Inner() {
 
   return (
     <div className="space-y-8">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-page font-bold">Work</h1>
           <p className="text-lead text-[var(--color-ink-light)] mt-2">Projects and invoices.</p>
@@ -74,7 +74,7 @@ function Inner() {
       </div>
 
       {/* Tab bar */}
-      <div className="flex gap-1 bg-white p-1 rounded-full border border-[var(--color-border)] w-fit">
+      <div className="flex gap-1 bg-white p-1 rounded-full border border-[var(--color-border)] w-fit max-w-full overflow-x-auto no-scrollbar">
         {TABS.map((t) => {
           const Icon = t.icon;
           const active = tab === t.key;
@@ -83,7 +83,7 @@ function Inner() {
               key={t.key}
               onClick={() => setTab(t.key)}
               className={cn(
-                "flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold transition-colors",
+                "flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold transition-colors whitespace-nowrap flex-shrink-0",
                 active ? "bg-[var(--color-primary)] text-white" : "text-[var(--color-ink-light)] hover:text-[var(--color-ink)]",
               )}
             >
@@ -244,8 +244,8 @@ function ProjectRow({
   return (
     <div className="bg-white rounded-[var(--radius-2xl)] border border-[var(--color-border)] shadow-soft-sm overflow-hidden">
       {/* Header. Avatar + title/client + single status pill */}
-      <div className="px-7 pt-6 pb-5 flex items-start gap-4">
-        <Avatar name={project.clientName} size={48} />
+      <div className="px-5 sm:px-7 pt-6 pb-5 flex items-start gap-4">
+        <Avatar name={project.clientName} size={44} />
         <div className="min-w-0 flex-1">
           <h3 className="text-card-title font-semibold text-[var(--color-ink)] truncate">{project.title}</h3>
           <div className="flex items-center gap-2 text-small text-[var(--color-ink-light)] mt-1 flex-wrap">
@@ -270,15 +270,15 @@ function ProjectRow({
       </div>
 
       {/* Dates */}
-      <div className="px-7 pb-4 grid grid-cols-2 gap-4">
+      <div className="px-5 sm:px-7 pb-4 grid grid-cols-2 gap-4">
         <DatePill label="Started" value={formatShortDate(project.startDate)} />
         <DatePill label="Next due" value={project.dueDate ? formatShortDate(project.dueDate) : "Not set"} />
       </div>
 
       {/* Financial snapshot */}
       {project.totalAmount > 0 && (
-        <div className="mx-7 mb-5 p-5 rounded-[var(--radius-lg)] bg-[var(--color-canvas)] border border-[var(--color-border)]">
-          <div className="grid grid-cols-3 gap-4 mb-3">
+        <div className="mx-5 sm:mx-7 mb-5 p-5 rounded-[var(--radius-lg)] bg-[var(--color-canvas)] border border-[var(--color-border)]">
+          <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-3">
             <FinancialCell label="Total" value={format(project.totalAmount)} />
             <FinancialCell label="Paid" value={format(project.amountPaid)} tone="success" />
             <FinancialCell label="Balance" value={format(project.balanceDue)} tone={project.balanceDue > 0 ? "danger" : undefined} />
@@ -293,7 +293,7 @@ function ProjectRow({
       )}
 
       {/* Quick actions */}
-      <div className="px-7 py-4 border-t border-[var(--color-border)] flex items-center gap-2 flex-wrap">
+      <div className="px-5 sm:px-7 py-4 border-t border-[var(--color-border)] flex items-center gap-2 flex-wrap">
         <Link
           href={`/projects/${project.clientId}`}
           className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-small font-semibold bg-[var(--color-primary)] text-white hover:bg-[var(--color-primary-dark)] transition-colors"
@@ -321,7 +321,7 @@ function DatePill({ label, value }: { label: string; value: string }) {
   return (
     <div>
       <div className="text-tiny font-semibold uppercase tracking-wider text-[var(--color-muted)]">{label}</div>
-      <div className="text-body font-semibold text-[var(--color-ink)] mt-0.5">{value}</div>
+      <div className="text-small sm:text-body font-semibold text-[var(--color-ink)] mt-0.5">{value}</div>
     </div>
   );
 }
@@ -337,7 +337,7 @@ function FinancialCell({
   return (
     <div>
       <div className="text-tiny font-semibold uppercase tracking-wider text-[var(--color-muted)]">{label}</div>
-      <div className="text-body font-bold mt-0.5" style={{ color }}>{value}</div>
+      <div className="text-small sm:text-body font-bold mt-0.5 tabular-nums break-words" style={{ color }}>{value}</div>
     </div>
   );
 }
@@ -365,19 +365,23 @@ function InvoicesTab() {
         <Link
           key={p.id}
           href={`/payments/${p.id}`}
-          className="flex items-center gap-4 px-5 py-3.5 bg-white rounded-[var(--radius-xl)] border border-[var(--color-border)] shadow-soft-sm hover:shadow-soft transition-all"
+          className="flex items-center gap-3 sm:gap-4 px-4 sm:px-5 py-3.5 bg-white rounded-[var(--radius-xl)] border border-[var(--color-border)] shadow-soft-sm hover:shadow-soft transition-all"
         >
-          <Receipt className="h-4 w-4 text-[var(--color-primary)]" />
-          <div className="flex-1 min-w-0">
-            <div className="text-sm font-semibold truncate">
-              {p.invoice_number ?? "Invoice"} · {p.client_name}
-            </div>
-            <div className="text-xs text-[var(--color-muted)] mt-0.5">{formatShortDate(p.date)}</div>
+          <div className="w-9 h-9 rounded-lg bg-[var(--color-primary-subtle)] flex items-center justify-center flex-shrink-0">
+            <Receipt className="h-4 w-4 text-[var(--color-primary)]" />
           </div>
-          <div className="text-sm font-bold">{formatCurrency(p.amount)}</div>
-          <Badge tone={p.status === "paid" ? "success" : p.status === "overdue" ? "danger" : "warning"}>
-            {p.status}
-          </Badge>
+          <div className="flex-1 min-w-0">
+            <div className="text-sm font-semibold truncate">{p.client_name}</div>
+            <div className="text-xs text-[var(--color-muted)] mt-0.5 truncate">
+              {p.invoice_number ?? "Invoice"} · {formatShortDate(p.date)}
+            </div>
+          </div>
+          <div className="flex flex-col items-end gap-1 flex-shrink-0">
+            <div className="text-sm font-bold tabular-nums whitespace-nowrap">{formatCurrency(p.amount)}</div>
+            <Badge tone={p.status === "paid" ? "success" : p.status === "overdue" ? "danger" : "warning"}>
+              {p.status}
+            </Badge>
+          </div>
         </Link>
       ))}
     </div>
@@ -388,7 +392,7 @@ function InvoicesTab() {
 
 function Empty({ icon, title, sub }: { icon: React.ReactNode; title: string; sub: string }) {
   return (
-    <div className="bg-white rounded-[var(--radius-xl)] border border-[var(--color-border)] p-10 text-center">
+    <div className="bg-white rounded-[var(--radius-xl)] border border-[var(--color-border)] p-6 sm:p-10 text-center">
       <div className="mx-auto mb-3">{icon}</div>
       <h3 className="text-base font-bold mb-1">{title}</h3>
       <p className="text-sm text-[var(--color-ink-light)] max-w-sm mx-auto">{sub}</p>

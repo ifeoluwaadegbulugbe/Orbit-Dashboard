@@ -133,7 +133,7 @@ export function NotificationBell() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -8, scale: 0.97 }}
             transition={{ duration: 0.15 }}
-            className="absolute right-0 top-12 z-50 w-[92vw] sm:w-[380px] max-h-[480px] rounded-[var(--radius-2xl)] bg-white border border-[var(--color-border)] shadow-soft-lg overflow-hidden flex flex-col"
+            className="fixed left-3 right-3 top-16 sm:absolute sm:left-auto sm:right-0 sm:top-12 z-50 sm:w-[380px] max-h-[min(480px,75dvh)] rounded-[var(--radius-2xl)] bg-white border border-[var(--color-border)] shadow-soft-lg overflow-hidden flex flex-col"
           >
             {/* Header */}
             <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--color-border)] flex-shrink-0">
@@ -233,7 +233,7 @@ function NotificationRowItem({
 
 function EmptyState({ onTest, testing }: { onTest: () => void; testing: boolean }) {
   return (
-    <div className="px-6 py-10 text-center">
+    <div className="px-4 sm:px-6 py-10 text-center">
       <div className="w-12 h-12 rounded-full bg-[var(--color-canvas)] mx-auto mb-3 flex items-center justify-center">
         <Check className="h-5 w-5 text-[var(--color-success)]" />
       </div>
@@ -255,7 +255,7 @@ function EmptyState({ onTest, testing }: { onTest: () => void; testing: boolean 
 
 function SetupNeededState({ onTest, testing }: { onTest: () => void; testing: boolean }) {
   return (
-    <div className="px-6 py-8 text-center">
+    <div className="px-4 sm:px-6 py-8 text-center">
       <div className="w-12 h-12 rounded-full bg-[var(--color-warning-light)] mx-auto mb-3 flex items-center justify-center">
         <Database className="h-5 w-5 text-[var(--color-warning-deep)]" />
       </div>

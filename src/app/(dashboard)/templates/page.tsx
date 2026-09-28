@@ -134,7 +134,7 @@ function TemplatesInner() {
 
   return (
     <div className="space-y-8">
-      <div className="flex items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-page font-bold">Templates</h1>
           <p className="text-lead text-[var(--color-ink-light)] mt-2">
@@ -151,7 +151,7 @@ function TemplatesInner() {
           {[0, 1, 2].map((i) => <div key={i} className="h-32 rounded-[var(--radius-2xl)] skeleton" />)}
         </div>
       ) : templates.length === 0 ? (
-        <div className="bg-white rounded-[var(--radius-2xl)] border border-[var(--color-border)] p-10 text-center">
+        <div className="bg-white rounded-[var(--radius-2xl)] border border-[var(--color-border)] p-6 sm:p-10 text-center">
           <MessageSquare className="h-10 w-10 text-[var(--color-muted)] mx-auto mb-3" />
           <h3 className="text-card-title font-semibold mb-2">No templates yet</h3>
           <p className="text-body text-[var(--color-ink-light)] max-w-sm mx-auto">

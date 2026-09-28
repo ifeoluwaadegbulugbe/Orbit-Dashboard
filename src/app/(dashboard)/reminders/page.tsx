@@ -71,7 +71,7 @@ function Inner() {
 
   return (
     <div className="space-y-8">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-page font-bold">Reminders</h1>
           <p className="text-lead text-[var(--color-ink-light)] mt-2">Never miss a follow-up.</p>
@@ -86,7 +86,7 @@ function Inner() {
           {[0, 1, 2].map((i) => <div key={i} className="h-16 rounded-[var(--radius-xl)] skeleton" />)}
         </div>
       ) : reminders.length === 0 ? (
-        <div className="bg-white rounded-[var(--radius-xl)] border border-[var(--color-border)] p-10 text-center">
+        <div className="bg-white rounded-[var(--radius-xl)] border border-[var(--color-border)] p-6 sm:p-10 text-center">
           <Bell className="h-10 w-10 text-[var(--color-muted)] mx-auto mb-3" />
           <h3 className="text-base font-bold mb-1">No reminders yet</h3>
           <p className="text-sm text-[var(--color-ink-light)] max-w-sm mx-auto">

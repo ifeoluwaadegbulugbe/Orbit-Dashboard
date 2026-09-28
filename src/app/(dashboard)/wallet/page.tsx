@@ -80,7 +80,7 @@ function WalletPageInner() {
 
       {/* Balance card(s) */}
       {balancesError ? (
-        <div className="bg-white rounded-[var(--radius-2xl)] border border-[var(--color-border)] p-8 text-center">
+        <div className="bg-white rounded-[var(--radius-2xl)] border border-[var(--color-border)] p-5 sm:p-8 text-center">
           <AlertCircle className="h-8 w-8 text-[var(--color-warning-deep)] mx-auto mb-3" />
           <p className="text-body font-semibold text-[var(--color-ink)]">Your wallet isn&apos;t set up yet.</p>
           <p className="text-small text-[var(--color-muted)] mt-1">
@@ -90,7 +90,7 @@ function WalletPageInner() {
       ) : balancesLoading ? (
         <div className="h-32 rounded-[var(--radius-2xl)] skeleton" />
       ) : balances.length === 0 ? (
-        <div className="bg-white rounded-[var(--radius-2xl)] border border-[var(--color-border)] p-8 text-center">
+        <div className="bg-white rounded-[var(--radius-2xl)] border border-[var(--color-border)] p-5 sm:p-8 text-center">
           <WalletIcon className="h-8 w-8 text-[var(--color-muted)] mx-auto mb-3" />
           <p className="text-small text-[var(--color-ink-light)]">No wallet activity yet.</p>
         </div>
@@ -99,20 +99,20 @@ function WalletPageInner() {
           {balances.map((b) => (
             <div
               key={b.wallet_id}
-              className="bg-white rounded-[var(--radius-2xl)] border border-[var(--color-border)] shadow-soft-sm p-8"
+              className="bg-white rounded-[var(--radius-2xl)] border border-[var(--color-border)] shadow-soft-sm p-5 sm:p-8"
             >
               <div className="flex items-center justify-between gap-4">
-                <div>
+                <div className="min-w-0">
                   <span className="text-tiny font-semibold uppercase tracking-wider text-[var(--color-muted)]">
                     {b.currency} balance
                   </span>
-                  <div className="mt-2 text-stat font-bold">{formatMinor(b.balance_minor, b.currency)}</div>
+                  <div className="mt-2 text-stat font-bold tabular-nums break-words">{formatMinor(b.balance_minor, b.currency)}</div>
                 </div>
                 <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-[var(--color-primary-subtle)] text-[var(--color-primary)] flex-shrink-0">
                   <WalletIcon className="h-6 w-6" />
                 </div>
               </div>
-              <div className="mt-6 pt-6 border-t border-[var(--color-border)] flex items-center justify-between gap-4">
+              <div className="mt-6 pt-6 border-t border-[var(--color-border)] flex flex-wrap items-center justify-between gap-3">
                 <span className="text-small text-[var(--color-muted)]">Lifetime confirmed payments</span>
                 <Button variant="secondary" onClick={() => setWithdrawOpen(true)}>Withdraw</Button>
               </div>
@@ -123,7 +123,7 @@ function WalletPageInner() {
 
       {/* Bank accounts */}
       <div>
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
           <h2 className="text-tiny font-bold uppercase tracking-wider text-[var(--color-muted)]">
             Bank accounts
           </h2>
@@ -132,7 +132,7 @@ function WalletPageInner() {
           </Button>
         </div>
         {bankAccounts.length === 0 ? (
-          <div className="bg-white rounded-[var(--radius-xl)] border border-[var(--color-border)] p-8 text-center">
+          <div className="bg-white rounded-[var(--radius-xl)] border border-[var(--color-border)] p-5 sm:p-8 text-center">
             <Landmark className="h-7 w-7 text-[var(--color-muted)] mx-auto mb-2" />
             <p className="text-small text-[var(--color-ink-light)]">No withdrawal destinations saved yet.</p>
           </div>
@@ -169,7 +169,7 @@ function WalletPageInner() {
             {withdrawals.map((w) => (
               <div
                 key={w.id}
-                className="flex items-center gap-5 px-6 py-5 bg-white rounded-[var(--radius-2xl)] border border-[var(--color-border)] shadow-soft-sm"
+                className="flex items-center gap-3 sm:gap-5 px-4 sm:px-6 py-5 bg-white rounded-[var(--radius-2xl)] border border-[var(--color-border)] shadow-soft-sm"
               >
                 <div className="w-12 h-12 rounded-xl bg-[var(--color-canvas)] flex items-center justify-center flex-shrink-0">
                   <Clock className="h-5 w-5 text-[var(--color-ink-mid)]" />
@@ -201,7 +201,7 @@ function WalletPageInner() {
             {[0, 1, 2].map((i) => <div key={i} className="h-16 rounded-[var(--radius-xl)] skeleton" />)}
           </div>
         ) : transactions.length === 0 ? (
-          <div className="bg-white rounded-[var(--radius-xl)] border border-[var(--color-border)] p-10 text-center">
+          <div className="bg-white rounded-[var(--radius-xl)] border border-[var(--color-border)] p-6 sm:p-10 text-center">
             <p className="text-sm text-[var(--color-ink-light)]">No activity yet.</p>
           </div>
         ) : (
@@ -211,7 +211,7 @@ function WalletPageInner() {
               return (
                 <div
                   key={entry.id}
-                  className="flex items-center gap-5 px-6 py-5 bg-white rounded-[var(--radius-2xl)] border border-[var(--color-border)] shadow-soft-sm"
+                  className="flex items-center gap-3 sm:gap-5 px-4 sm:px-6 py-5 bg-white rounded-[var(--radius-2xl)] border border-[var(--color-border)] shadow-soft-sm"
                 >
                   <div
                     className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
