@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import Link from "next/link";
 import {
   Users, UserCheck, Wallet, TrendingUp,
@@ -50,6 +50,10 @@ export default function HomePage() {
   const revenue = payments
     .filter((p) => p.status === "paid")
     .reduce((sum, p) => sum + (p.paid_amount ?? p.amount), 0);
+
+  // For overdue invoices, which only carry client_id/client_name - phone and
+  // email for the WhatsApp/email send actions come from this lookup.
+  const clientById = useMemo(() => new Map(clients.map((c) => [c.id, c])), [clients]);
 
   const followUps = clients.filter((c) => c.status === "follow_up").slice(0, 4);
   const overdueInvoices = payments.filter((p) => p.status === "overdue").slice(0, 4);
@@ -224,6 +228,8 @@ export default function HomePage() {
                   }}
                   locked={!isPro}
                   onLocked={() => setPaywallOpen(true)}
+                  clientPhone={c.whatsapp_number || c.phone}
+                  clientEmail={c.email}
                 />
               </div>
             ))}
@@ -259,6 +265,8 @@ export default function HomePage() {
                   }}
                   locked={!isPro}
                   onLocked={() => setPaywallOpen(true)}
+                  clientPhone={clientById.get(p.client_id)?.whatsapp_number || clientById.get(p.client_id)?.phone}
+                  clientEmail={clientById.get(p.client_id)?.email}
                 />
               </div>
             ))}
@@ -269,17 +277,30 @@ export default function HomePage() {
         {upcomingBirthdays.length > 0 && (
           <Section title="Upcoming birthdays">
             {upcomingBirthdays.map((c) => (
-              <div key={c.id} className="flex items-center gap-4 px-5 py-3.5">
-                <div className="w-11 h-11 rounded-xl bg-[var(--color-primary-subtle)] flex items-center justify-center flex-shrink-0">
-                  <Cake className="h-5 w-5 text-[var(--color-primary)]" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="text-body font-semibold text-[var(--color-ink)] truncate">{c.name}</div>
-                  <div className="text-small text-[var(--color-muted)] mt-0.5">
-                    {c.daysAway === 0 ? "Today 🎂" : c.daysAway === 1 ? "Tomorrow" : `In ${c.daysAway} days`}
+              <div key={c.id} className="px-5 py-3.5">
+                <div className="flex items-center gap-4">
+                  <div className="w-11 h-11 rounded-xl bg-[var(--color-primary-subtle)] flex items-center justify-center flex-shrink-0">
+                    <Cake className="h-5 w-5 text-[var(--color-primary)]" />
                   </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-body font-semibold text-[var(--color-ink)] truncate">{c.name}</div>
+                    <div className="text-small text-[var(--color-muted)] mt-0.5">
+                      {c.daysAway === 0 ? "Today 🎂" : c.daysAway === 1 ? "Tomorrow" : `In ${c.daysAway} days`}
+                    </div>
+                  </div>
+                  <Bell className="h-4 w-4 text-[var(--color-muted)]" />
                 </div>
-                <Bell className="h-4 w-4 text-[var(--color-muted)]" />
+                {c.daysAway === 0 && (
+                  <SuggestButton
+                    label="Draft birthday wish"
+                    kind="birthday_wish"
+                    context={{ clientName: c.name, businessName: profile?.business_name }}
+                    locked={!isPro}
+                    onLocked={() => setPaywallOpen(true)}
+                    clientPhone={c.whatsapp_number || c.phone}
+                    clientEmail={c.email}
+                  />
+                )}
               </div>
             ))}
           </Section>

@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import Link from "next/link";
 import { Receipt, AlertCircle, Clock, CheckCircle2, Wallet2, Sparkles, ArrowRight, CalendarClock } from "lucide-react";
 import { usePayments } from "@/hooks/usePayments";
+import { useClients } from "@/hooks/useClients";
 import { useWalletBalances } from "@/hooks/useWallet";
 import { useSubscription } from "@/hooks/useSubscription";
 import { Badge } from "@/components/ui/Badge";
@@ -30,8 +31,11 @@ export default function PaymentsPage() {
   const [tab, setTab] = useState<Tab>("invoices");
   const { isPro } = useSubscription();
   const { data: payments = [], isLoading } = usePayments();
+  const { data: clients = [] } = useClients();
   const { format: formatCurrency } = useCurrency();
   const [paywallOpen, setPaywallOpen] = useState(false);
+  // "Draft reminder" needs phone/email, which the payment row doesn't carry.
+  const clientById = useMemo(() => new Map(clients.map((c) => [c.id, c])), [clients]);
 
   const outstanding = payments
     .filter((p) => ["pending", "overdue", "partial"].includes(p.status))
@@ -181,6 +185,8 @@ export default function PaymentsPage() {
                         }}
                         locked={!isPro}
                         onLocked={() => setPaywallOpen(true)}
+                        clientPhone={clientById.get(p.client_id)?.whatsapp_number || clientById.get(p.client_id)?.phone}
+                        clientEmail={clientById.get(p.client_id)?.email}
                       />
                     )}
                   </div>

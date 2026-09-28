@@ -11,7 +11,7 @@ import { getEffectiveRule, type MessageRuleRow, type TriggerType } from "@/lib/a
 
 const SYSTEM_PROMPT = `You are Orbit's business coach, drafting a single short suggestion for a service-business owner (many run small businesses in Nigeria/Africa). Reply with ONLY the requested draft or suggestion - no preamble, no "Here's a draft:", no sign-off asking if they want changes. Keep it warm but brief (2-5 sentences for a message draft).`;
 
-type SuggestKind = "invoice_chase" | "client_followup" | "home_digest";
+type SuggestKind = "invoice_chase" | "client_followup" | "home_digest" | "birthday_wish";
 
 interface SuggestBody {
   kind?: SuggestKind;
@@ -22,6 +22,7 @@ interface SuggestBody {
     daysSinceContact?: number;
     overdueCount?: number;
     followUpCount?: number;
+    businessName?: string;
   };
 }
 
@@ -29,6 +30,7 @@ interface SuggestBody {
 const KIND_TO_TRIGGER: Partial<Record<SuggestKind, TriggerType>> = {
   invoice_chase: "payment_reminder",
   client_followup: "client_followup",
+  birthday_wish: "birthday",
 };
 
 function buildPrompt(kind: SuggestKind, context: SuggestBody["context"], savedTemplate: string | null): string | null {
@@ -55,6 +57,14 @@ function buildPrompt(kind: SuggestKind, context: SuggestBody["context"], savedTe
     case "home_digest": {
       const { overdueCount, followUpCount } = context ?? {};
       return `Give me one short, encouraging sentence of business advice for today. I have ${overdueCount ?? 0} overdue invoices and ${followUpCount ?? 0} clients due for a follow-up. Be specific to that, not generic.`;
+    }
+    case "birthday_wish": {
+      const { clientName, businessName } = context ?? {};
+      if (!clientName) return null;
+      if (savedTemplate) {
+        return `I have a saved birthday-wish template I like to use: "${savedTemplate}". Personalize it for my client ${clientName}. Keep the same tone and structure as my template, just adapt the specifics.`;
+      }
+      return `Draft a short, warm happy-birthday message to send to my client ${clientName}${businessName ? ` from ${businessName}` : ""}. Make it feel personal, not like a generic mass text.`;
     }
     default:
       return null;

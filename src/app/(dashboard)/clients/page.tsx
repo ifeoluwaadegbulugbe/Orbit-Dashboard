@@ -209,6 +209,8 @@ export default function ClientsPage() {
                   }}
                   locked={!isPro}
                   onLocked={() => setPaywallOpen(true)}
+                  clientPhone={c.whatsapp_number || c.phone}
+                  clientEmail={c.email}
                 />
               )}
             </div>
