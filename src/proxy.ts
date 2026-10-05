@@ -9,6 +9,7 @@ export async function proxy(request: NextRequest) {
 export const config = {
   matcher: [
     // Run on everything except static assets and image optimization paths
-    "/((?!_next/static|_next/image|favicon.ico|icon\\.svg|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    // (also the PWA files - the service worker and manifest must load signed out)
+    "/((?!_next/static|_next/image|favicon.ico|icon\\.svg|sw\\.js|manifest\\.webmanifest|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };

@@ -1,11 +1,32 @@
 "use client";
 
 import { useEffect, useState, type ReactNode } from "react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient } from "@tanstack/react-query";
+import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
+import { createSyncStoragePersister } from "@tanstack/query-sync-storage-persister";
 import { createClient } from "@/lib/supabase/client";
 import { useAuthStore } from "@/stores/authStore";
 import { useCurrencyStore } from "@/stores/currencyStore";
 import type { UserProfile } from "@/types";
+
+/**
+ * Offline support: the query cache (clients, bookings, invoices...) is saved
+ * to this device so the last-loaded data still shows with no connection.
+ * It belongs to one account: wiped on sign-out, and when a different user
+ * signs in on the same browser.
+ */
+const CACHE_KEY = "orbit-query-cache";
+const CACHE_OWNER_KEY = "orbit-query-cache-owner";
+const CACHE_MAX_AGE = 7 * 24 * 60 * 60 * 1000;
+
+function clearPersistedCache() {
+  try {
+    localStorage.removeItem(CACHE_KEY);
+    localStorage.removeItem(CACHE_OWNER_KEY);
+  } catch {
+    // storage blocked - nothing persisted anyway
+  }
+}
 
 export function Providers({ children }: { children: ReactNode }) {
   const [queryClient] = useState(
@@ -14,12 +35,37 @@ export function Providers({ children }: { children: ReactNode }) {
         defaultOptions: {
           queries: {
             staleTime: 30 * 1000,
+            // Must be >= the persisted age, or restored data is dropped immediately.
+            gcTime: CACHE_MAX_AGE,
             refetchOnWindowFocus: false,
             retry: 1,
+            // Offline: show cached data instead of erroring.
+            networkMode: "offlineFirst",
           },
         },
       }),
   );
+  const [persister] = useState(() =>
+    createSyncStoragePersister({
+      storage: typeof window === "undefined" ? undefined : window.localStorage,
+      key: CACHE_KEY,
+      throttleTime: 2000,
+    }),
+  );
+
+  /** Drop another account's cached data the moment we know who's signed in. */
+  function claimCacheFor(userId: string) {
+    try {
+      const owner = localStorage.getItem(CACHE_OWNER_KEY);
+      if (owner && owner !== userId) {
+        queryClient.clear();
+        clearPersistedCache();
+      }
+      localStorage.setItem(CACHE_OWNER_KEY, userId);
+    } catch {
+      // ignore
+    }
+  }
 
   const { setUser, setProfile, setLoading, reset } = useAuthStore();
   const hydrateCurrency = useCurrencyStore((s) => s.hydrateFromCode);
@@ -43,6 +89,7 @@ export function Providers({ children }: { children: ReactNode }) {
         if (cancelled) return;
         setUser(user);
         if (user) {
+          claimCacheFor(user.id);
           loadProfile(user.id).then((p) => { if (!cancelled) setProfile(p); });
         }
       })
@@ -61,7 +108,11 @@ export function Providers({ children }: { children: ReactNode }) {
       setUser(u);
       if (event === "SIGNED_OUT") {
         reset();
+        queryClient.clear();
+        clearPersistedCache();
+        navigator.serviceWorker?.controller?.postMessage("orbit:clear-cache");
       } else if (u) {
+        claimCacheFor(u.id);
         loadProfile(u.id).then((p) => { if (!cancelled) setProfile(p); });
       }
     });
@@ -107,5 +158,20 @@ export function Providers({ children }: { children: ReactNode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
+  // Offline app shell. Production only - in dev it would serve stale builds.
+  useEffect(() => {
+    if (process.env.NODE_ENV !== "production" || !("serviceWorker" in navigator)) return;
+    navigator.serviceWorker.register("/sw.js", { scope: "/", updateViaCache: "none" }).catch((err) => {
+      console.warn("[Orbit] service worker registration failed:", err);
+    });
+  }, []);
+
+  return (
+    <PersistQueryClientProvider
+      client={queryClient}
+      persistOptions={{ persister, maxAge: CACHE_MAX_AGE, buster: "v1" }}
+    >
+      {children}
+    </PersistQueryClientProvider>
+  );
 }

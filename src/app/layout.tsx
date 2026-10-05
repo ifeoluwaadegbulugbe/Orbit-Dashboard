@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import { Providers } from "@/components/providers/Providers";
 import { Toaster } from "@/components/ui/Toaster";
@@ -14,6 +14,11 @@ export const metadata: Metadata = {
   title: "Orbit - CRM for service businesses",
   description:
     "Track clients, bookings, payments and reminders. The CRM your business will actually use.",
+  appleWebApp: { capable: true, title: "Orbit", statusBarStyle: "default" },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#E8557A",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
