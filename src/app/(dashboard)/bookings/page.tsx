@@ -9,6 +9,7 @@ import { usePayments } from "@/hooks/usePayments";
 import { formatShortDate, cn } from "@/lib/utils";
 import { BookingActions } from "@/components/bookings/BookingActions";
 import { NewBookingDialog } from "@/components/bookings/NewBookingDialog";
+import { BookingLinkCard } from "@/components/booking/BookingLinkCard";
 import type { Booking } from "@/types";
 
 export default function BookingsPage() {
@@ -37,6 +38,8 @@ function Inner() {
           New booking
         </Button>
       </div>
+
+      <BookingLinkCard />
 
       {/* Pending bookings rail - top of the page when there's anything to confirm */}
       {pendingBookings.length > 0 && (
