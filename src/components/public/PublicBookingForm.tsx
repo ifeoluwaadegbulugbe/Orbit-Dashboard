@@ -16,15 +16,25 @@ interface PublicBookingFormProps {
   slug: string;
   businessName: string;
   services: Service[];
+  /** Prefill from a "Book again" link. */
+  initialServices?: string[];
+  initialName?: string;
+  initialPhone?: string;
+  initialEmail?: string;
 }
 
-export function PublicBookingForm({ slug, businessName, services }: PublicBookingFormProps) {
-  const [selectedIndices, setSelectedIndices] = useState<number[]>([]);
+export function PublicBookingForm({
+  slug, businessName, services, initialServices = [], initialName = "", initialPhone = "", initialEmail = "",
+}: PublicBookingFormProps) {
+  const [selectedIndices, setSelectedIndices] = useState<number[]>(() => {
+    const wanted = initialServices.map((n) => n.trim().toLowerCase());
+    return services.map((s, i) => (wanted.includes(s.name.trim().toLowerCase()) ? i : -1)).filter((i) => i >= 0);
+  });
   const [date, setDate] = useState(() => new Date(Date.now() + 86400000).toISOString().slice(0, 10));
   const [time, setTime] = useState("10:00");
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
+  const [name, setName] = useState(initialName);
+  const [email, setEmail] = useState(initialEmail);
+  const [phone, setPhone] = useState(initialPhone);
   const [notes, setNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -124,7 +134,7 @@ export function PublicBookingForm({ slug, businessName, services }: PublicBookin
                   key={i}
                   type="button"
                   onClick={() => toggleService(i)}
-                  className={`w-full flex items-center gap-4 px-5 py-4 rounded-[var(--radius-lg)] border-2 transition-all text-left ${
+                  className={`w-full flex items-center gap-3 sm:gap-4 px-4 sm:px-5 py-3.5 sm:py-4 rounded-[var(--radius-lg)] border-2 transition-all text-left ${
                     isSelected
                       ? "border-[var(--color-primary)] bg-[var(--color-primary-subtle)]"
                       : "border-[var(--color-border)] bg-white hover:border-[var(--color-primary)]/30"
@@ -151,7 +161,7 @@ export function PublicBookingForm({ slug, businessName, services }: PublicBookin
                   </div>
                   <div className="flex-shrink-0 text-right">
                     <div className="text-body font-bold text-[var(--color-ink)]">
-                      {s.price || "Price TBC"}
+                      {s.price || "Price on request"}
                     </div>
                   </div>
                 </button>

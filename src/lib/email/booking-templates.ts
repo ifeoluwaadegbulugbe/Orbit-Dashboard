@@ -23,6 +23,8 @@ export interface BookingMessageParams {
   clientEmail?: string | null;
   /** Client's phone — included in owner-facing emails. */
   clientPhone?: string | null;
+  /** Client's private "my appointments" page - included in client-facing confirmations. */
+  portalUrl?: string | null;
 }
 
 // ─── Formatting helpers ─────────────────────────────────────────────────────
@@ -80,6 +82,7 @@ export function buildConfirmEmail(p: BookingMessageParams): {
       <tr><td style="padding: 8px 0; font-size: 13px; color: #6B6B6B;">Date</td><td style="padding: 8px 0; font-size: 15px; font-weight: 600;">${escapeHtml(dateLine)}</td></tr>
       <tr><td style="padding: 8px 0; font-size: 13px; color: #6B6B6B;">Time</td><td style="padding: 8px 0; font-size: 15px; font-weight: 600;">${escapeHtml(timeLine)}</td></tr>
     </table>
+    ${p.portalUrl ? `<p style="margin: 0 0 24px;"><a href="${escapeHtml(p.portalUrl)}" style="display: inline-block; background: #E8557A; color: #ffffff; text-decoration: none; font-size: 14px; font-weight: 700; padding: 12px 24px; border-radius: 999px;">View my appointments</a></p>` : ""}
     <p style="font-size: 14px; color: #6B6B6B; margin: 0; line-height: 1.6;">
       Need to change something? ${p.ownerEmail ? `Reply to this email or message ${escapeHtml(p.businessName)} directly.` : `Message ${escapeHtml(p.businessName)} directly.`}
     </p>
@@ -94,7 +97,9 @@ Your booking with ${p.businessName} is confirmed.
   Service: ${p.service}
   Date:    ${dateLine}
   Time:    ${timeLine}
-
+${p.portalUrl ? `
+Your appointments, invoices and rebooking: ${p.portalUrl}
+` : ""}
 See you then.
 
 - Orbit`;
@@ -160,7 +165,9 @@ function buildConfirmText(p: BookingMessageParams): string {
 
 ${p.service}
 ${formatDate(p.date)} at ${formatTime(p.time)}
-
+${p.portalUrl ? `
+Your appointments & rebooking: ${p.portalUrl}
+` : ""}
 See you then!`;
 }
 

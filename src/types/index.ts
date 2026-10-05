@@ -125,7 +125,8 @@ export type NotificationType =
   | "subscription_renewed"  // billing cycle renewed
   | "subscription_failed"   // payment for subscription failed
   | "client_birthday"       // a client's birthday is today
-  | "welcome";              // new account
+  | "welcome"               // new account
+  | "review_received";      // a client left a review
 
 export interface NotificationRow {
   id: string;

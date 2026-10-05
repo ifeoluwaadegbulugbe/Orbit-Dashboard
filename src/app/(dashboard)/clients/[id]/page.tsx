@@ -5,8 +5,10 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   ChevronLeft, Phone, Mail, Cake, MessageCircle, Receipt, BellPlus,
-  Calendar, Edit2, Trash2, Plus,
+  Calendar, Edit2, Trash2, Plus, Link2, Star,
 } from "lucide-react";
+import { ShareLinkButton } from "@/components/clients/ShareLinkButton";
+import { useAuthStore } from "@/stores/authStore";
 import { useClient, useDeleteClient } from "@/hooks/useClients";
 import { usePaymentsForClient } from "@/hooks/usePayments";
 import { useRemindersForClient } from "@/hooks/useReminders";
@@ -43,6 +45,9 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
   const deleteClient = useDeleteClient();
   const { format: formatCurrency } = useCurrency();
   const [tab, setTab] = useState<Tab>("overview");
+  const profile = useAuthStore((s) => s.profile);
+  const businessName = profile?.business_name || profile?.full_name || "us";
+  const todayIso = new Date().toISOString().slice(0, 10);
 
   async function handleDelete() {
     if (!confirm("Delete this client? Their payments and bookings will also be removed.")) return;
@@ -127,6 +132,15 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
           <QuickAction icon={<BellPlus className="h-4 w-4" />}       label="Add reminder" href={`/reminders?clientId=${id}`} />
           <QuickAction icon={<Calendar className="h-4 w-4" />}       label="Book session" href={`/work?clientId=${id}`} />
         </div>
+        <ShareLinkButton
+          kind="client"
+          id={id}
+          phone={client.whatsapp_number || client.phone}
+          message={(url) => `Hi ${client.name.split(" ")[0]}! Here's your personal page with ${businessName} - see your appointments, pay invoices and book again anytime: ${url}`}
+          className="mt-2.5 w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-full bg-[var(--color-primary-subtle)] text-[var(--color-primary-dark)] text-sm font-semibold hover:opacity-90 transition-opacity disabled:opacity-60"
+        >
+          <Link2 className="h-4 w-4" /> Send client their appointments page
+        </ShareLinkButton>
       </div>
 
       {/* Tab bar */}
@@ -227,12 +241,24 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
                     {formatShortDate(b.date)}{b.time ? ` at ${b.time.slice(0, 5)}` : ""}
                   </div>
                 </div>
-                <BookingActions
-                  bookingId={b.id}
-                  status={b.status}
-                  clientName={client.name}
-                  compact
-                />
+                {b.date <= todayIso && b.status !== "cancelled" ? (
+                  <ShareLinkButton
+                    kind="review"
+                    id={b.id}
+                    phone={client.whatsapp_number || client.phone}
+                    message={(url) => `Hi ${client.name.split(" ")[0]}, thank you for coming in! Could you leave a quick review of your ${b.title}? It really helps ${businessName}: ${url}`}
+                    className="flex-shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-[var(--color-border)] text-xs font-semibold hover:bg-[var(--color-canvas)] disabled:opacity-60"
+                  >
+                    <Star className="h-3.5 w-3.5" /> Ask for review
+                  </ShareLinkButton>
+                ) : (
+                  <BookingActions
+                    bookingId={b.id}
+                    status={b.status}
+                    clientName={client.name}
+                    compact
+                  />
+                )}
               </div>
             )}
           />

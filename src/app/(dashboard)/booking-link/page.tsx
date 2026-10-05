@@ -2,37 +2,21 @@
 
 import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
-import { Link2, Copy, Check, ExternalLink, Plus, Trash2, Save, Calendar, Scissors, ArrowRight } from "lucide-react";
+import { Link2, Copy, Check, ExternalLink, Plus, Trash2, Save, Calendar, Scissors, ArrowRight, MapPin, AtSign, MessageCircle } from "lucide-react";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { useAuthStore } from "@/stores/authStore";
 import { createClient as createSupabaseClient } from "@/lib/supabase/client";
 import { toast } from "@/stores/toastStore";
 import { GoogleCalendarCard } from "@/components/booking/GoogleCalendarCard";
+import { PhotoGalleryEditor } from "@/components/booking/PhotoGalleryEditor";
+import { QrCodeCard } from "@/components/booking/QrCodeCard";
+import { ReviewsManager } from "@/components/booking/ReviewsManager";
+import {
+  DEFAULT_BOOKING_CONFIG as DEFAULTS, type BookingConfig, type BookingService as Service,
+} from "@/lib/booking-profile";
 
 const BOOKING_STORAGE_KEY = "orbit_booking_link_v1";
-
-interface Service {
-  name: string;
-  duration_minutes: number;
-  price: string;
-}
-
-interface BookingConfig {
-  slug: string;
-  intro: string;
-  services: Service[];
-  availability: string;
-}
-
-const DEFAULTS: BookingConfig = {
-  slug: "",
-  intro: "Choose a service and a time that works for you. I'll confirm by message within an hour.",
-  services: [
-    { name: "Initial consultation", duration_minutes: 30, price: "Free" },
-  ],
-  availability: "Mon–Fri · 9am–6pm",
-};
 
 export default function BookingLinkPage() {
   return <BookingLinkInner />;
@@ -40,6 +24,8 @@ export default function BookingLinkPage() {
 
 function BookingLinkInner() {
   const profile = useAuthStore((s) => s.profile);
+  // The auth user is known before (and even without) the profile row.
+  const userId = useAuthStore((s) => s.user?.id) ?? profile?.id ?? null;
   const [config, setConfig] = useState<BookingConfig>(DEFAULTS);
   const [saving, setSaving] = useState(false);
   const [savedRecently, setSavedRecently] = useState(false);
@@ -105,6 +91,17 @@ function BookingLinkInner() {
       ...c,
       services: c.services.filter((_, idx) => idx !== i),
     }));
+  }
+
+  /** Photos save immediately (they're already uploaded), without touching other unsaved edits. */
+  async function savePhotos(photos: string[]) {
+    if (!profile?.id) return;
+    const supabase = createSupabaseClient();
+    const { data } = await supabase.from("profiles").select("booking_link").eq("id", profile.id).maybeSingle();
+    const current = (data?.booking_link as BookingConfig | null) ?? null;
+    if (!current?.slug) return; // first save happens with the Save button
+    const { error } = await supabase.from("profiles").update({ booking_link: { ...current, photos } }).eq("id", profile.id);
+    if (error) toast("Couldn't save photos - press Save to try again.", "danger");
   }
 
   async function handleSave() {
@@ -213,6 +210,10 @@ function BookingLinkInner() {
         </p>
       </div>
 
+      {config.slug && url && (
+        <QrCodeCard url={url} businessName={profile?.business_name || profile?.full_name || "us"} />
+      )}
+
       <Suspense fallback={<div className="h-40 rounded-[var(--radius-2xl)] skeleton" />}>
         <GoogleCalendarCard />
       </Suspense>
@@ -240,8 +241,43 @@ function BookingLinkInner() {
           placeholder="e.g. Mon–Fri · 9am–6pm"
           value={config.availability}
           onChange={(e) => update("availability", e.target.value)}
-          hint="A human-readable summary. Detailed calendar settings come from your Work tab."
+          hint="Shown on your booking page as your opening hours."
         />
+
+        <Input
+          label="Location"
+          icon={<MapPin className="h-4 w-4" />}
+          placeholder="e.g. 12 Admiralty Way, Lekki Phase 1, Lagos"
+          value={config.location ?? ""}
+          onChange={(e) => update("location", e.target.value)}
+          hint="Clients get a Directions button. Write 'Home service - Lagos' if you travel to them."
+        />
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <Input
+            label="Instagram"
+            icon={<AtSign className="h-4 w-4" />}
+            placeholder="glambyamaka"
+            value={config.instagram ?? ""}
+            onChange={(e) => update("instagram", e.target.value.replace(/^@/, ""))}
+          />
+          <Input
+            label="WhatsApp number"
+            icon={<MessageCircle className="h-4 w-4" />}
+            type="tel"
+            placeholder="0803 123 4567"
+            value={config.whatsapp ?? ""}
+            onChange={(e) => update("whatsapp", e.target.value)}
+          />
+        </div>
+
+        {userId && (
+          <PhotoGalleryEditor
+            userId={userId}
+            photos={config.photos ?? []}
+            onChange={(photos) => { update("photos", photos); void savePhotos(photos); }}
+          />
+        )}
 
         {/* Services - inline editor kept for convenience, but the dedicated
             Services page is the canonical place. We surface a clear pointer
@@ -317,6 +353,8 @@ function BookingLinkInner() {
           </Button>
         </div>
       </div>
+
+      {userId && <ReviewsManager userId={userId} />}
     </div>
   );
 }

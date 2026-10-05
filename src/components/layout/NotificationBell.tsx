@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import {
   Bell, Calendar, DollarSign, AlertCircle, Sparkles, Cake, Heart,
-  Check, X, Database, Zap, type LucideIcon,
+  Check, X, Database, Zap, Star, type LucideIcon,
 } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useQueryClient } from "@tanstack/react-query";
@@ -37,6 +37,7 @@ const TYPE_META: Record<NotificationType, TypeMeta> = {
   subscription_failed:   { icon: AlertCircle, bg: "var(--color-danger-light)",  fg: "var(--color-danger-deep)" },
   client_birthday:       { icon: Cake,        bg: "var(--color-primary-subtle)", fg: "var(--color-primary)" },
   welcome:               { icon: Sparkles,    bg: "var(--color-primary-subtle)", fg: "var(--color-primary)" },
+  review_received:       { icon: Star,        bg: "var(--color-warning-light)", fg: "var(--color-warning-deep)" },
 };
 
 export function NotificationBell() {
