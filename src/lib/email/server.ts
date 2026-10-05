@@ -21,7 +21,7 @@
  */
 
 import "server-only";
-import nodemailer from "nodemailer";
+import nodemailer, { type Transporter } from "nodemailer";
 
 export interface SendEmailParams {
   to: string;
@@ -38,9 +38,9 @@ export interface SendEmailResult {
 }
 
 // Reused across invocations of a warm serverless instance.
-let smtpTransport: nodemailer.Transporter | null = null;
+let smtpTransport: Transporter | null = null;
 
-function getSmtpTransport(): nodemailer.Transporter | null {
+function getSmtpTransport(): Transporter | null {
   const user = process.env.SMTP_USER;
   const pass = process.env.SMTP_PASS?.replace(/\s+/g, ""); // Google shows app passwords with spaces
   if (!user || !pass) return null;
@@ -64,7 +64,7 @@ export async function sendEmail(params: SendEmailParams): Promise<SendEmailResul
 }
 
 async function sendViaSmtp(
-  transport: nodemailer.Transporter,
+  transport: Transporter,
   params: SendEmailParams,
 ): Promise<SendEmailResult> {
   const from = process.env.EMAIL_FROM ?? `Orbit <${process.env.SMTP_USER}>`;
