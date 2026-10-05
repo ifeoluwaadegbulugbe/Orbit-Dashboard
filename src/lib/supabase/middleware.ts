@@ -11,10 +11,13 @@ const PUBLIC_PATHS = [
   "/auth/callback",              // Supabase email-link target
   "/terms",
   "/privacy",
-  "/book",                       // public Calendly-style booking pages
+  "/book/",                      // public booking pages (/book/<slug>) - trailing slash so the owner's /booking-link editor stays private
+  "/review/",                    // client review form (signed link)
+  "/offline",                    // service-worker fallback page
+  "/c/",                         // client "my appointments" page (signed link) - trailing slash so /clients stays private
   "/api/auth/signup",            // account creation — called before the user has a session
   "/api/auth/forgot-password",   // password reset email — called before the user has a session
-  "/api/public/bookings",        // unauthed booking submission endpoint
+  "/api/public",                 // unauthed booking + review submission endpoints
   "/api/paystack/webhook",
   "/api/lemonsqueezy/webhook",
   "/api/cron",                   // Vercel Cron has no login session - each route
