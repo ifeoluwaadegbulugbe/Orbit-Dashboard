@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Zap, MessageCircle, Calendar, Cake, type LucideIcon, Bell, Sparkles, Hourglass, Save, Loader2 } from "lucide-react";
+import { Zap, MessageCircle, Calendar, Cake, type LucideIcon, Bell, Sparkles, Hourglass, Save, Loader2, Star } from "lucide-react";
 import { ProGate } from "@/components/paywall/ProGate";
 import { Textarea } from "@/components/ui/Textarea";
 import { Button } from "@/components/ui/Button";
@@ -56,6 +56,24 @@ const RULES: RuleMeta[] = [
     title: "Booking confirmations",
     description: "Auto-send a confirmation when you confirm a booking",
     detail: "Clients get a branded email confirming their booking time and service.",
+  },
+  {
+    id: "appointment_reminder",
+    icon: Bell,
+    iconBg: "#E0F2FE",
+    iconColor: "#0369A1",
+    title: "Appointment reminders",
+    description: "Remind clients before their appointment to cut no-shows",
+    detail: "Email reminders before each booking, plus one WhatsApp message an hour before when WhatsApp is connected.",
+  },
+  {
+    id: "review_request",
+    icon: Star,
+    iconBg: "#FEF3C7",
+    iconColor: "#B45309",
+    title: "Review requests",
+    description: "Ask clients for a review after their appointment",
+    detail: "About 2 hours after an appointment ends, clients get a link to rate it (email, and WhatsApp when connected). Reviews show on your booking page.",
   },
   {
     id: "birthday",

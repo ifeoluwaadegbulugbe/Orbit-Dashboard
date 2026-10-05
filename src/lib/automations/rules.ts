@@ -5,13 +5,17 @@
  * endpoint, so they all agree on the same state instead of drifting.
  */
 
-export type TriggerType = "booking_confirmation" | "birthday" | "payment_reminder" | "client_followup";
+export type TriggerType =
+  | "booking_confirmation" | "birthday" | "payment_reminder" | "client_followup"
+  | "appointment_reminder" | "review_request";
 
 export const TRIGGER_TYPES: TriggerType[] = [
   "booking_confirmation",
   "birthday",
   "payment_reminder",
   "client_followup",
+  "appointment_reminder",
+  "review_request",
 ];
 
 /**
@@ -26,6 +30,10 @@ export const DEFAULT_ENABLED: Record<TriggerType, boolean> = {
   birthday: true,
   payment_reminder: false,
   client_followup: false,
+  // Client reminders already went out unconditionally - default on keeps that.
+  appointment_reminder: true,
+  // New automatic message to clients - opt-in like the others.
+  review_request: false,
 };
 
 export interface MessageRuleRow {

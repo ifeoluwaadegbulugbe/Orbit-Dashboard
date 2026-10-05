@@ -3,6 +3,9 @@ import { createServiceClient } from "@/lib/supabase/server";
 import { sendEmail } from "@/lib/email/server";
 import { notify } from "@/lib/notifications/server";
 import { zonedTimeToUtcMs, DEFAULT_TIMEZONE } from "@/lib/time/zonedTime";
+import { sendWhatsAppTemplate, whatsappConfigured } from "@/lib/whatsapp-cloud";
+import { getEffectiveRule, type MessageRuleRow } from "@/lib/automations/rules";
+import { sendDueReviewRequests } from "@/lib/automations/review-requests";
 
 /**
  * Sends appointment-reminder emails 60 / 30 / 5 minutes before each upcoming
@@ -38,13 +41,19 @@ interface ProfileRow {
   id: string;
   email: string;
   full_name: string;
+  business_name: string | null;
   timezone: string | null;
 }
 
 interface ClientRow {
   id: string;
   email: string | null;
+  phone: string | null;
+  whatsapp_number: string | null;
 }
+
+/** WhatsApp goes out once, at this lead time - three paid messages per booking would be spam. */
+const WHATSAPP_LEAD_MINUTES = 60;
 
 export async function GET(request: Request) {
   // Optional bearer-token check for cron callers
@@ -58,6 +67,9 @@ export async function GET(request: Request) {
 
   const supabase = createServiceClient();
   const now = new Date();
+
+  // Review requests ride on this 5-minute tick (they need ~hourly precision).
+  const reviews = await sendDueReviewRequests(supabase, now);
   const horizonMinutes = Math.max(...LEAD_TIMES_MINUTES) + 5; // small slack
 
   // Fetch all bookings starting within the next horizonMinutes window.
@@ -75,7 +87,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
   if (!bookings || bookings.length === 0) {
-    return NextResponse.json({ ok: true, sent: 0, message: "No upcoming bookings." });
+    return NextResponse.json({ ok: true, sent: 0, reviewRequests: reviews.sent, message: "No upcoming bookings." });
   }
 
   // Need each owner's timezone BEFORE we can tell how far away their booking
@@ -85,7 +97,7 @@ export async function GET(request: Request) {
   const candidateUserIds = Array.from(new Set((bookings as BookingRow[]).map((b) => b.user_id)));
   const { data: candidateProfiles } = await supabase
     .from("profiles")
-    .select("id,email,full_name,timezone")
+    .select("id,email,full_name,business_name,timezone")
     .in("id", candidateUserIds);
   const profileMap = new Map<string, ProfileRow>(
     (candidateProfiles ?? []).map((p) => [p.id as string, p as ProfileRow]),
@@ -106,12 +118,21 @@ export async function GET(request: Request) {
   }
 
   if (toSend.length === 0) {
-    return NextResponse.json({ ok: true, sent: 0, message: "Nothing in the reminder windows." });
+    return NextResponse.json({ ok: true, sent: 0, reviewRequests: reviews.sent, message: "Nothing in the reminder windows." });
   }
 
   // Client emails for just the bookings we're actually sending for
   const clientIds = Array.from(new Set(toSend.map((s) => s.booking.client_id)));
-  const { data: clientRows } = await supabase.from("clients").select("id,email").in("id", clientIds);
+  const { data: clientRows } = await supabase.from("clients").select("id,email,phone,whatsapp_number").in("id", clientIds);
+
+  // Owners can switch client reminders off on the Automations page.
+  const { data: ruleRows } = await supabase
+    .from("message_rules")
+    .select("user_id,trigger_type,enabled,template")
+    .in("user_id", Array.from(new Set(toSend.map((s) => s.booking.user_id))))
+    .eq("trigger_type", "appointment_reminder");
+  const remindersOn = (userId: string) =>
+    getEffectiveRule(((ruleRows ?? []) as (MessageRuleRow & { user_id: string })[]).filter((r) => r.user_id === userId), "appointment_reminder").enabled;
   const clientMap = new Map<string, ClientRow>(
     (clientRows ?? []).map((c) => [c.id as string, c as ClientRow]),
   );
@@ -122,10 +143,32 @@ export async function GET(request: Request) {
   for (const { booking, minutesUntil } of toSend) {
     const profile = profileMap.get(booking.user_id);
     const client = clientMap.get(booking.client_id);
-    const businessName = profile?.full_name || "the business";
+    const businessName = profile?.business_name || profile?.full_name || "the business";
+    const clientRemindersOn = remindersOn(booking.user_id);
+
+    // WhatsApp the CLIENT once, an hour before. Claim the booking first
+    // (whatsapp_reminded_at) so overlapping ticks can't double-send; if the
+    // column doesn't exist yet (migration 017), skip WhatsApp entirely.
+    if (clientRemindersOn && minutesUntil === WHATSAPP_LEAD_MINUTES && whatsappConfigured()) {
+      const target = client?.whatsapp_number || client?.phone;
+      const { data: claimed, error: claimErr } = target
+        ? await supabase.from("bookings").update({ whatsapp_reminded_at: now.toISOString() })
+            .eq("id", booking.id).is("whatsapp_reminded_at", null).select("id")
+        : { data: null, error: null };
+      if (claimed?.length && !claimErr) {
+        const wa = await sendWhatsAppTemplate(target, "orbit_appointment_reminder", [
+          booking.client_name.split(" ")[0],
+          booking.title,
+          businessName,
+          `in 1 hour, at ${formatTime(booking.time)}`,
+        ]);
+        if (wa.ok) sent++;
+        else if (!wa.skipped) errors.push(`whatsapp ${booking.id}: ${wa.error}`);
+      }
+    }
 
     // Remind the CLIENT - the higher-value reminder, cuts no-shows.
-    if (client?.email) {
+    if (client?.email && clientRemindersOn) {
       const result = await sendEmail({
         to: client.email,
         subject: `Reminder: ${booking.title} in ${minutesUntil} minutes`,
@@ -174,7 +217,8 @@ export async function GET(request: Request) {
     ok: true,
     sent,
     considered: toSend.length,
-    errors: errors.length ? errors : undefined,
+    reviewRequests: reviews.sent,
+    errors: errors.length || reviews.errors.length ? [...errors, ...reviews.errors] : undefined,
   });
 }
 

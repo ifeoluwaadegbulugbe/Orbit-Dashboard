@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { notify } from "@/lib/notifications/server";
 import { sendEmail } from "@/lib/email/server";
+import { clientPortalUrl } from "@/lib/signed-links";
+import { sendWhatsAppTemplate, whatsappConfigured } from "@/lib/whatsapp-cloud";
 import { syncBookingToGoogleCalendar } from "@/lib/google-calendar/server";
 import { maybeCreateInvoiceForBooking } from "@/lib/bookings/auto-invoice";
 import { getEffectiveRule, type MessageRuleRow } from "@/lib/automations/rules";
@@ -161,6 +163,7 @@ export async function POST(
     ownerEmail: profile?.email ?? undefined,
     clientEmail: client?.email ?? null,
     clientPhone: client?.whatsapp_number || client?.phone || null,
+    portalUrl: booking.client_id ? clientPortalUrl(booking.client_id, request) : null,
   };
 
   // ── Email the client if we have an address and this trigger is enabled ──
@@ -204,7 +207,27 @@ export async function POST(
   // ── Build a wa.me URL the browser can open in a new tab ────────────────
   // Prefer whatsapp_number if explicitly set, fall back to phone.
   const whatsappTarget = client?.whatsapp_number || client?.phone || null;
-  const whatsappUrl = buildWhatsAppUrl(whatsappTarget, messageParams, action === "confirmed" ? "confirm" : "cancel");
+  let whatsappUrl = buildWhatsAppUrl(whatsappTarget, messageParams, action === "confirmed" ? "confirm" : "cancel");
+
+  // ── Send the WhatsApp confirmation automatically when the Cloud API is set
+  // up - the owner then doesn't need to tap Send. Cancellations stay manual.
+  let whatsappSent = false;
+  if (action === "confirmed" && whatsappTarget && whatsappConfigured() && bookingConfirmationRule.enabled) {
+    const when = `${new Date(`${booking.date}T00:00:00`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" })} at ${hhmmToLabel(booking.time)}`;
+    const wa = await sendWhatsAppTemplate(whatsappTarget, "orbit_booking_confirmed", [
+      String(booking.client_name).split(" ")[0],
+      booking.title,
+      businessName,
+      when,
+      messageParams.portalUrl ?? "",
+    ]);
+    if (wa.ok) {
+      whatsappSent = true;
+      whatsappUrl = null;
+    } else if (!wa.skipped) {
+      console.warn("[booking-respond] WhatsApp send failed:", wa.error);
+    }
+  }
 
   // ── Log the event in the bell dropdown so the owner sees an audit trail
   await notify(supabase, {
@@ -214,7 +237,7 @@ export async function POST(
       action === "confirmed"
         ? `You confirmed ${booking.client_name}'s booking`
         : `You cancelled ${booking.client_name}'s booking`,
-    body: `${booking.title} on ${booking.date} at ${String(booking.time).slice(0, 5)}.${emailSent ? " Email sent to client." : ""}${autoInvoice.created ? ` Invoice ${autoInvoice.invoiceNumber} created.` : ""}`,
+    body: `${booking.title} on ${booking.date} at ${String(booking.time).slice(0, 5)}.${emailSent ? " Email sent to client." : ""}${whatsappSent ? " WhatsApp sent." : ""}${autoInvoice.created ? ` Invoice ${autoInvoice.invoiceNumber} created.` : ""}`,
     actionUrl: `/clients/${booking.client_id}`,
     metadata: {
       booking_id: booking.id,
@@ -230,9 +253,17 @@ export async function POST(
     emailSent,
     emailError,
     whatsappUrl,
+    whatsappSent,
     clientHasEmail: !!client?.email,
     clientHasPhone: !!whatsappTarget,
     invoiceCreated: autoInvoice.created,
     invoiceNumber: autoInvoice.created ? autoInvoice.invoiceNumber : null,
   });
+}
+
+/** "14:30" -> "2:30pm" */
+function hhmmToLabel(time: string | null): string {
+  const [h, m] = String(time ?? "").split(":").map(Number);
+  if (Number.isNaN(h)) return String(time ?? "");
+  return `${h % 12 === 0 ? 12 : h % 12}:${String(m || 0).padStart(2, "0")}${h < 12 ? "am" : "pm"}`;
 }
