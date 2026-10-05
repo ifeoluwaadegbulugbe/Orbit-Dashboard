@@ -7,24 +7,7 @@ import { ProGate } from "@/components/paywall/ProGate";
 import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
 import { Button } from "@/components/ui/Button";
-
-const BRANDING_STORAGE_KEY = "orbit_branding_v1";
-
-interface Branding {
-  business_name: string;
-  tagline: string;
-  logo_url: string;
-  accent_color: string;
-  invoice_footer: string;
-}
-
-const DEFAULTS: Branding = {
-  business_name: "",
-  tagline: "",
-  logo_url: "",
-  accent_color: "#E8557A",
-  invoice_footer: "Thank you for your business!",
-};
+import { BRANDING_STORAGE_KEY, DEFAULT_BRANDING as DEFAULTS, type Branding } from "@/lib/branding";
 
 const ACCENT_PRESETS = [
   "#E8557A", "#F59E0B", "#22C55E", "#6366F1",

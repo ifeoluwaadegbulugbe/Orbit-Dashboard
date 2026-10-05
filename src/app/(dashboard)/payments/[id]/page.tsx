@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/Button";
 import { Avatar } from "@/components/ui/Avatar";
 import { formatShortDate, relativeDate } from "@/lib/utils";
 import { useCurrency } from "@/hooks/useCurrency";
+import { InvoicePdfActions } from "@/components/invoices/InvoicePdfActions";
 import type { PaymentStatus } from "@/types";
 
 const TONE: Record<PaymentStatus, "success" | "warning" | "danger" | "info" | "neutral"> = {
@@ -163,6 +164,10 @@ export default function PaymentDetailPage({ params }: { params: Promise<{ id: st
         <div className="mt-7 pt-5 border-t border-[var(--color-border)] grid grid-cols-2 gap-5">
           <Meta icon={<Calendar className="h-3.5 w-3.5" />} label="Date" value={formatShortDate(payment.date)} sub={relativeDate(payment.date)} />
           <Meta icon={<Receipt className="h-3.5 w-3.5" />} label="Type" value={payment.type} />
+        </div>
+
+        <div className="mt-5">
+          <InvoicePdfActions payment={payment} client={client} />
         </div>
 
         {sourceBooking && (
