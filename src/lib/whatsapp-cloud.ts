@@ -9,7 +9,7 @@
  *
  *   orbit_booking_confirmed
  *     Hi {{1}}, your {{2}} with {{3}} is confirmed for {{4}}.
- *     See your appointments or book again: {{5}}
+ *     See your appointments or book again here: {{5}} - see you soon!
  *
  *   orbit_appointment_reminder
  *     Hi {{1}}, a reminder that your {{2}} with {{3}} is {{4}}.   ({{4}} = "in 1 hour, at 2:30pm")
@@ -17,7 +17,10 @@
  *
  *   orbit_review_request
  *     Hi {{1}}, thank you for visiting {{2}}! How was your {{3}}?
- *     Leave a quick review here: {{4}}
+ *     Leave a quick review here: {{4}} - it only takes 30 seconds.
+ *
+ * (Meta rejects templates that begin or end with a variable, hence the
+ * closing words after the links.)
  *
  * Env:
  *   WHATSAPP_ACCESS_TOKEN     permanent System User token with whatsapp_business_messaging
