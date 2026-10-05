@@ -3,7 +3,6 @@ import { createServiceClient } from "@/lib/supabase/server";
 import { sendEmail } from "@/lib/email/server";
 import { notify } from "@/lib/notifications/server";
 import { zonedTimeToUtcMs, DEFAULT_TIMEZONE } from "@/lib/time/zonedTime";
-import { sendWhatsAppTemplate, whatsappConfigured } from "@/lib/whatsapp-cloud";
 import { getEffectiveRule, type MessageRuleRow } from "@/lib/automations/rules";
 import { sendDueReviewRequests } from "@/lib/automations/review-requests";
 
@@ -48,12 +47,7 @@ interface ProfileRow {
 interface ClientRow {
   id: string;
   email: string | null;
-  phone: string | null;
-  whatsapp_number: string | null;
 }
-
-/** WhatsApp goes out once, at this lead time - three paid messages per booking would be spam. */
-const WHATSAPP_LEAD_MINUTES = 60;
 
 export async function GET(request: Request) {
   // Optional bearer-token check for cron callers
@@ -123,7 +117,7 @@ export async function GET(request: Request) {
 
   // Client emails for just the bookings we're actually sending for
   const clientIds = Array.from(new Set(toSend.map((s) => s.booking.client_id)));
-  const { data: clientRows } = await supabase.from("clients").select("id,email,phone,whatsapp_number").in("id", clientIds);
+  const { data: clientRows } = await supabase.from("clients").select("id,email").in("id", clientIds);
 
   // Owners can switch client reminders off on the Automations page.
   const { data: ruleRows } = await supabase
@@ -145,27 +139,6 @@ export async function GET(request: Request) {
     const client = clientMap.get(booking.client_id);
     const businessName = profile?.business_name || profile?.full_name || "the business";
     const clientRemindersOn = remindersOn(booking.user_id);
-
-    // WhatsApp the CLIENT once, an hour before. Claim the booking first
-    // (whatsapp_reminded_at) so overlapping ticks can't double-send; if the
-    // column doesn't exist yet (migration 017), skip WhatsApp entirely.
-    if (clientRemindersOn && minutesUntil === WHATSAPP_LEAD_MINUTES && whatsappConfigured()) {
-      const target = client?.whatsapp_number || client?.phone;
-      const { data: claimed, error: claimErr } = target
-        ? await supabase.from("bookings").update({ whatsapp_reminded_at: now.toISOString() })
-            .eq("id", booking.id).is("whatsapp_reminded_at", null).select("id")
-        : { data: null, error: null };
-      if (claimed?.length && !claimErr) {
-        const wa = await sendWhatsAppTemplate(target, "orbit_appointment_reminder", [
-          booking.client_name.split(" ")[0],
-          booking.title,
-          businessName,
-          `in 1 hour, at ${formatTime(booking.time)}`,
-        ]);
-        if (wa.ok) sent++;
-        else if (!wa.skipped) errors.push(`whatsapp ${booking.id}: ${wa.error}`);
-      }
-    }
 
     // Remind the CLIENT - the higher-value reminder, cuts no-shows.
     if (client?.email && clientRemindersOn) {

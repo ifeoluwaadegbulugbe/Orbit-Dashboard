@@ -21,8 +21,6 @@ interface RespondResult {
   emailSent?: boolean;
   emailError?: string | null;
   whatsappUrl?: string | null;
-  /** True when the confirmation went out automatically via the WhatsApp Cloud API. */
-  whatsappSent?: boolean;
   clientHasEmail?: boolean;
   clientHasPhone?: boolean;
   invoiceCreated?: boolean;
@@ -78,9 +76,7 @@ export function BookingActions({
       const who = clientName ? ` ${clientName}` : "";
       const invoiceSuffix = json.invoiceCreated ? ` Invoice ${json.invoiceNumber} created.` : "";
       if (action === "confirmed") {
-        if (json.whatsappSent) {
-          toast(`Confirmed${who}. ${json.emailSent ? "Email + WhatsApp" : "WhatsApp"} sent automatically.${invoiceSuffix}`, "success");
-        } else if (json.emailSent && json.whatsappUrl) {
+        if (json.emailSent && json.whatsappUrl) {
           toast(`Confirmed${who}. Email sent + WhatsApp opened.${invoiceSuffix}`, "success");
         } else if (json.emailSent) {
           toast(`Confirmed${who}. Email sent.${invoiceSuffix}`, "success");

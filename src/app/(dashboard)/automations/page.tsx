@@ -64,7 +64,7 @@ const RULES: RuleMeta[] = [
     iconColor: "#0369A1",
     title: "Appointment reminders",
     description: "Remind clients before their appointment to cut no-shows",
-    detail: "Email reminders before each booking, plus one WhatsApp message an hour before when WhatsApp is connected.",
+    detail: "Clients get email reminders 60, 30 and 5 minutes before each booking.",
   },
   {
     id: "review_request",
@@ -73,7 +73,7 @@ const RULES: RuleMeta[] = [
     iconColor: "#B45309",
     title: "Review requests",
     description: "Ask clients for a review after their appointment",
-    detail: "About 2 hours after an appointment ends, clients get a link to rate it (email, and WhatsApp when connected). Reviews show on your booking page.",
+    detail: "About 2 hours after an appointment ends, clients get an email asking them to rate it. Reviews show on your booking page.",
   },
   {
     id: "birthday",

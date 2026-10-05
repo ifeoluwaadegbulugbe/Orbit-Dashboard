@@ -1,5 +1,5 @@
 -- ============================================================
--- Orbit — public booking profile, reviews, client page, WhatsApp automation
+-- Orbit — public booking profile, reviews, client page, review requests
 -- (numbered 017 to follow the mobile repo's migrations 013-016 on the same database)
 --
 -- reviews: one per booking, left by the client from a private signed link
@@ -65,11 +65,9 @@ ALTER TABLE notifications ADD CONSTRAINT notifications_type_check CHECK (type IN
   'review_received'
 ));
 
--- ── Automatic review requests + WhatsApp reminders ──────────────────────
+-- ── Automatic review requests ───────────────────────────────────────────
 -- Set once a review request has gone out, so the cron never asks twice.
 ALTER TABLE bookings ADD COLUMN IF NOT EXISTS review_requested_at TIMESTAMPTZ;
--- Set once the WhatsApp reminder has gone out for a booking.
-ALTER TABLE bookings ADD COLUMN IF NOT EXISTS whatsapp_reminded_at TIMESTAMPTZ;
 
 -- New Automations switches (message_rules lives in the mobile repo's
 -- migration 014; widen its allowed trigger types if the table exists).

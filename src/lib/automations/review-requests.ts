@@ -1,6 +1,6 @@
 /**
  * Automatic review requests: about 2 hours after an appointment ends, ask
- * the client to rate it (email + WhatsApp when connected). Runs from the
+ * the client to rate it by email. Runs from the
  * appointment-reminders cron tick. Each booking is asked at most once
  * (bookings.review_requested_at), and only for owners who switched on the
  * "Review requests" automation.
@@ -10,7 +10,6 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { sendEmail } from "@/lib/email/server";
 import { reviewUrl } from "@/lib/signed-links";
-import { sendWhatsAppTemplate } from "@/lib/whatsapp-cloud";
 import { getEffectiveRule, type MessageRuleRow } from "@/lib/automations/rules";
 import { zonedTimeToUtcMs, DEFAULT_TIMEZONE } from "@/lib/time/zonedTime";
 
@@ -64,7 +63,7 @@ export async function sendDueReviewRequests(
 
   const { data: clients } = await supabase
     .from("clients")
-    .select("id, email, phone, whatsapp_number")
+    .select("id, email")
     .in("id", [...new Set(due.map((b) => b.client_id))]);
   const clientById = new Map((clients ?? []).map((c) => [c.id as string, c]));
 
@@ -95,13 +94,6 @@ export async function sendDueReviewRequests(
       if (r.ok) sent++;
       else if (!r.skipped) errors.push(`review email ${b.id}: ${r.error}`);
     }
-    const wa = await sendWhatsAppTemplate(
-      (client?.whatsapp_number as string) || (client?.phone as string),
-      "orbit_review_request",
-      [firstName, business, b.title, link],
-    );
-    if (wa.ok) sent++;
-    else if (!wa.skipped) errors.push(`review whatsapp ${b.id}: ${wa.error}`);
   }
   return { sent, errors };
 }
