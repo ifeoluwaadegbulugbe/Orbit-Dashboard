@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Link2, Copy, Check, ExternalLink, Plus, Trash2, Save, Calendar, Scissors, ArrowRight, MapPin, AtSign, MessageCircle } from "lucide-react";
 import { Input } from "@/components/ui/Input";
@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/Button";
 import { useAuthStore } from "@/stores/authStore";
 import { createClient as createSupabaseClient } from "@/lib/supabase/client";
 import { toast } from "@/stores/toastStore";
-import { GoogleCalendarCard } from "@/components/booking/GoogleCalendarCard";
 import { PhotoGalleryEditor } from "@/components/booking/PhotoGalleryEditor";
 import { QrCodeCard } from "@/components/booking/QrCodeCard";
 import { ReviewsManager } from "@/components/booking/ReviewsManager";
@@ -233,10 +232,6 @@ function BookingLinkInner() {
       {url && (
         <QrCodeCard url={url} businessName={profile?.business_name || profile?.full_name || "us"} />
       )}
-
-      <Suspense fallback={<div className="h-40 rounded-[var(--radius-2xl)] skeleton" />}>
-        <GoogleCalendarCard />
-      </Suspense>
 
       {/* Configuration */}
       <div className="bg-white rounded-[var(--radius-2xl)] border border-[var(--color-border)] shadow-soft-sm p-5 sm:p-8 space-y-6">
