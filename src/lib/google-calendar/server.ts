@@ -1,5 +1,6 @@
 import "server-only";
 import type { createServiceClient } from "@/lib/supabase/server";
+import { appUrl } from "@/lib/app-url";
 
 type ServiceClient = ReturnType<typeof createServiceClient>;
 
@@ -37,8 +38,8 @@ const DEFAULT_TIMEZONE = "UTC";
 const DEFAULT_EVENT_MINUTES = 60;
 
 function redirectUri(): string {
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
-  return `${appUrl}/api/google-calendar/callback`;
+  const baseUrl = appUrl();
+  return `${baseUrl}/api/google-calendar/callback`;
 }
 
 export function isGoogleCalendarConfigured(): boolean {

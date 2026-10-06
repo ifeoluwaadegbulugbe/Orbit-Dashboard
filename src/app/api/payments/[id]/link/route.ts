@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { initializeInvoiceCharge } from "@/lib/paystack/server";
+import { appUrl } from "@/lib/app-url";
 
 /**
  * Generate a payment link for an invoice, collected into Orbit's OWN
@@ -50,7 +51,7 @@ export async function POST(
     client?.email?.trim() ||
     `${(client?.phone || "no-email").replace(/\D/g, "")}@orbit-clients.app`;
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  const baseUrl = appUrl();
   const reference = `orbit_inv_${payment.id}_${Date.now()}`;
 
   try {
@@ -58,7 +59,7 @@ export async function POST(
       email: customerEmail,
       amountKobo: Math.round((payment.amount as number) * 100),
       reference,
-      callbackUrl: `${appUrl}/payments/${payment.id}?paid=success`,
+      callbackUrl: `${baseUrl}/payments/${payment.id}?paid=success`,
       metadata: {
         kind: "invoice",
         payment_id: payment.id,

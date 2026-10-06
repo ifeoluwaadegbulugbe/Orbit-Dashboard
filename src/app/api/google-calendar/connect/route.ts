@@ -2,8 +2,9 @@ import { NextResponse } from "next/server";
 import { randomBytes } from "crypto";
 import { createClient } from "@/lib/supabase/server";
 import { buildGoogleAuthUrl, isGoogleCalendarConfigured } from "@/lib/google-calendar/server";
+import { appUrl } from "@/lib/app-url";
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+const APP_URL = appUrl();
 
 /** GET /api/google-calendar/connect - redirects to Google's consent screen. */
 export async function GET() {

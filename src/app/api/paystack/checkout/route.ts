@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { initializeSubscription } from "@/lib/paystack/server";
 import { FREE_TRIAL_DAYS } from "@/lib/constants";
+import { appUrl } from "@/lib/app-url";
 
 /** Detects placeholder env values left over from .env.local.example. */
 function looksLikePlaceholder(value: string | undefined): boolean {
@@ -42,7 +43,7 @@ export async function POST(request: Request) {
   const secretKey = process.env.PAYSTACK_SECRET_KEY;
   const planCode = process.env.NEXT_PUBLIC_PAYSTACK_PLAN_CODE;
   const amountKobo = Number(process.env.PAYSTACK_PLAN_AMOUNT_KOBO ?? 900000); // ₦9,000 ≈ $17
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  const baseUrl = appUrl();
 
   // ── 2. Config sanity checks - fail with a CLEAR message ──
   if (looksLikePlaceholder(secretKey) || !secretKey?.startsWith("sk_")) {
@@ -80,7 +81,7 @@ export async function POST(request: Request) {
       email: userEmail,
       amountKobo,
       planCode: planCode!,
-      callbackUrl: `${appUrl}/api/paystack/verify`,
+      callbackUrl: `${baseUrl}/api/paystack/verify`,
       trialDays: startTrial ? FREE_TRIAL_DAYS : 0,
       metadata: {
         user_id: userId!,

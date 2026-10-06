@@ -2,8 +2,9 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { exchangeCodeForTokens, storeGoogleCalendarTokens } from "@/lib/google-calendar/server";
+import { appUrl } from "@/lib/app-url";
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+const APP_URL = appUrl();
 
 function redirectTo(status: "connected" | "error", reason?: string) {
   const url = new URL("/booking-link", APP_URL);

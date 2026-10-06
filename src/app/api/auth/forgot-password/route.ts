@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
 import { sendEmail } from "@/lib/email/server";
 import { buildPasswordResetEmail } from "@/lib/email/booking-templates";
+import { appUrl } from "@/lib/app-url";
 
 /**
  * POST /api/auth/forgot-password
@@ -56,11 +57,7 @@ export async function POST(request: Request) {
   // NEXT_PUBLIC_APP_URL must be set in production; in local dev the Origin
   // header is used as a fallback. Trailing slashes are stripped so we never
   // build "https://app//reset-password".
-  const origin = (
-    process.env.NEXT_PUBLIC_APP_URL ||
-    request.headers.get("origin") ||
-    "http://localhost:3000"
-  ).replace(/\/+$/, "");
+  const origin = appUrl(request.headers.get("origin") || "http://localhost:3000");
 
   const { data, error: genError } = await supabase.auth.admin.generateLink({
     type: "recovery",

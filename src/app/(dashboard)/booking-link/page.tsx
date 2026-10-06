@@ -15,6 +15,7 @@ import { ReviewsManager } from "@/components/booking/ReviewsManager";
 import {
   DEFAULT_BOOKING_CONFIG as DEFAULTS, type BookingConfig, type BookingService as Service,
 } from "@/lib/booking-profile";
+import { appUrl } from "@/lib/app-url";
 
 const BOOKING_STORAGE_KEY = "orbit_booking_link_v1";
 
@@ -34,11 +35,18 @@ function BookingLinkInner() {
   // This avoids a hydration mismatch that crashes the production build.
   const [origin, setOrigin] = useState("");
   const [mounted, setMounted] = useState(false);
+  // The slug actually saved on this account. Links, the QR code and Copy only
+  // ever use this - never a draft that would open a "not found" page.
+  // undefined = still loading, null = never saved.
+  const [savedSlug, setSavedSlug] = useState<string | null | undefined>(undefined);
 
   useEffect(() => {
     setMounted(true);
     setOrigin(window.location.origin);
-    const raw = localStorage.getItem(BOOKING_STORAGE_KEY);
+    if (!userId) return;
+    // Per-account key: a shared key let one account's draft (and QR) show up
+    // for another account signed in on the same browser.
+    const raw = localStorage.getItem(`${BOOKING_STORAGE_KEY}:${userId}`);
     if (raw) {
       try {
         setConfig({ ...DEFAULTS, ...JSON.parse(raw) });
@@ -53,20 +61,18 @@ function BookingLinkInner() {
 
     // Always pull the latest config from the database so changes made on the
     // /services page (or another device) show up here. Falls back silently.
-    if (profile?.id) {
-      const supabase = createSupabaseClient();
-      supabase
-        .from("profiles")
-        .select("booking_link")
-        .eq("id", profile.id)
-        .maybeSingle()
-        .then(({ data, error }) => {
-          if (error || !data?.booking_link) return;
-          const remote = data.booking_link as Partial<BookingConfig>;
-          setConfig((c) => ({ ...c, ...remote }));
-        });
-    }
-  }, [profile?.id, profile?.business_name]);
+    const supabase = createSupabaseClient();
+    supabase
+      .from("profiles")
+      .select("booking_link")
+      .eq("id", userId)
+      .maybeSingle()
+      .then(({ data, error }) => {
+        const remote = (error ? null : data?.booking_link) as Partial<BookingConfig> | null;
+        setSavedSlug(remote?.slug || null);
+        if (remote) setConfig((c) => ({ ...c, ...remote }));
+      });
+  }, [userId, profile?.business_name]);
 
   function update<K extends keyof BookingConfig>(key: K, value: BookingConfig[K]) {
     setConfig((c) => ({ ...c, [key]: value }));
@@ -95,17 +101,17 @@ function BookingLinkInner() {
 
   /** Photos save immediately (they're already uploaded), without touching other unsaved edits. */
   async function savePhotos(photos: string[]) {
-    if (!profile?.id) return;
+    if (!userId) return;
     const supabase = createSupabaseClient();
-    const { data } = await supabase.from("profiles").select("booking_link").eq("id", profile.id).maybeSingle();
+    const { data } = await supabase.from("profiles").select("booking_link").eq("id", userId).maybeSingle();
     const current = (data?.booking_link as BookingConfig | null) ?? null;
     if (!current?.slug) return; // first save happens with the Save button
-    const { error } = await supabase.from("profiles").update({ booking_link: { ...current, photos } }).eq("id", profile.id);
+    const { error } = await supabase.from("profiles").update({ booking_link: { ...current, photos } }).eq("id", userId);
     if (error) toast("Couldn't save photos - press Save to try again.", "danger");
   }
 
   async function handleSave() {
-    if (!profile?.id) {
+    if (!userId) {
       toast("Sign in to save your booking link", "danger");
       return;
     }
@@ -116,7 +122,7 @@ function BookingLinkInner() {
     setSaving(true);
 
     // Always write to localStorage for fast local hydration next time
-    localStorage.setItem(BOOKING_STORAGE_KEY, JSON.stringify(config));
+    localStorage.setItem(`${BOOKING_STORAGE_KEY}:${userId}`, JSON.stringify(config));
 
     // Persist to the database so the public /book/<slug> page can look it up.
     // Falls back gracefully if the booking_link column doesn't exist yet.
@@ -125,7 +131,7 @@ function BookingLinkInner() {
       const { error } = await supabase
         .from("profiles")
         .update({ booking_link: config })
-        .eq("id", profile.id);
+        .eq("id", userId);
       if (error) {
         if (error.message?.toLowerCase().includes("column") || error.code === "42703") {
           toast(
@@ -136,6 +142,7 @@ function BookingLinkInner() {
           toast(error.message, "danger");
         }
       } else {
+        setSavedSlug(config.slug);
         toast("Booking link saved", "success");
       }
     } catch (err) {
@@ -149,13 +156,15 @@ function BookingLinkInner() {
 
   // Until we mount, render an empty URL placeholder so server-rendered HTML
   // matches the first client render. After mount, origin is the real one.
-  const base = origin || "";
-  const url = mounted
-    ? (config.slug ? `${base}/book/${config.slug}` : `${base}/book/your-name`)
-    : "";
+  // Always the official domain (NEXT_PUBLIC_APP_URL), so a QR printed while
+  // using an old address or a test server still points clients to the right place.
+  const base = appUrl(origin);
+  const url = mounted && savedSlug ? `${base}/book/${savedSlug}` : "";
+  const draftUrl = mounted ? `${base}/book/${config.slug || "your-name"}` : "";
+  const unsavedSlug = !!savedSlug && config.slug !== savedSlug;
 
   async function handleCopy() {
-    if (!config.slug) return;
+    if (!url) return;
     await navigator.clipboard.writeText(url);
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
@@ -186,31 +195,42 @@ function BookingLinkInner() {
         </div>
         <div className="flex items-center gap-2 sm:gap-3 pl-4 pr-2 sm:px-5 py-2 sm:py-4 rounded-[var(--radius-lg)] bg-[var(--color-canvas)] border border-[var(--color-border)]">
           <span className="flex-1 min-w-0 text-small sm:text-body font-mono text-[var(--color-ink-mid)] truncate">
-            {url || "Loading..."}
+            {url || draftUrl || "Loading..."}
           </span>
           <button
             onClick={handleCopy}
-            disabled={!config.slug}
+            disabled={!url}
             className="inline-flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-full text-small font-semibold bg-white border border-[var(--color-border)] hover:border-[var(--color-primary)]/40 transition-colors disabled:opacity-50 flex-shrink-0"
           >
             {copied ? <><Check className="h-4 w-4 text-[var(--color-success)]" /> Copied</> : <><Copy className="h-4 w-4" /> Copy</>}
           </button>
           <a
-            href={url}
+            href={url || undefined}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-[var(--color-primary)] text-white hover:bg-[var(--color-primary-dark)] transition-colors flex-shrink-0"
+            aria-disabled={!url}
+            className={`inline-flex items-center justify-center w-10 h-10 rounded-full bg-[var(--color-primary)] text-white hover:bg-[var(--color-primary-dark)] transition-colors flex-shrink-0 ${url ? "" : "opacity-50 pointer-events-none"}`}
             aria-label="Open link"
           >
             <ExternalLink className="h-4 w-4" />
           </a>
         </div>
-        <p className="mt-3 text-small text-[var(--color-muted)]">
-          Share this on Instagram bio, WhatsApp status, business cards - anywhere clients find you.
-        </p>
+        {savedSlug === null ? (
+          <p className="mt-3 text-small font-semibold text-[var(--color-warning-deep)]">
+            Not live yet - choose your link below and press Save to switch it on.
+          </p>
+        ) : unsavedSlug ? (
+          <p className="mt-3 text-small font-semibold text-[var(--color-warning-deep)]">
+            You changed your link to &ldquo;{config.slug}&rdquo; - press Save to use it. Until then your live link and QR code stay as shown above.
+          </p>
+        ) : (
+          <p className="mt-3 text-small text-[var(--color-muted)]">
+            Share this on Instagram bio, WhatsApp status, business cards - anywhere clients find you.
+          </p>
+        )}
       </div>
 
-      {config.slug && url && (
+      {url && (
         <QrCodeCard url={url} businessName={profile?.business_name || profile?.full_name || "us"} />
       )}
 

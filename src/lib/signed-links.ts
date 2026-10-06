@@ -10,6 +10,7 @@
 
 import "server-only";
 import { createHmac, timingSafeEqual } from "node:crypto";
+import { appUrl } from "@/lib/app-url";
 
 type Purpose = "review" | "client";
 
@@ -31,11 +32,7 @@ export function verifyId(purpose: Purpose, id: string, token: string | null | un
 }
 
 export function appOrigin(request?: Request): string {
-  return (
-    process.env.NEXT_PUBLIC_APP_URL ||
-    (request ? new URL(request.url).origin : "") ||
-    "http://localhost:3000"
-  ).replace(/\/+$/, "");
+  return appUrl((request ? new URL(request.url).origin : "") || "http://localhost:3000");
 }
 
 export function reviewUrl(bookingId: string, request?: Request): string {

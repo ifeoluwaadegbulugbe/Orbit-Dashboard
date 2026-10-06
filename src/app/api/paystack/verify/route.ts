@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
 import { verifyTransaction } from "@/lib/paystack/server";
 import { FREE_TRIAL_DAYS } from "@/lib/constants";
+import { appUrl } from "@/lib/app-url";
 
 /**
  * Paystack's callback_url redirects here after the customer pays.
@@ -14,16 +15,16 @@ import { FREE_TRIAL_DAYS } from "@/lib/constants";
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const reference = url.searchParams.get("reference") ?? url.searchParams.get("trxref");
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  const baseUrl = appUrl();
 
   if (!reference) {
-    return NextResponse.redirect(`${appUrl}/profile?paystack=missing_ref`);
+    return NextResponse.redirect(`${baseUrl}/profile?paystack=missing_ref`);
   }
 
   try {
     const result = await verifyTransaction(reference);
     if (result.data.status !== "success") {
-      return NextResponse.redirect(`${appUrl}/profile?paystack=failed`);
+      return NextResponse.redirect(`${baseUrl}/profile?paystack=failed`);
     }
 
     const userId = (result.data.metadata?.user_id as string | undefined) ?? null;
@@ -47,9 +48,9 @@ export async function GET(request: Request) {
       }
     }
 
-    return NextResponse.redirect(`${appUrl}/profile?paystack=success`);
+    return NextResponse.redirect(`${baseUrl}/profile?paystack=success`);
   } catch (err) {
     const msg = err instanceof Error ? err.message : "verify_failed";
-    return NextResponse.redirect(`${appUrl}/profile?paystack=${encodeURIComponent(msg)}`);
+    return NextResponse.redirect(`${baseUrl}/profile?paystack=${encodeURIComponent(msg)}`);
   }
 }

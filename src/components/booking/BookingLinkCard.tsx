@@ -6,8 +6,7 @@ import { Link2, Copy, Check, Share2, ExternalLink, Settings2, ChevronRight } fro
 import { useAuthStore } from "@/stores/authStore";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "@/stores/toastStore";
-
-const BOOKING_STORAGE_KEY = "orbit_booking_link_v1";
+import { appUrl } from "@/lib/app-url";
 
 /**
  * Compact "your public booking link" card with copy / share / open.
@@ -16,31 +15,28 @@ const BOOKING_STORAGE_KEY = "orbit_booking_link_v1";
  */
 export function BookingLinkCard() {
   const profile = useAuthStore((s) => s.profile);
+  const userId = useAuthStore((s) => s.user?.id) ?? profile?.id ?? null;
   const [slug, setSlug] = useState<string | null | undefined>(undefined); // undefined = loading
   const [origin, setOrigin] = useState("");
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     setOrigin(window.location.origin);
-    let local: string | null = null;
-    try {
-      local = JSON.parse(localStorage.getItem(BOOKING_STORAGE_KEY) ?? "null")?.slug || null;
-    } catch {
-      // ignore
-    }
-    if (!profile?.id) { setSlug(local); return; }
+    if (!userId) return;
+    // Only the slug saved on this account - a local draft could be unsaved
+    // (a "not found" page) or belong to another account on this browser.
     createClient()
       .from("profiles")
       .select("booking_link")
-      .eq("id", profile.id)
+      .eq("id", userId)
       .maybeSingle()
       .then(({ data }) => {
-        const remote = (data?.booking_link as { slug?: string } | null)?.slug;
-        setSlug(remote || local);
+        setSlug((data?.booking_link as { slug?: string } | null)?.slug || null);
       });
-  }, [profile?.id]);
+  }, [userId]);
 
-  const url = slug && origin ? `${origin}/book/${slug}` : "";
+  const base = appUrl(origin);
+  const url = slug && base ? `${base}/book/${slug}` : "";
 
   async function copy() {
     if (!url) return;

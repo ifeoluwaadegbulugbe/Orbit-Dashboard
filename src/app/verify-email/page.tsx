@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Mail, Loader2, CheckCircle2, ArrowLeft, AlertCircle } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { appUrl } from "@/lib/app-url";
 
 /**
  * Shown right after signup when Supabase has email confirmation enabled.
@@ -32,13 +33,11 @@ function VerifyInner() {
     setResendError(null);
     try {
       const supabase = createClient();
-      const appUrl =
-        process.env.NEXT_PUBLIC_APP_URL ||
-        (typeof window !== "undefined" ? window.location.origin : "");
+      const base = appUrl(typeof window !== "undefined" ? window.location.origin : "");
       const { error } = await supabase.auth.resend({
         type: "signup",
         email,
-        options: { emailRedirectTo: `${appUrl}/auth/callback` },
+        options: { emailRedirectTo: `${base}/auth/callback` },
       });
       if (error) throw new Error(error.message);
       setResendState("sent");
