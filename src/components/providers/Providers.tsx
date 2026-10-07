@@ -53,6 +53,22 @@ export function Providers({ children }: { children: ReactNode }) {
     }),
   );
 
+  /**
+   * "Last active" for lifecycle emails (re-engagement, at-risk detection).
+   * At most one write per 30 minutes per browser.
+   */
+  function pingActivity(userId: string) {
+    try {
+      const key = `orbit-active-ping:${userId}`;
+      const last = Number(localStorage.getItem(key) ?? 0);
+      if (Date.now() - last < 30 * 60 * 1000) return;
+      localStorage.setItem(key, String(Date.now()));
+    } catch {
+      // storage blocked - fall through and record anyway
+    }
+    createClient().from("profiles").update({ last_active_at: new Date().toISOString() }).eq("id", userId).then(() => {});
+  }
+
   /** Drop another account's cached data the moment we know who's signed in. */
   function claimCacheFor(userId: string) {
     try {
@@ -90,6 +106,7 @@ export function Providers({ children }: { children: ReactNode }) {
         setUser(user);
         if (user) {
           claimCacheFor(user.id);
+          pingActivity(user.id);
           loadProfile(user.id).then((p) => { if (!cancelled) setProfile(p); });
         }
       })

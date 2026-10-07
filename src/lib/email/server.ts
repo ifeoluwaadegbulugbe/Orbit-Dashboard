@@ -28,6 +28,8 @@ export interface SendEmailParams {
   subject: string;
   html: string;
   text?: string;
+  /** Extra headers, e.g. List-Unsubscribe for lifecycle/marketing mail. */
+  headers?: Record<string, string>;
 }
 
 export interface SendEmailResult {
@@ -35,6 +37,14 @@ export interface SendEmailResult {
   skipped?: boolean;
   id?: string;
   error?: string;
+  /** The address itself was rejected (doesn't exist, mailbox disabled...) - retrying won't help. */
+  permanent?: boolean;
+}
+
+/** SMTP 5xx recipient errors and their usual wording = a dead address. */
+function isPermanentRecipientError(message: string, code?: number): boolean {
+  if (code && code >= 550 && code <= 554) return true;
+  return /\b55[0-4]\b|user unknown|no such user|does not exist|mailbox (unavailable|disabled|not found)|invalid (recipient|address)|recipient address rejected/i.test(message);
 }
 
 // Reused across invocations of a warm serverless instance.
@@ -75,10 +85,17 @@ async function sendViaSmtp(
       subject: params.subject,
       html: params.html,
       text: params.text,
+      headers: params.headers,
     });
+    // Some servers accept the message but list the address as rejected.
+    if (info.rejected?.length) {
+      return { ok: false, error: `Rejected: ${info.rejected.join(", ")}`, permanent: true };
+    }
     return { ok: true, id: info.messageId };
   } catch (err) {
-    return { ok: false, error: err instanceof Error ? err.message : String(err) };
+    const e = err as { message?: string; responseCode?: number };
+    const message = e?.message ?? String(err);
+    return { ok: false, error: message, permanent: isPermanentRecipientError(message, e?.responseCode) };
   }
 }
 
@@ -97,11 +114,13 @@ async function sendViaResend(apiKey: string, params: SendEmailParams): Promise<S
         subject: params.subject,
         html: params.html,
         text: params.text,
+        headers: params.headers,
       }),
     });
     const json = (await res.json()) as { id?: string; message?: string };
     if (!res.ok) {
-      return { ok: false, error: json.message ?? `Resend ${res.status}` };
+      const message = json.message ?? `Resend ${res.status}`;
+      return { ok: false, error: message, permanent: res.status === 422 && isPermanentRecipientError(message) };
     }
     return { ok: true, id: json.id };
   } catch (err) {

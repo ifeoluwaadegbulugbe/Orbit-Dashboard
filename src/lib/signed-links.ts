@@ -12,7 +12,7 @@ import "server-only";
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { appUrl } from "@/lib/app-url";
 
-type Purpose = "review" | "client";
+type Purpose = "review" | "client" | "unsub";
 
 function secret(): string {
   const s = process.env.LINK_SIGNING_SECRET || process.env.SUPABASE_SERVICE_ROLE_KEY;

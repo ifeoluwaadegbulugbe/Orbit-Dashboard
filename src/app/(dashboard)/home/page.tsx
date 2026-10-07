@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { QuickAction } from "@/components/dashboard/QuickAction";
+import { SetupChecklist } from "@/components/dashboard/SetupChecklist";
 import { Avatar } from "@/components/ui/Avatar";
 import { Badge } from "@/components/ui/Badge";
 import { BookingActions } from "@/components/bookings/BookingActions";
@@ -105,6 +106,9 @@ export default function HomePage() {
           ))}
         </Section>
       )}
+
+      {/* ─── Setup checklist - only until the owner is activated ─── */}
+      <SetupChecklist />
 
       {/* ─── Stat cards ─── */}
       <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-5">

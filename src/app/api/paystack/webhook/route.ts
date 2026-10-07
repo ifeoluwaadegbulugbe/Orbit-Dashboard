@@ -5,6 +5,7 @@ import { recordWebhookEvent, markWebhookProcessed, postInvoicePaymentWithFee } f
 import { recalcClientBalance } from "@/lib/payments/recalc-client-balance";
 import { notify } from "@/lib/notifications/server";
 import { splitPaymentMinor } from "@/lib/wallet/fees";
+import { trackEvent } from "@/lib/lifecycle/events";
 
 /**
  * Paystack webhook → subscription status sync.
@@ -131,6 +132,7 @@ export async function POST(request: Request) {
           ? await query.eq("id", userId)
           : await query.eq("email", email!);
         if (error) console.error("[paystack] charge.success subscription update failed:", error);
+        else if (userId) await trackEvent(userId, "subscription_started", { reference: data.reference ?? null });
       }
       break;
     }

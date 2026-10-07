@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { initializeSubscription } from "@/lib/paystack/server";
 import { FREE_TRIAL_DAYS } from "@/lib/constants";
 import { appUrl } from "@/lib/app-url";
+import { trackEvent } from "@/lib/lifecycle/events";
 
 /** Detects placeholder env values left over from .env.local.example. */
 function looksLikePlaceholder(value: string | undefined): boolean {
@@ -39,6 +40,9 @@ export async function POST(request: Request) {
   }
 
   const { startTrial } = (await request.json().catch(() => ({}))) as { startTrial?: boolean };
+
+  // For the "Still thinking about Orbit Pro?" email - cancelled automatically if they finish.
+  if (userId) await trackEvent(userId, "checkout_started", { trial: !!startTrial });
 
   const secretKey = process.env.PAYSTACK_SECRET_KEY;
   const planCode = process.env.NEXT_PUBLIC_PAYSTACK_PLAN_CODE;

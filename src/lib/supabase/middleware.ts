@@ -14,6 +14,9 @@ const PUBLIC_PATHS = [
   "/book/",                      // public booking pages (/book/<slug>) - trailing slash so the owner's /booking-link editor stays private
   "/review/",                    // client review form (signed link)
   "/offline",                    // service-worker fallback page
+  "/e/",                         // lifecycle email click tracking (redirects into the app)
+  "/email/",                     // unsubscribe page (signed link)
+  "/api/email/unsubscribe",      // one-click unsubscribe POSTed by mail apps
   "/c/",                         // client "my appointments" page (signed link) - trailing slash so /clients stays private
   "/api/auth/signup",            // account creation — called before the user has a session
   "/api/auth/forgot-password",   // password reset email — called before the user has a session

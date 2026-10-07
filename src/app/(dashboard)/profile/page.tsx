@@ -20,6 +20,7 @@ import { createClient } from "@/lib/supabase/client";
 import { BUSINESS_TYPE_LABELS } from "@/types";
 import { PRO_PRICE_DISPLAY, PRO_PRICE_PERIOD } from "@/lib/constants";
 import { COUNTRIES, type Country } from "@/lib/countries";
+import { EmailPreferences } from "@/components/settings/EmailPreferences";
 
 export default function ProfilePage() {
   return (
@@ -350,6 +351,8 @@ function ProfileInner() {
       </SectionCard>
 
       {/* ─── Security ─── */}
+      <EmailPreferences />
+
       <SectionCard title="Security" icon={<Lock className="h-4 w-4 text-[var(--color-primary)]" />}>
         <ChangePasswordRow />
       </SectionCard>
