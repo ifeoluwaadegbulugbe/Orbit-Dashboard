@@ -12,6 +12,10 @@
  * 2. Resend (https://resend.com)
  *      RESEND_API_KEY=re_xxxxxxxxxxxxxxxx
  *      RESEND_FROM_EMAIL="Orbit <reminders@yourdomain.com>"
+ *
+ * Optional: EMAIL_REPLY_TO="you@gmail.com" - where replies go, so a
+ * no-mailbox sender like hello@yourdomain.com still reaches a real inbox.
+ *
  *    NOTE: without a domain verified in Resend, the default onboarding@resend.dev
  *    sender can ONLY deliver to the Resend account owner's own address — every
  *    other recipient is rejected with a 403.
@@ -86,6 +90,7 @@ async function sendViaSmtp(
       html: params.html,
       text: params.text,
       headers: params.headers,
+      replyTo: process.env.EMAIL_REPLY_TO || undefined,
     });
     // Some servers accept the message but list the address as rejected.
     if (info.rejected?.length) {
@@ -115,6 +120,7 @@ async function sendViaResend(apiKey: string, params: SendEmailParams): Promise<S
         html: params.html,
         text: params.text,
         headers: params.headers,
+        ...(process.env.EMAIL_REPLY_TO ? { reply_to: process.env.EMAIL_REPLY_TO } : {}),
       }),
     });
     const json = (await res.json()) as { id?: string; message?: string };

@@ -55,6 +55,8 @@ export interface RunReport {
   skipped: Record<string, number>;
   failed: { user: string; campaign: string; error: string }[];
   conversions: number;
+  /** Set when the email sender itself isn't configured correctly - the run stops early. */
+  setupError?: string;
 }
 
 export async function runLifecycle(supabase: SupabaseClient, now = new Date()): Promise<RunReport> {
@@ -67,8 +69,8 @@ export async function runLifecycle(supabase: SupabaseClient, now = new Date()): 
   // ── Bulk-load everything once (cheap at Orbit's size; move to SQL views when it grows)
   const [profilesQ, clientsQ, bookingsQ, paymentsQ, remindersQ, prefsQ, suppQ, sentQ, checkoutQ] = await Promise.all([
     supabase.from("profiles").select("id, email, full_name, business_name, subscription_status, trial_ends_at, created_at, last_active_at, booking_link"),
-    supabase.from("clients").select("user_id"),
-    supabase.from("bookings").select("user_id"),
+    supabase.from("clients").select("user_id, created_at"),
+    supabase.from("bookings").select("user_id, created_at"),
     supabase.from("payments").select("user_id, status, date, created_at"),
     supabase.from("reminders").select("user_id"),
     supabase.from("email_preferences").select("user_id, tips, product_updates, promotions, unsubscribed_at"),
@@ -86,6 +88,13 @@ export async function runLifecycle(supabase: SupabaseClient, now = new Date()): 
     return m;
   };
   const clients = countBy(clientsQ.data as { user_id: string }[] | null);
+  // Last sign of life per owner from what they've created - app-open tracking
+  // (last_active_at) only started recently, so on its own it would make
+  // long-standing users look churned.
+  const lastRecordAt = new Map<string, string>();
+  for (const r of [...(clientsQ.data ?? []), ...(bookingsQ.data ?? []), ...(paymentsQ.data ?? [])] as { user_id: string; created_at?: string }[]) {
+    if (r.created_at && r.created_at > (lastRecordAt.get(r.user_id) ?? "")) lastRecordAt.set(r.user_id, r.created_at);
+  }
   const bookings = countBy(bookingsQ.data as { user_id: string }[] | null);
   const reminders = countBy(remindersQ.data as { user_id: string }[] | null);
   const paymentsByUser = new Map<string, PaymentRow[]>();
@@ -107,10 +116,12 @@ export async function runLifecycle(supabase: SupabaseClient, now = new Date()): 
 
   for (const p of profiles) {
     const payments = paymentsByUser.get(p.id) ?? [];
-    const unpaid = payments.filter((x) => !["paid", "refunded", "failed"].includes(x.status));
+    // Unpaid invoices from the last 30 days - not ancient ones nobody expects paid.
+    const unpaid = payments.filter((x) =>
+      !["paid", "refunded", "failed"].includes(x.status) && (daysSince(x.created_at, nowMs) ?? 0) <= 30);
     const facts: UserFacts = {
       signedUpAt: p.created_at,
-      lastActiveAt: p.last_active_at,
+      lastActiveAt: [p.last_active_at, lastRecordAt.get(p.id)].filter(Boolean).sort().pop() ?? null,
       isPro: computeSubscriptionState(p, false).isPro,
       hasBusinessName: !!p.business_name?.trim(),
       serviceCount: Array.isArray(p.booking_link?.services) ? p.booking_link!.services!.length : 0,
@@ -199,7 +210,15 @@ export async function runLifecycle(supabase: SupabaseClient, now = new Date()): 
     const result = await deliver(supabase, p.id, email, campaign, ctx, byKey.get(campaign.key(p.id, ctx)), base, now);
     if (result === "sent") { sendsThisRun++; report.sent.push({ user: p.id, campaign: campaign.id }); }
     else if (result === "claimed_elsewhere") skip("claimed_elsewhere");
-    else report.failed.push({ user: p.id, campaign: campaign.id, error: result.error });
+    else {
+      report.failed.push({ user: p.id, campaign: campaign.id, error: result.error });
+      if (result.setupError) {
+        // Sending itself is broken (no sender / unverified domain): every
+        // other email would fail the same way, so stop and wait for a fix.
+        report.setupError = result.error;
+        break;
+      }
+    }
   }
 
   return report;
@@ -214,7 +233,7 @@ async function deliver(
   prior: SentRow | undefined,
   base: string,
   now: Date,
-): Promise<"sent" | "claimed_elsewhere" | { error: string }> {
+): Promise<"sent" | "claimed_elsewhere" | { error: string; setupError?: boolean }> {
   const key = campaign.key(userId, ctx);
   const subject = campaign.subject(ctx);
 
@@ -278,6 +297,11 @@ async function deliver(
   }
 
   const error = result.error ?? (result.skipped ? "No email provider configured" : "Send failed");
+  if (result.skipped || isSetupError(error)) {
+    // Not this email's fault: release the claim so it goes out once sending works.
+    await supabase.from("lifecycle_emails").delete().eq("id", rowId);
+    return { error, setupError: true };
+  }
   if (result.permanent) {
     // Dead address: stop all lifecycle mail to it.
     await supabase.from("email_suppressions").upsert({ email, reason: "bounce", detail: error.slice(0, 300) });
@@ -291,4 +315,9 @@ async function deliver(
     }).eq("id", rowId);
   }
   return { error };
+}
+
+/** Errors that mean the SENDER is misconfigured, not that this one email failed. */
+function isSetupError(message: string): boolean {
+  return /testing emails to your own email|verify a domain|domain is not verified|api key is invalid|invalid api key|not configured|authentication failed|invalid login|username and password not accepted|535/i.test(message);
 }
