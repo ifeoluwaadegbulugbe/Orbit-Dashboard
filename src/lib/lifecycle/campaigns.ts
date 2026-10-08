@@ -65,21 +65,26 @@ export const CAMPAIGNS: Campaign[] = [
     key: (u) => `welcome:${u}`,
     eligible: (ctx) => ctx.daysSinceSignup <= 3,
     goal: (f) => f.serviceCount > 0 || f.clientCount > 0,
-    subject: () => "Welcome to Orbit 👋",
+    subject: (ctx) => (ctx.firstName ? `Welcome aboard, ${ctx.firstName} 🚀` : "Welcome aboard 🚀"),
     content: (ctx) => {
-      const next = ACTIVATION_STEPS.find((s) => !s.done(ctx.facts));
+      const left = ACTIVATION_STEPS.filter((s) => !s.done(ctx.facts));
+      const next = left[0];
       return {
-        preheader: "One small step to get your business set up.",
-        heading: ctx.firstName ? `Welcome, ${ctx.firstName}` : "Welcome to Orbit",
+        preheader: "Your business, in one calm little universe. Here's where to start.",
+        kicker: "Welcome aboard",
+        headline: "You're in orbit.",
+        hero: "welcome",
         paragraphs: [
-          `Orbit keeps your clients, bookings and payments in one place${ctx.businessName ? ` for **${ctx.businessName}**` : ""}, so you spend less time on admin and more time on the work.`,
+          `${ctx.firstName ? `Hey ${ctx.firstName} - ` : ""}Orbit keeps your clients, bookings and payments in one place${ctx.businessName ? ` for **${ctx.businessName}**` : ""}. Less admin, more doing the work you're actually good at.`,
           next
-            ? `The best place to start: **${next.action.toLowerCase()}**. It takes about a minute.`
-            : "You've already done the setup basics - nice. Have a look around your dashboard.",
-          "Reply to this email any time if you get stuck. A real person reads it.",
+            ? "You don't need to set everything up today. Start with the first one - it takes about a minute."
+            : "You've already nailed the basics. Have a wander around your dashboard.",
         ],
+        section: left.length
+          ? { title: "Your first moves:", note: `(${left.length} quick steps)`, items: left.slice(0, 3).map((s) => ({ title: s.label })) }
+          : undefined,
         cta: next ? { text: next.action, url: ctx.url(next.href) } : { text: "Open Orbit", url: ctx.url("/home") },
-        signoff: SIGNOFF,
+        signoff: `Stuck? Just reply - a real person reads these.<br>${SIGNOFF}`,
       };
     },
   },
@@ -92,15 +97,23 @@ export const CAMPAIGNS: Campaign[] = [
     key: (u) => `first_service:${u}`,
     eligible: (ctx) => onboarding(ctx, 1) && ctx.facts.serviceCount === 0,
     goal: (f) => f.serviceCount > 0,
-    subject: () => "Your first service is the easiest place to start",
+    subject: () => "Quick one: what do you sell?",
     content: (ctx) => ({
-      preheader: "Name, price, how long it takes. That's it.",
-      heading: "Start with what you sell",
+      preheader: "Name, price, how long it takes. That's the whole job.",
+      kicker: "Setup · Step 1",
+      headline: "What do you sell?",
+      hero: "first_service",
       paragraphs: [
-        hi(ctx),
-        "Add one service - a name, a price and roughly how long it takes. Once it's in, Orbit can use it for bookings, invoices and your booking page, so you never type it twice.",
-        "Just one is enough to start. You can add the rest later.",
+        `${hi(ctx)} add one service and Orbit uses it everywhere - bookings, invoices and your booking page. Type it once, never again.`,
       ],
+      section: {
+        title: "Takes about a minute:",
+        items: [
+          { title: "Name it", body: "\"Gel manicure\", \"Bridal makeup\", \"1-hour lesson\"." },
+          { title: "Price it", body: "A number, \"from ₦5,000\", or \"Free\" - your call." },
+          { title: "Time it", body: "Roughly how long it takes, so bookings don't clash." },
+        ],
+      },
       cta: { text: "Add your first service", url: ctx.url("/services") },
       signoff: SIGNOFF,
     }),
@@ -116,13 +129,21 @@ export const CAMPAIGNS: Campaign[] = [
     goal: (f) => f.bookingLinkLive,
     subject: () => "Let clients book you without the back-and-forth",
     content: (ctx) => ({
-      preheader: "One link for your bio and WhatsApp status.",
-      heading: "No more \"what time works for you?\"",
+      preheader: "One link. Clients pick a time. You just confirm.",
+      kicker: "Setup · Step 2",
+      headline: "No more \"what time works?\"",
+      hero: "booking_link",
       paragraphs: [
-        hi(ctx),
-        "Your booking page lets clients pick a service and a time themselves. You just confirm.",
-        "Pick a link name, press Save, and put it in your Instagram bio or WhatsApp status. You'll also get a QR code for your shop wall.",
+        `${hi(ctx)} your booking page lets clients pick a service and a time on their own - even at 2am. You just tap confirm.`,
       ],
+      section: {
+        title: "Go live in 3 taps:",
+        items: [
+          { title: "Pick your link name", body: "Something like glam-by-amaka." },
+          { title: "Press Save", body: "Your page goes live instantly." },
+          { title: "Share it everywhere", body: "Instagram bio, WhatsApp status - plus a QR code for your wall." },
+        ],
+      },
       cta: { text: "Set up your booking link", url: ctx.url("/booking-link") },
       signoff: SIGNOFF,
     }),
@@ -138,13 +159,21 @@ export const CAMPAIGNS: Campaign[] = [
     goal: (f) => f.clientCount > 0,
     subject: () => "Let's get your first client into Orbit",
     content: (ctx) => ({
-      preheader: "Their number, their preferences, what they owe - all in one place.",
-      heading: "Start keeping your clients in one place",
+      preheader: "Who booked what, who paid, who owes - without scrolling WhatsApp.",
+      kicker: "Setup · Step 3",
+      headline: "Your people, one place.",
+      hero: "add_clients",
       paragraphs: [
-        hi(ctx),
-        "Add one regular client - just a name and phone number. From there Orbit remembers their bookings, what they've paid, what they owe and even their birthday.",
-        "No more scrolling through WhatsApp to find who booked what.",
+        `${hi(ctx)} add one regular - just a name and number. From then on Orbit quietly remembers everything about them for you.`,
       ],
+      section: {
+        title: "What Orbit remembers:",
+        items: [
+          { title: "Every booking", body: "Past and upcoming, in one tap." },
+          { title: "What they've paid (and owe)", body: "No more awkward guesswork." },
+          { title: "Little details", body: "Birthdays, preferences, notes - the stuff that keeps them coming back." },
+        ],
+      },
       cta: { text: "Add a client", url: ctx.url("/clients/new") },
       signoff: SIGNOFF,
     }),
@@ -162,13 +191,21 @@ export const CAMPAIGNS: Campaign[] = [
     goal: (f) => f.invoiceCount > 0,
     subject: () => "Get paid without chasing payments",
     content: (ctx) => ({
-      preheader: "A proper invoice in under a minute.",
-      heading: "Ready to get paid?",
+      preheader: "A proper invoice in under a minute - and a link they can pay from.",
+      kicker: "Get paid",
+      headline: "Get paid, not ghosted.",
+      hero: "first_invoice",
       paragraphs: [
-        hi(ctx),
-        `You've got ${ctx.facts.clientCount === 1 ? "a client" : `${ctx.facts.clientCount} clients`} in Orbit. Next time one of them owes you, send an invoice from Orbit instead of a reminder message.`,
-        "They get a clean PDF and a link to pay by card, transfer or USSD. Orbit keeps track of who's paid, so you don't have to.",
+        `${hi(ctx)} you've got ${ctx.facts.clientCount === 1 ? "a client" : `**${ctx.facts.clientCount} clients**`} in Orbit. Next time someone owes you, send a real invoice instead of a "hi, just checking in…" message.`,
       ],
+      section: {
+        title: "Here's the flow:",
+        items: [
+          { title: "Pick the client" },
+          { title: "Add what they owe", body: "Line items optional - it's up to you." },
+          { title: "Send it", body: "They get a clean PDF and a link to pay by card, transfer or USSD." },
+        ],
+      },
       cta: { text: "Create your first invoice", url: ctx.url("/payments/new") },
       signoff: SIGNOFF,
     }),
@@ -184,17 +221,21 @@ export const CAMPAIGNS: Campaign[] = [
     goal: (f) => activation(f).activated,
     subject: () => "You're closer than you think",
     content: (ctx) => {
-      const left = ACTIVATION_STEPS.filter((s) => !s.done(ctx.facts));
-      const next = left[0];
+      const act = activation(ctx.facts);
+      const next = ACTIVATION_STEPS.find((s) => !s.done(ctx.facts));
       return {
-        preheader: `${left.length} small step${left.length === 1 ? "" : "s"} left.`,
-        heading: "You're closer than you think",
+        preheader: `You're ${act.pct}% of the way there.`,
+        kicker: `${act.pct}% done`,
+        headline: "Almost there.",
+        hero: "finish_setup",
         paragraphs: [
-          hi(ctx),
-          `You're ${activation(ctx.facts).pct}% of the way to having Orbit run the admin side of your business. ${left.length === 1 ? "There's one thing left:" : "Here's what's left:"}`,
-          ...left.map((s) => `• ${s.label}`),
-          "Each one takes a couple of minutes.",
+          `${hi(ctx)} you're **${act.pct}%** of the way to Orbit running the admin side of your business. Here's your checklist:`,
         ],
+        section: {
+          title: "Your setup:",
+          note: `(${act.doneCount}/${act.total})`,
+          items: ACTIVATION_STEPS.map((s) => ({ title: s.label, done: s.done(ctx.facts) })),
+        },
         cta: { text: next ? next.action : "Open Orbit", url: ctx.url(next ? next.href : "/home") },
         signoff: SIGNOFF,
       };
@@ -214,13 +255,22 @@ export const CAMPAIGNS: Campaign[] = [
     subject: () => "Make it easy for clients to pay you",
     content: (ctx) => ({
       preheader: "A payment link does the chasing for you.",
-      heading: "Your invoice is out. Now let's get it paid.",
+      kicker: "Get paid",
+      headline: "Let the link do the chasing.",
+      hero: "first_payment",
       paragraphs: [
-        hi(ctx),
-        "Open your invoice and tap **Generate payment link**. Send it on WhatsApp - your client can pay by card, bank transfer or USSD, and Orbit marks it paid automatically.",
-        "Paid in cash or by direct transfer instead? Tap **Mark paid** so your numbers stay right.",
+        `${hi(ctx)} your invoice is out there. Give your client the easiest possible way to pay it.`,
       ],
+      section: {
+        title: "Three taps:",
+        items: [
+          { title: "Open the invoice" },
+          { title: "Tap Generate payment link" },
+          { title: "Send it on WhatsApp", body: "They pay by card, transfer or USSD - Orbit marks it paid for you." },
+        ],
+      },
       cta: { text: "Open your invoices", url: ctx.url("/payments") },
+      secondary: { text: "Got paid in cash? Mark it paid instead", url: ctx.url("/payments") },
       signoff: SIGNOFF,
     }),
   },
@@ -240,15 +290,22 @@ export const CAMPAIGNS: Campaign[] = [
     subject: () => "Still thinking about Orbit Pro?",
     content: (ctx) => ({
       preheader: "Your upgrade didn't go through - here's the link if you still want it.",
-      heading: "Your upgrade didn't finish",
+      kicker: "Orbit Pro",
+      headline: "Still thinking it over?",
+      hero: "checkout_abandoned",
       paragraphs: [
-        hi(ctx),
-        "Looks like you started upgrading to Pro but didn't finish. No pressure - if something went wrong with the payment, the link below picks up where you left off.",
-        `Pro gives you unlimited clients, automatic reminders and follow-ups, and full insights into how ${ctx.businessName ? `**${ctx.businessName}**` : "your business"} is doing.`,
-        "If you've got a question first, just reply.",
+        `${hi(ctx)} looks like you started upgrading to Pro but didn't finish. No pressure at all - if the payment hiccuped, the button below picks up right where you left off.`,
       ],
+      section: {
+        title: "What Pro adds:",
+        items: [
+          { title: "Unlimited clients", body: "Grow past 10 without thinking about it." },
+          { title: "Reminders on autopilot", body: "Follow-ups and payment nudges that send themselves." },
+          { title: "The full picture", body: `Insights on how ${ctx.businessName ? `**${ctx.businessName}**` : "your business"} is really doing.` },
+        ],
+      },
       cta: { text: "Finish upgrading", url: ctx.url("/profile?upgrade=1") },
-      signoff: SIGNOFF,
+      signoff: `Questions first? Just reply.<br>${SIGNOFF}`,
     }),
   },
 ];
