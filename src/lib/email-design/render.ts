@@ -255,7 +255,7 @@ function renderBlock(b: Block, base: string): string {
       const align = b.align ?? "left";
       return row(`
         <table role="presentation" cellpadding="0" cellspacing="0" ${align === "center" ? 'align="center"' : ""}><tr>
-          <td bgcolor="${C.pink}" style="background:${C.pink};border-radius:12px;border-bottom:3px solid ${C.rose};">
+          <td bgcolor="${C.pink}" style="background:${C.pink};border-radius:12px;border-bottom:3px solid ${C.roseMuted};">
             <a href="${esc(b.url)}" style="display:inline-block;padding:15px 26px;font-family:${FONT.sans};font-size:16px;font-weight:800;line-height:20px;color:${C.ink};text-decoration:none;border-radius:12px;">${esc(b.text)}&nbsp;&nbsp;&rarr;</a>
           </td></tr></table>
         ${b.secondary ? `<p style="margin:14px 0 0;${font(TYPE.small)}text-align:${align};"><a href="${esc(b.secondary.url)}" style="color:${C.body};text-decoration:underline;">${esc(b.secondary.text)}</a></p>` : ""}`,
@@ -264,6 +264,14 @@ function renderBlock(b: Block, base: string): string {
     case "signoff":
       return row(`<p style="margin:0;font-family:${FONT.serif};font-style:italic;font-size:17px;line-height:26px;color:${C.body};">${b.lines.map(esc).join("<br>")}</p>`, "36px 40px 0");
   }
+}
+
+/**
+ * One block as a standalone table row, on the paper sheet - used by the
+ * design-system documentation so its previews are the real renderer's output.
+ */
+export function renderBlockPreview(b: Block, appUrl: string): string {
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" bgcolor="${C.paper}" style="max-width:${WIDTH}px;background:${C.paper};">${renderBlock(b, appUrl)}<tr><td style="padding:28px 0 0;"></td></tr></table>`;
 }
 
 // ── Document ───────────────────────────────────────────────────────────────

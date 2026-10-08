@@ -14,12 +14,13 @@ export const COLOR = {
   mistDeep: "#E2DED8",   // card "lift" edge
   ink: "#171719",        // Deep Ink - headlines, primary text
   softBlack: "#222225",  // body copy
-  body: "#45433F",       // secondary copy (7.9:1 on paper)
-  meta: "#6E6B66",       // metadata, captions (5.1:1 on paper)
+  body: "#45433F",       // secondary copy (9.7:1 on paper)
+  meta: "#6E6B66",       // metadata, captions (5.2:1 on paper)
   // supporting (~25%)
   pinkSoft: "#FCE7ED",   // Soft Pink - chips, highlights
   pinkPale: "#FFF3F6",   // Pale Pink - tinted panels
-  rose: "#C94D6D",       // Muted Rose - annotations, eyebrow text (4.6:1 on paper)
+  rose: "#B03C5B",       // Rose Ink - pink-family TEXT: eyebrows, notes, pill text (5.7:1 on paper, 4.9:1 on pinkSoft)
+  roseMuted: "#C94D6D",  // Muted Rose - strokes and edges only (4.4:1 - too light for small text)
   successBg: "#E6F4EC",
   success: "#1D7A45",
   amberBg: "#FDF2DC",

@@ -15,7 +15,7 @@ import { mkdirSync, rmSync, readdirSync } from "node:fs";
 
 const INK = "#171719";
 const PINK = "#E8557A";
-const ROSE = "#C94D6D";
+const ROSE = "#C94D6D"; // Muted Rose: strokes only
 
 /** Each doodle: [name, width, height (at 1x), svg body]. Rendered at 2x. */
 const DOODLES = [
