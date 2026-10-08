@@ -6,6 +6,10 @@ import { recalcClientBalance } from "@/lib/payments/recalc-client-balance";
 import { notify } from "@/lib/notifications/server";
 import { splitPaymentMinor } from "@/lib/wallet/fees";
 import { trackEvent } from "@/lib/lifecycle/events";
+import { sendEmail } from "@/lib/email/server";
+import { appUrl } from "@/lib/app-url";
+import { renderEmail } from "@/lib/email-design/render";
+import { paymentReceivedEmail } from "@/lib/email-design/templates";
 
 /**
  * Paystack webhook → subscription status sync.
@@ -117,6 +121,25 @@ export async function POST(request: Request) {
             actionUrl: `/payments/${meta.payment_id}`,
             metadata: { payment_id: meta.payment_id, amount: paidAmount, provider: "paystack" },
           });
+
+          // Transactional "Someone paid you" email to the owner (not marketing -
+          // it's about their money, so email preferences don't apply).
+          const { data: owner } = await supabase.from("profiles").select("email").eq("id", paymentRow.user_id).maybeSingle();
+          if (owner?.email && paidAmount != null) {
+            const base = appUrl();
+            const { html, text } = renderEmail(
+              paymentReceivedEmail({
+                amount: `₦${paidAmount.toLocaleString("en-NG", { maximumFractionDigits: 2 })}`,
+                clientName: paymentRow.client_name ?? "A client",
+                invoiceNumber: paymentRow.invoice_number ?? null,
+                paymentPath: `/payments/${meta.payment_id}`,
+                url: (path) => `${base}${path}`,
+              }),
+              { appUrl: base, reason: "You're getting this because a client paid you through Orbit." },
+            );
+            const sent = await sendEmail({ to: owner.email, subject: "Someone paid you", html, text });
+            if (!sent.ok && !sent.skipped) console.warn("[paystack] payment email failed:", sent.error);
+          }
         }
         break;
       }

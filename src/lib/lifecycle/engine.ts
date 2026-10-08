@@ -26,7 +26,7 @@ import {
   activation, firstValueAchieved, lifecycleStage, nextBestAction, daysSince, type UserFacts,
 } from "./activation";
 import { CAMPAIGNS, type Campaign, type CampaignContext } from "./campaigns";
-import { renderLifecycleEmail } from "./render";
+import { renderEmail } from "@/lib/email-design/render";
 
 /** Frequency caps for lifecycle/marketing email (transactional email is never counted). */
 const MAX_PER_DAY = Number(process.env.LIFECYCLE_MAX_PER_DAY ?? 1);
@@ -265,17 +265,21 @@ async function deliver(
     return `${base}/e/${rowId}?to=${encodeURIComponent(path)}`;
   };
   const content = campaign.content(ctx);
-  content.cta = { ...content.cta, url: tracked(content.cta.url) };
-  if (content.secondary) content.secondary = { ...content.secondary, url: tracked(content.secondary.url) };
+  content.blocks = content.blocks.map((blk) =>
+    blk.type === "cta"
+      ? { ...blk, url: tracked(blk.url), secondary: blk.secondary ? { ...blk.secondary, url: tracked(blk.secondary.url) } : undefined }
+      : blk,
+  );
 
   const unsubQuery = `u=${userId}&t=${signId("unsub", userId)}`;
   // Footer link -> confirmation page; header -> the POST endpoint mail apps call for one-click.
   const unsubscribeUrl = `${base}/email/unsubscribe?${unsubQuery}`;
   const oneClickUrl = `${base}/api/email/unsubscribe?${unsubQuery}`;
-  const { html, text } = renderLifecycleEmail(content, {
+  const { html, text } = renderEmail(content, {
+    appUrl: base,
     unsubscribeUrl,
     preferencesUrl: `${base}/profile#email-preferences`,
-    appUrl: base,
+    reason: "You're getting this because you have an Orbit account.",
   });
 
   const result = await sendEmail({
