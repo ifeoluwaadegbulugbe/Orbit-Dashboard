@@ -205,6 +205,7 @@ export async function runLifecycle(supabase: SupabaseClient, now = new Date()): 
     if (!campaign) { skip("nothing_eligible"); continue; }
 
     if (dryRun) { report.wouldSend.push({ user: p.id, campaign: campaign.id }); continue; }
+    if (report.setupError) { skip("sender_not_configured"); continue; }
     if (sendsThisRun >= MAX_SENDS_PER_RUN) { skip("run_limit"); continue; }
 
     const result = await deliver(supabase, p.id, email, campaign, ctx, byKey.get(campaign.key(p.id, ctx)), base, now);
@@ -214,9 +215,9 @@ export async function runLifecycle(supabase: SupabaseClient, now = new Date()): 
       report.failed.push({ user: p.id, campaign: campaign.id, error: result.error });
       if (result.setupError) {
         // Sending itself is broken (no sender / unverified domain): every
-        // other email would fail the same way, so stop and wait for a fix.
+        // other email would fail the same way, so stop SENDING for this run -
+        // but keep updating everyone's stage and conversions below.
         report.setupError = result.error;
-        break;
       }
     }
   }
