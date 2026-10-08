@@ -101,7 +101,7 @@ function avatar(name: string, size = 40) {
 
 /** Sticker: editorial label stuck to a card corner. Real text. */
 const sticker = (text: string) =>
-  `<span style="display:inline-block;padding:5px 11px;border:1.5px solid ${C.ink};border-radius:999px;background:${C.pinkSoft};color:${C.ink};font-family:${FONT.sans};font-size:12px;font-weight:800;letter-spacing:0.2px;">${esc(text)}</span>`;
+  `<span style="display:inline-block;padding:5px 11px;border:1.5px solid ${C.rose};border-radius:999px;background:${C.pinkSoft};color:${C.rose};font-family:${FONT.sans};font-size:12px;font-weight:800;letter-spacing:0.2px;">${esc(text)}</span>`;
 
 const ICON_GLYPH: Record<string, string> = { booking: "&#9711;", payment: "&#8358;", invoice: "&#9636;", reminder: "&#9201;", client: "&#9679;" };
 
@@ -125,7 +125,7 @@ function uiCard(c: UICard, base: string, cursor: boolean): string {
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
           <td width="76" valign="top">
             <table role="presentation" cellpadding="0" cellspacing="0" width="64" style="border:1px solid ${C.mist};border-radius:12px;">
-              <tr><td bgcolor="${C.pink}" style="background:${C.pink};border-radius:11px 11px 0 0;padding:4px 0;text-align:center;font-family:${FONT.sans};font-size:11px;font-weight:800;letter-spacing:1px;color:${C.ink};">${esc(c.month.toUpperCase())}</td></tr>
+              <tr><td bgcolor="${C.rose}" style="background:${C.rose};border-radius:11px 11px 0 0;padding:4px 0;text-align:center;font-family:${FONT.sans};font-size:11px;font-weight:800;letter-spacing:1px;color:#FFFFFF;">${esc(c.month.toUpperCase())}</td></tr>
               <tr><td style="padding:6px 0 2px;text-align:center;${font(TYPE.amount)}color:${C.ink};">${esc(c.day)}</td></tr>
               <tr><td style="padding:0 0 8px;text-align:center;${font(TYPE.meta)}color:${C.meta};">${esc(c.weekday)}</td></tr>
             </table>
@@ -199,7 +199,7 @@ function renderBlock(b: Block, base: string): string {
       return row(b.items.map((n, i) => `
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" bgcolor="${C.paper}" style="background:${C.paper};border:1px solid ${C.mist};border-bottom:3px solid ${C.mistDeep};border-radius:14px;margin-top:${i ? 10 : 0}px;">
           <tr>
-            <td width="52" style="padding:14px 0 14px 14px;"><div style="width:34px;height:34px;line-height:34px;border-radius:10px;background:${i === 0 ? C.pink : C.pinkSoft};color:${i === 0 ? C.ink : C.rose};text-align:center;font-size:16px;font-family:${FONT.sans};font-weight:700;">${ICON_GLYPH[n.icon]}</div></td>
+            <td width="52" style="padding:14px 0 14px 14px;"><div style="width:34px;height:34px;line-height:34px;border-radius:10px;background:${i === 0 ? C.pink : C.pinkSoft};color:${i === 0 ? "#FFFFFF" : C.rose};text-align:center;font-size:16px;font-family:${FONT.sans};font-weight:700;">${ICON_GLYPH[n.icon]}</div></td>
             <td style="padding:14px 8px;"><div style="${font(TYPE.small)}font-weight:700;color:${C.ink};">${esc(n.title)}</div><div style="${font(TYPE.meta)}font-weight:400;color:${C.meta};margin-top:2px;">${esc(n.meta)}</div></td>
             <td align="right" style="padding:14px 16px 14px 0;${font(TYPE.meta)}color:${C.meta};white-space:nowrap;">${esc(n.time)}</td>
           </tr>
@@ -256,7 +256,7 @@ function renderBlock(b: Block, base: string): string {
       return row(`
         <table role="presentation" cellpadding="0" cellspacing="0" ${align === "center" ? 'align="center"' : ""}><tr>
           <td bgcolor="${C.pink}" style="background:${C.pink};border-radius:12px;border-bottom:3px solid ${C.roseMuted};">
-            <a href="${esc(b.url)}" style="display:inline-block;padding:15px 26px;font-family:${FONT.sans};font-size:16px;font-weight:800;line-height:20px;color:${C.ink};text-decoration:none;border-radius:12px;">${esc(b.text)}&nbsp;&nbsp;&rarr;</a>
+            <a href="${esc(b.url)}" style="display:inline-block;padding:15px 26px;font-family:${FONT.sans};font-size:19px;font-weight:800;line-height:22px;color:#FFFFFF;text-decoration:none;border-radius:12px;">${esc(b.text)}&nbsp;&nbsp;&rarr;</a>
           </td></tr></table>
         ${b.secondary ? `<p style="margin:14px 0 0;${font(TYPE.small)}text-align:${align};"><a href="${esc(b.secondary.url)}" style="color:${C.body};text-decoration:underline;">${esc(b.secondary.text)}</a></p>` : ""}`,
         "32px 40px 0");
