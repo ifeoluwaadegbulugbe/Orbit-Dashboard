@@ -20,7 +20,15 @@ export const useCurrencyStore = create<CurrencyState>()(
         if (c) set({ country: c });
       },
     }),
-    { name: "orbit_currency_v1" },
+    {
+      name: "orbit_currency_v1",
+      // Only the code is trusted from storage; the rest comes from the
+      // current list, so devices saved before a field was added stay correct.
+      merge: (persisted, current) => {
+        const code = (persisted as { country?: { code?: string } } | undefined)?.country?.code;
+        return { ...current, country: findCountryByCode(code) ?? current.country };
+      },
+    },
   ),
 );
 

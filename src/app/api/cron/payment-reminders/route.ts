@@ -4,6 +4,7 @@ import { sendEmail } from "@/lib/email/server";
 import { notify } from "@/lib/notifications/server";
 import { getEffectiveRule, fillTemplate, type MessageRuleRow } from "@/lib/automations/rules";
 import { isProServer } from "@/lib/subscription/isPro";
+import { formatMoney } from "@/lib/countries";
 
 /**
  * Automatically chases unpaid invoices - a real send path for the
@@ -40,6 +41,7 @@ interface ClientRow {
 }
 
 interface ProfileRow {
+  country_code?: string | null;
   id: string;
   email: string | null;
   full_name: string | null;
@@ -88,7 +90,7 @@ export async function GET(request: Request) {
   const clientIds = Array.from(new Set(dueNow.map((p) => p.client_id)));
 
   const [{ data: profiles }, { data: clients }, { data: ruleRows }] = await Promise.all([
-    supabase.from("profiles").select("id, email, full_name, business_name, subscription_status, trial_ends_at").in("id", userIds),
+    supabase.from("profiles").select("id, email, full_name, business_name, subscription_status, trial_ends_at, country_code").in("id", userIds),
     supabase.from("clients").select("id, email").in("id", clientIds),
     supabase.from("message_rules").select("user_id, trigger_type, enabled, template").in("user_id", userIds).eq("trigger_type", "payment_reminder"),
   ]);
@@ -119,7 +121,7 @@ export async function GET(request: Request) {
     // Orbit is multi-currency and payments don't carry a currency code of
     // their own (it's a soft, business-level preference) - a plain number
     // avoids asserting the wrong currency symbol server-side.
-    const amountDisplay = payment.amount.toLocaleString();
+    const amountDisplay = formatMoney(payment.amount, profile.country_code);
     const businessName = profile.business_name?.trim() || profile.full_name?.trim() || "your business";
 
     let emailSent = false;

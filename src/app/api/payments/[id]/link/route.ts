@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { initializeInvoiceCharge } from "@/lib/paystack/server";
 import { appUrl } from "@/lib/app-url";
+import { DEFAULT_COUNTRY, findCountryByCode } from "@/lib/countries";
 
 /**
  * Generate a payment link for an invoice, collected into Orbit's OWN
@@ -38,6 +39,18 @@ export async function POST(
     return NextResponse.json(
       { error: "This invoice is already marked as paid." },
       { status: 409 },
+    );
+  }
+
+  // Payment links are charged by Orbit's Paystack account in Naira. An
+  // invoice in another currency would be charged the same number in NGN,
+  // so refuse rather than charge the wrong amount.
+  const { data: owner } = await supabase.from("profiles").select("country_code").eq("id", user.id).maybeSingle();
+  const currency = (findCountryByCode(owner?.country_code) ?? DEFAULT_COUNTRY).currency;
+  if (currency !== "NGN") {
+    return NextResponse.json(
+      { error: `Online payment links only work for invoices in Naira (₦) for now. Your invoices are in ${currency}, so share your bank details and use "Mark paid" when the money arrives.` },
+      { status: 400 },
     );
   }
 

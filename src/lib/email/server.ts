@@ -51,6 +51,16 @@ function isPermanentRecipientError(message: string, code?: number): boolean {
   return /\b55[0-4]\b|user unknown|no such user|does not exist|mailbox (unavailable|disabled|not found)|invalid (recipient|address)|recipient address rejected/i.test(message);
 }
 
+/**
+ * Reads an env var, forgiving copy-paste slips: surrounding spaces and
+ * quotes ("Orbit <hi@x.com>" pasted into Vercel keeps the quotes, which
+ * providers reject as an invalid sender).
+ */
+function envValue(name: string): string | undefined {
+  const v = process.env[name]?.trim().replace(/^(["'])(.*)\1$/, "$2").trim();
+  return v || undefined;
+}
+
 // Reused across invocations of a warm serverless instance.
 let smtpTransport: Transporter | null = null;
 
@@ -81,7 +91,7 @@ async function sendViaSmtp(
   transport: Transporter,
   params: SendEmailParams,
 ): Promise<SendEmailResult> {
-  const from = process.env.EMAIL_FROM ?? `Orbit <${process.env.SMTP_USER}>`;
+  const from = envValue("EMAIL_FROM") ?? `Orbit <${process.env.SMTP_USER}>`;
   try {
     const info = await transport.sendMail({
       from,
@@ -90,7 +100,7 @@ async function sendViaSmtp(
       html: params.html,
       text: params.text,
       headers: params.headers,
-      replyTo: process.env.EMAIL_REPLY_TO || undefined,
+      replyTo: envValue("EMAIL_REPLY_TO"),
     });
     // Some servers accept the message but list the address as rejected.
     if (info.rejected?.length) {
@@ -105,7 +115,7 @@ async function sendViaSmtp(
 }
 
 async function sendViaResend(apiKey: string, params: SendEmailParams): Promise<SendEmailResult> {
-  const from = process.env.RESEND_FROM_EMAIL ?? "Orbit <onboarding@resend.dev>";
+  const from = envValue("RESEND_FROM_EMAIL") ?? "Orbit <onboarding@resend.dev>";
   try {
     const res = await fetch("https://api.resend.com/emails", {
       method: "POST",
@@ -120,7 +130,7 @@ async function sendViaResend(apiKey: string, params: SendEmailParams): Promise<S
         html: params.html,
         text: params.text,
         headers: params.headers,
-        ...(process.env.EMAIL_REPLY_TO ? { reply_to: process.env.EMAIL_REPLY_TO } : {}),
+        ...(envValue("EMAIL_REPLY_TO") ? { reply_to: envValue("EMAIL_REPLY_TO") } : {}),
       }),
     });
     const json = (await res.json()) as { id?: string; message?: string };

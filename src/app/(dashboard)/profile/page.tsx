@@ -19,7 +19,8 @@ import { useCurrencyStore } from "@/stores/currencyStore";
 import { createClient } from "@/lib/supabase/client";
 import { BUSINESS_TYPE_LABELS } from "@/types";
 import { PRO_PRICE_DISPLAY, PRO_PRICE_PERIOD } from "@/lib/constants";
-import { COUNTRIES, type Country } from "@/lib/countries";
+import { type Country } from "@/lib/countries";
+import { CountryList } from "@/components/ui/CountryList";
 import { EmailPreferences } from "@/components/settings/EmailPreferences";
 
 export default function ProfilePage() {
@@ -406,28 +407,7 @@ function ProfileInner() {
 
       {/* Currency picker dialog */}
       <Dialog open={currencyPickerOpen} onClose={() => setCurrencyPickerOpen(false)} title="Pick your country">
-        <div className="max-h-[60vh] overflow-y-auto -mx-6">
-          <div className="divide-y divide-[var(--color-border)]">
-            {COUNTRIES.map((c) => (
-              <button
-                key={c.code}
-                onClick={() => handleCountrySelect(c)}
-                className="w-full flex items-center gap-4 px-4 sm:px-6 py-3.5 hover:bg-[var(--color-canvas)] transition-colors text-left"
-              >
-                <span className="text-2xl flex-shrink-0">{c.flag}</span>
-                <div className="flex-1 min-w-0">
-                  <div className="text-body font-semibold truncate">{c.name}</div>
-                  <div className="text-small text-[var(--color-muted)]">
-                    {c.currency} · {c.symbol}
-                  </div>
-                </div>
-                {country.code === c.code && (
-                  <Check className="h-5 w-5 text-[var(--color-primary)] flex-shrink-0" />
-                )}
-              </button>
-            ))}
-          </div>
-        </div>
+        <CountryList selectedCode={country.code} onSelect={handleCountrySelect} />
       </Dialog>
     </div>
   );

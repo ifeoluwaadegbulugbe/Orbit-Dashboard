@@ -18,6 +18,7 @@ import { StatusSegmented } from "@/components/ui/StatusSegmented";
 import { toast } from "@/stores/toastStore";
 import { formatShortDate, relativeDate } from "@/lib/utils";
 import { BUSINESS_TYPE_LABELS, type PaymentStatus } from "@/types";
+import { toWhatsAppDigits } from "@/lib/phone";
 
 const STATUS_PILL: Record<ProjectStatus, { dot: string; bg: string; color: string }> = {
   not_started: { dot: "#9A9893", bg: "var(--color-border-light)",      color: "var(--color-ink-mid)" },
@@ -42,7 +43,7 @@ export default function ProjectDetailPage({
   const { data: payments = [] } = usePaymentsForClient(clientId);
   const { data: reminders = [] } = useRemindersForClient(clientId);
   const { status, setStatus } = useProjectStatus(clientId);
-  const { format } = useCurrency();
+  const { format, country } = useCurrency();
 
   // Derive project meta from the underlying bookings
   const project = useMemo(() => {
@@ -113,7 +114,7 @@ export default function ProjectDetailPage({
   }
 
   const pill = STATUS_PILL[status];
-  const whatsappUrl = `https://wa.me/${client.phone.replace(/\D/g, "")}`;
+  const whatsappUrl = `https://wa.me/${toWhatsAppDigits(client.phone, country.dialCode) ?? ""}`;
 
   return (
     <div className="space-y-7">

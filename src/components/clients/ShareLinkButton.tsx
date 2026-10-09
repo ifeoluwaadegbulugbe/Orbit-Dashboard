@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Loader2 } from "lucide-react";
 import { toast } from "@/stores/toastStore";
 import { whatsappUrl } from "@/lib/booking-profile";
+import { useCurrency } from "@/hooks/useCurrency";
 
 /**
  * Fetches a signed link (client page or review request) and sends it to the
@@ -22,6 +23,7 @@ export function ShareLinkButton({
   className?: string;
 }) {
   const [busy, setBusy] = useState(false);
+  const { country } = useCurrency();
 
   async function go() {
     setBusy(true);
@@ -33,7 +35,7 @@ export function ShareLinkButton({
       if (!res.ok || !json.url) throw new Error(json.error ?? "Couldn't create the link");
       const text = message(json.url);
 
-      const wa = whatsappUrl(phone ?? undefined, text);
+      const wa = whatsappUrl(phone ?? undefined, text, country.dialCode);
       if (wa && waWindow) { waWindow.location.href = wa; return; }
       waWindow?.close();
       if (navigator.share) {

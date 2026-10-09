@@ -13,6 +13,8 @@ interface Service {
 }
 
 interface PublicBookingFormProps {
+  /** The business's country dialling code, for the phone example. */
+  dialCode?: string;
   slug: string;
   businessName: string;
   services: Service[];
@@ -24,7 +26,7 @@ interface PublicBookingFormProps {
 }
 
 export function PublicBookingForm({
-  slug, businessName, services, initialServices = [], initialName = "", initialPhone = "", initialEmail = "",
+  slug, businessName, services, initialServices = [], initialName = "", initialPhone = "", initialEmail = "", dialCode = "234",
 }: PublicBookingFormProps) {
   const [selectedIndices, setSelectedIndices] = useState<number[]>(() => {
     const wanted = initialServices.map((n) => n.trim().toLowerCase());
@@ -220,7 +222,7 @@ export function PublicBookingForm({
             label="Phone"
             type="tel"
             icon={<Phone className="h-4 w-4" />}
-            placeholder="+234 901 234 5678"
+            placeholder={`+${dialCode} 801 234 5678`}
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
             hint="Used for WhatsApp confirmation"

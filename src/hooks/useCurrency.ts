@@ -2,7 +2,7 @@
 
 import { useCallback, useMemo } from "react";
 import { useCurrencyStore } from "@/stores/currencyStore";
-import type { Country } from "@/lib/countries";
+import { formatWithSymbol, type Country } from "@/lib/countries";
 
 interface UseCurrencyReturn {
   /** The currently-selected country (from onboarding / Profile). */
@@ -35,7 +35,7 @@ export function useCurrency(): UseCurrencyReturn {
       // Always prefix with the country's preferred symbol (₦, $, £, ₹, etc.)
       // rather than relying on Intl currency display, which can output "NGN 1,234"
       // in some locales.
-      return `${country.symbol}${num}`;
+      return formatWithSymbol(country.symbol, num);
     },
     [country],
   );

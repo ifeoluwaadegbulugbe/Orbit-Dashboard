@@ -18,6 +18,7 @@ import { formatShortDate, relativeDate } from "@/lib/utils";
 import { useCurrency } from "@/hooks/useCurrency";
 import { InvoicePdfActions } from "@/components/invoices/InvoicePdfActions";
 import type { PaymentStatus } from "@/types";
+import { toWhatsAppDigits } from "@/lib/phone";
 
 const TONE: Record<PaymentStatus, "success" | "warning" | "danger" | "info" | "neutral"> = {
   paid: "success", pending: "warning", overdue: "danger",
@@ -35,7 +36,7 @@ export default function PaymentDetailPage({ params }: { params: Promise<{ id: st
   const sourceBooking = payment?.booking_id
     ? clientBookings.find((b) => b.id === payment.booking_id)
     : undefined;
-  const { format: formatCurrency } = useCurrency();
+  const { format: formatCurrency, country } = useCurrency();
   const update = useUpdatePayment();
   const del = useDeletePayment();
   const [busy, setBusy] = useState(false);
@@ -108,7 +109,7 @@ export default function PaymentDetailPage({ params }: { params: Promise<{ id: st
   }
 
   const whatsappReminderUrl = client
-    ? `https://wa.me/${client.phone.replace(/\D/g, "")}?text=${encodeURIComponent(
+    ? `https://wa.me/${toWhatsAppDigits(client.phone, country.dialCode) ?? ""}?text=${encodeURIComponent(
         `Hi ${client.name}, this is a friendly reminder for invoice ${payment.invoice_number ?? ""} (${formatCurrency(payment.amount)}).`,
       )}`
     : "#";
@@ -118,7 +119,7 @@ export default function PaymentDetailPage({ params }: { params: Promise<{ id: st
     : "";
 
   const whatsappPayUrl = client && payment.payment_link
-    ? `https://wa.me/${client.phone.replace(/\D/g, "")}?text=${encodeURIComponent(paymentLinkMessage)}`
+    ? `https://wa.me/${toWhatsAppDigits(client.phone, country.dialCode) ?? ""}?text=${encodeURIComponent(paymentLinkMessage)}`
     : "#";
 
   return (

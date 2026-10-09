@@ -1,3 +1,5 @@
+import { toWhatsAppDigits } from "@/lib/phone";
+
 /**
  * Builds a "tap to send" wa.me link with the message pre-filled - the owner
  * still has to tap send themselves. Automated business-initiated WhatsApp
@@ -7,9 +9,8 @@
  * suggests a client-facing message (payment reminders, follow-ups, birthday
  * wishes) alongside email.
  */
-export function buildWhatsAppLink(phone: string | null | undefined, text: string): string | null {
-  if (!phone) return null;
-  const digits = phone.replace(/\D/g, "");
-  if (digits.length < 6) return null; // not a real phone number
+export function buildWhatsAppLink(phone: string | null | undefined, text: string, dialCode?: string): string | null {
+  const digits = toWhatsAppDigits(phone, dialCode);
+  if (!digits) return null; // not a real phone number
   return `https://wa.me/${digits}?text=${encodeURIComponent(text)}`;
 }

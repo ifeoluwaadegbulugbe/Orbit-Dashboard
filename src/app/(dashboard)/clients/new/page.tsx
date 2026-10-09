@@ -15,6 +15,7 @@ import { useAuthStore } from "@/stores/authStore";
 import { PaywallModal } from "@/components/paywall/PaywallModal";
 import { FREE_CLIENT_LIMIT } from "@/lib/constants";
 import type { ClientStatus } from "@/types";
+import { useCurrency } from "@/hooks/useCurrency";
 
 interface FormValues {
   name: string;
@@ -27,6 +28,7 @@ interface FormValues {
 
 export default function NewClientPage() {
   const router = useRouter();
+  const { country } = useCurrency();
   const profile = useAuthStore((s) => s.profile);
   const { data: clients = [] } = useClients();
   const { isPro } = useSubscription();
@@ -121,7 +123,7 @@ export default function NewClientPage() {
         <Input
           label="Phone"
           icon={<Phone className="h-4 w-4" />}
-          placeholder="e.g. +234 901 234 5678"
+          placeholder={`e.g. +${country.dialCode || "234"} 801 234 5678`}
           autoComplete="tel"
           {...register("phone", { required: true })}
         />

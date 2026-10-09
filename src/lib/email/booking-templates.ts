@@ -5,6 +5,7 @@
  */
 
 import "server-only";
+import { toWhatsAppDigits } from "@/lib/phone";
 
 export interface BookingMessageParams {
   /** Client's name as the business owner has it stored. */
@@ -519,12 +520,11 @@ export function buildWhatsAppUrl(
   phone: string | null | undefined,
   params: BookingMessageParams,
   action: "confirm" | "cancel",
+  dialCode?: string,
 ): string | null {
-  if (!phone) return null;
-
-  // wa.me wants digits only, no + or spaces
-  const digits = phone.replace(/[^\d]/g, "");
-  if (digits.length < 6) return null; // not a real phone number
+  // wa.me wants digits only, with the country code
+  const digits = toWhatsAppDigits(phone, dialCode);
+  if (!digits) return null; // not a real phone number
 
   const text = action === "confirm" ? buildConfirmText(params) : buildCancelText(params);
   return `https://wa.me/${digits}?text=${encodeURIComponent(text)}`;

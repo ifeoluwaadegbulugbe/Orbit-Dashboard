@@ -1,3 +1,4 @@
+import { toWhatsAppDigits } from "@/lib/phone";
 /**
  * The public booking profile stored in profiles.booking_link (jsonb).
  * Edited on /booking-link, rendered on /book/<slug>.
@@ -44,10 +45,9 @@ export function instagramUrl(handle?: string): string | null {
   return h ? `https://instagram.com/${h}` : null;
 }
 
-export function whatsappUrl(number?: string, text?: string): string | null {
-  let digits = (number ?? "").replace(/\D/g, "");
-  if (digits.length < 7) return null;
-  if (digits.startsWith("0") && digits.length === 11) digits = `234${digits.slice(1)}`; // Nigerian local format
+export function whatsappUrl(number?: string, text?: string, dialCode?: string): string | null {
+  const digits = toWhatsAppDigits(number, dialCode);
+  if (!digits) return null;
   return `https://wa.me/${digits}${text ? `?text=${encodeURIComponent(text)}` : ""}`;
 }
 

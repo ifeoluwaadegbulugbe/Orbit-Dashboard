@@ -4,6 +4,7 @@ import { createServiceClient } from "@/lib/supabase/server";
 import { verifyId, signId } from "@/lib/signed-links";
 import { PublicShell, PublicMessage } from "@/components/public/PublicShell";
 import { whatsappUrl, type BookingConfig } from "@/lib/booking-profile";
+import { dialCodeFor, formatMoney } from "@/lib/countries";
 
 export const metadata: Metadata = { title: "My appointments", robots: { index: false } };
 
@@ -42,7 +43,7 @@ export default async function ClientPortalPage({
   }
 
   const [{ data: profile }, { data: bookingRows }, { data: invoiceRows }, { data: reviewRows }] = await Promise.all([
-    supabase.from("profiles").select("business_name, full_name, avatar_url, booking_link").eq("id", client.user_id).maybeSingle(),
+    supabase.from("profiles").select("business_name, full_name, avatar_url, booking_link, country_code").eq("id", client.user_id).maybeSingle(),
     supabase.from("bookings").select("id, title, date, time, status").eq("client_id", clientId).order("date", { ascending: false }).limit(60),
     supabase.from("payments").select("id, invoice_number, amount, remaining_balance, status, date, payment_link").eq("client_id", clientId).order("date", { ascending: false }).limit(30),
     supabase.from("reviews").select("booking_id").eq("client_id", clientId),
@@ -67,8 +68,8 @@ export default async function ClientPortalPage({
     if (title) q.set("services", title.split(" + ").join("|"));
     return `/book/${config.slug}?${q.toString()}#book`;
   };
-  const wa = whatsappUrl(config?.whatsapp, `Hi ${businessName}, it's ${client.name}.`);
-  const money = (n: number) => `₦${Number(n).toLocaleString("en-NG", { maximumFractionDigits: 2 })}`;
+  const wa = whatsappUrl(config?.whatsapp, `Hi ${businessName}, it's ${client.name}.`, dialCodeFor(profile?.country_code));
+  const money = (n: number) => formatMoney(n, profile?.country_code);
   const when = (b: BookingRow) =>
     `${new Date(`${b.date}T00:00:00`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" })}${b.time ? ` · ${fmtTime(b.time)}` : ""}`;
 

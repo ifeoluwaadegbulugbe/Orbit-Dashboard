@@ -14,6 +14,7 @@ import { useClients } from "@/hooks/useClients";
 import { usePayments } from "@/hooks/usePayments";
 import { useBookings } from "@/hooks/useBookings";
 import { useCurrency } from "@/hooks/useCurrency";
+import { formatWithSymbol } from "@/lib/countries";
 import { useSubscription } from "@/hooks/useSubscription";
 import { cn } from "@/lib/utils";
 import {
@@ -40,7 +41,7 @@ export default function AnalyticsPage() {
   const p = PERIODS.find((x) => x.key === period)!;
   const compact = useMemo(() => {
     const nf = new Intl.NumberFormat(country.locale, { notation: "compact", maximumFractionDigits: 1 });
-    return (n: number) => `${symbol}${nf.format(n)}`;
+    return (n: number) => formatWithSymbol(symbol, nf.format(n));
   }, [country.locale, symbol]);
 
   const money = useMemo(() => moneyStats(payments, p.days), [payments, p.days]);

@@ -7,8 +7,10 @@ import { PublicBookingForm } from "@/components/public/PublicBookingForm";
 import {
   type BookingConfig, directionsUrl, instagramUrl, whatsappUrl,
 } from "@/lib/booking-profile";
+import { dialCodeFor } from "@/lib/countries";
 
 interface ProfileRow {
+  country_code?: string | null;
   id: string;
   full_name: string | null;
   business_name: string | null;
@@ -30,7 +32,7 @@ const loadBusiness = cache(async (slug: string) => {
   const supabase = createServiceClient();
   const { data, error } = await supabase
     .from("profiles")
-    .select("id, full_name, business_name, avatar_url, booking_link")
+    .select("id, full_name, business_name, avatar_url, booking_link, country_code")
     .eq("booking_link->>slug", slug)
     .maybeSingle();
   if (error) console.warn("[public-booking] lookup failed:", error.message);
@@ -92,7 +94,7 @@ export default async function PublicBookingPage({
 
   const { profile, config, name, reviews, avg } = biz;
   const photos = (config.photos ?? []).slice(0, 8);
-  const wa = whatsappUrl(config.whatsapp, `Hi ${name}, I found you on your Orbit booking page.`);
+  const wa = whatsappUrl(config.whatsapp, `Hi ${name}, I found you on your Orbit booking page.`, dialCodeFor(profile.country_code));
   const ig = instagramUrl(config.instagram);
   const maps = directionsUrl(config.location);
   const first = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v) ?? "";
@@ -234,6 +236,7 @@ export default async function PublicBookingPage({
         <section id="book" className="bg-white rounded-[var(--radius-2xl)] border border-[var(--color-border)] shadow-soft-sm p-5 sm:p-8 scroll-mt-4">
           <h2 className="text-card-title font-semibold mb-5">Book an appointment</h2>
           <PublicBookingForm
+            dialCode={dialCodeFor(profile.country_code)}
             slug={slug}
             businessName={name}
             services={config.services ?? []}

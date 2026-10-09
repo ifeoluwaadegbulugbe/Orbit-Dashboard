@@ -16,7 +16,7 @@ import { useCreateClient } from "@/hooks/useClients";
 import { useCreateBooking } from "@/hooks/useBookings";
 import { useUpdateServices } from "@/hooks/useServices";
 import { createClient as createSupabase } from "@/lib/supabase/client";
-import { COUNTRIES } from "@/lib/countries";
+import { CountryList } from "@/components/ui/CountryList";
 import {
   BUSINESS_TYPE_LABELS,
   DEFAULT_SERVICES_BY_TYPE,
@@ -446,29 +446,7 @@ export default function WelcomePage() {
               description="We'll use this to set your default currency. Change it later from Profile."
               icon={<Globe className="h-6 w-6 text-[var(--color-primary)]" />}
             >
-              <div className="max-h-[360px] overflow-y-auto rounded-[var(--radius-lg)] border border-[var(--color-border)] divide-y divide-[var(--color-border)] bg-white">
-                {COUNTRIES.map((c) => {
-                  const isActive = country.code === c.code;
-                  return (
-                    <button
-                      key={c.code}
-                      onClick={() => handlePickCountry(c)}
-                      className={`w-full flex items-center gap-4 px-5 py-3.5 text-left transition-colors ${
-                        isActive ? "bg-[var(--color-primary-subtle)]" : "hover:bg-[var(--color-canvas)]"
-                      }`}
-                    >
-                      <span className="text-2xl flex-shrink-0">{c.flag}</span>
-                      <div className="flex-1 min-w-0">
-                        <div className="text-body font-semibold truncate">{c.name}</div>
-                        <div className="text-small text-[var(--color-muted)]">
-                          {c.currency} · {c.symbol}
-                        </div>
-                      </div>
-                      {isActive && <Check className="h-5 w-5 text-[var(--color-primary)] flex-shrink-0" />}
-                    </button>
-                  );
-                })}
-              </div>
+              <CountryList selectedCode={country.code} onSelect={handlePickCountry} />
 
               <FooterButtons>
                 <button onClick={back} className="text-small font-semibold text-[var(--color-ink-light)] hover:text-[var(--color-ink)]">
@@ -496,7 +474,7 @@ export default function WelcomePage() {
                 />
                 <Input
                   label="Phone"
-                  placeholder="e.g. +234 901 234 5678"
+                  placeholder={`e.g. +${country.dialCode || "234"} 801 234 5678`}
                   value={clientPhone}
                   onChange={(e) => setClientPhone(e.target.value)}
                 />

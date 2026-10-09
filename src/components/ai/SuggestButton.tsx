@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Sparkles, Copy, Check, Loader2, RefreshCw, MessageCircle, Mail, ExternalLink } from "lucide-react";
 import { toast } from "@/stores/toastStore";
 import { buildWhatsAppLink } from "@/lib/whatsapp";
+import { useCurrency } from "@/hooks/useCurrency";
 
 interface SuggestButtonProps {
   label: string;
@@ -27,6 +28,7 @@ interface SuggestButtonProps {
  * send via the existing Resend integration).
  */
 export function SuggestButton({ label, kind, context, locked, onLocked, clientPhone, clientEmail }: SuggestButtonProps) {
+  const { country } = useCurrency();
   const [loading, setLoading] = useState(false);
   const [suggestion, setSuggestion] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -84,7 +86,7 @@ export function SuggestButton({ label, kind, context, locked, onLocked, clientPh
     }
   }
 
-  const whatsappLink = suggestion ? buildWhatsAppLink(clientPhone, suggestion) : null;
+  const whatsappLink = suggestion ? buildWhatsAppLink(clientPhone, suggestion, country.dialCode) : null;
 
   if (suggestion) {
     return (

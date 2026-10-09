@@ -13,6 +13,7 @@ import {
   buildOwnerCancelEmail,
   buildWhatsAppUrl,
 } from "@/lib/email/booking-templates";
+import { dialCodeFor } from "@/lib/countries";
 
 /**
  * Owner-side endpoint that the BookingActions buttons call when the business
@@ -53,6 +54,7 @@ interface ClientRow {
 }
 
 interface ProfileRow {
+  country_code?: string | null;
   full_name: string | null;
   business_name: string | null;
   email: string | null;
@@ -140,7 +142,7 @@ export async function POST(
       .maybeSingle(),
     supabase
       .from("profiles")
-      .select("full_name, business_name, email")
+      .select("full_name, business_name, email, country_code")
       .eq("id", userId)
       .maybeSingle(),
   ]);
@@ -206,7 +208,7 @@ export async function POST(
   // ── Build a wa.me URL the browser can open in a new tab ────────────────
   // Prefer whatsapp_number if explicitly set, fall back to phone.
   const whatsappTarget = client?.whatsapp_number || client?.phone || null;
-  const whatsappUrl = buildWhatsAppUrl(whatsappTarget, messageParams, action === "confirmed" ? "confirm" : "cancel");
+  const whatsappUrl = buildWhatsAppUrl(whatsappTarget, messageParams, action === "confirmed" ? "confirm" : "cancel", dialCodeFor(profile?.country_code));
 
 
   // ── Log the event in the bell dropdown so the owner sees an audit trail

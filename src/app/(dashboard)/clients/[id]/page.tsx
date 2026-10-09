@@ -20,6 +20,7 @@ import { BookingActions } from "@/components/bookings/BookingActions";
 import { formatShortDate, relativeDate } from "@/lib/utils";
 import { useCurrency } from "@/hooks/useCurrency";
 import type { ClientStatus, PaymentStatus } from "@/types";
+import { toWhatsAppDigits } from "@/lib/phone";
 
 const STATUS_TONE: Record<ClientStatus, "success" | "warning" | "danger" | "neutral"> = {
   active: "success",
@@ -43,7 +44,7 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
   const { data: reminders = [] } = useRemindersForClient(id);
   const { data: bookings = [] } = useBookingsForClient(id);
   const deleteClient = useDeleteClient();
-  const { format: formatCurrency } = useCurrency();
+  const { format: formatCurrency, country } = useCurrency();
   const [tab, setTab] = useState<Tab>("overview");
   const profile = useAuthStore((s) => s.profile);
   const businessName = profile?.business_name || profile?.full_name || "us";
@@ -69,7 +70,7 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
     );
   }
 
-  const whatsappUrl = `https://wa.me/${client.phone.replace(/\D/g, "")}`;
+  const whatsappUrl = `https://wa.me/${toWhatsAppDigits(client.phone, country.dialCode) ?? ""}`;
 
   const TABS: { key: Tab; label: string; count?: number }[] = [
     { key: "overview", label: "Overview" },
