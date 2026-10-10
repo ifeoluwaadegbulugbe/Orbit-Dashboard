@@ -342,7 +342,7 @@ function toText(c: EmailContent, f: EmailFooter): string {
       case "statement": out.push(plain(b.text).toUpperCase(), ""); break;
       case "text": b.paragraphs.forEach((p) => out.push(plain(p), "")); break;
       case "card": if (b.annotation) out.push(`(${b.annotation})`); out.push(...cardText(b.card), ""); break;
-      case "notifications": b.items.forEach((n) => out.push(`- ${n.title} · ${n.meta} · ${n.time}`)); out.push(""); break;
+      case "notifications": b.items.forEach((n) => out.push(`- ${[n.title, n.meta, n.time].filter(Boolean).join(" · ")}`)); out.push(""); break;
       case "beforeAfter": out.push(`Before: ${b.before.join(", ")}`, `With Orbit: ${b.after.join(", ")}`, ""); break;
       case "steps": out.push(b.title.toUpperCase(), ...b.items.map((it, i) => `${i + 1}. ${plain(it.title)}${it.body ? ` - ${plain(it.body)}` : ""}`), ""); break;
       case "checklist": out.push(b.title.toUpperCase(), ...b.items.map((it) => `${it.done ? "[x]" : "[ ]"} ${it.title}`), ""); break;

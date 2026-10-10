@@ -145,22 +145,26 @@ export function reengagementEmail(p: {
   waiting: { icon: "booking" | "payment" | "invoice" | "reminder" | "client"; title: string; meta: string; time: string }[];
   signoff: string;
   url: Url;
+  /** "nudge" after a week away, "last" (the default) after three weeks. */
+  variant?: "nudge" | "last";
 }): EmailContent {
+  const nudge = p.variant === "nudge";
+  const hey = p.firstName ? `Hey ${p.firstName}. ` : "";
+  const intro = nudge
+    ? `${hey}Haven't seen you in Orbit for a week${p.waiting.length ? ", and a few things have piled up" : ""}. Two minutes now saves a scramble later.`
+    : `${hey}${p.clientCount ? `You added **${p.clientCount} client${p.clientCount === 1 ? "" : "s"}**` : "You set up Orbit"} and then life got busy - we get it. It's been ${p.daysAway} days, and everything's exactly where you left it.`;
   return {
-    preheader: `${p.clientCount ? `${p.clientCount} clients` : "Your setup"}, right where you left ${p.clientCount ? "them" : "it"}.`,
-    eyebrow: "It's been a minute",
-    title: "Your business is still here",
+    preheader: nudge
+      ? (p.waiting.length ? p.waiting.map((w) => w.title).slice(0, 2).join(" · ") : "Everything's where you left it.")
+      : `${p.clientCount ? `${p.clientCount} clients` : "Your setup"}, right where you left ${p.clientCount ? "them" : "it"}.`,
+    eyebrow: nudge ? "Quick check-in" : "It's been a minute",
+    title: nudge ? "A few things are waiting" : "Your business is still here",
     blocks: [
-      { type: "statement", text: "Your business is *still here.*" },
-      {
-        type: "text",
-        paragraphs: [
-          `${p.firstName ? `Hey ${p.firstName}. ` : ""}${p.clientCount ? `You added **${p.clientCount} client${p.clientCount === 1 ? "" : "s"}**` : "You set up Orbit"} and then life got busy - we get it. It's been ${p.daysAway} days, and everything's exactly where you left it.`,
-        ],
-      },
+      { type: "statement", text: nudge ? "Your Orbit missed you *a little.*" : "Your business is *still here.*" },
+      { type: "text", paragraphs: [intro] },
       ...(p.waiting.length ? [{ type: "notifications" as const, items: p.waiting.slice(0, 4) }] : []),
-      { type: "cta", text: "Pick up where you left off", url: p.url("/home") },
-      { type: "signoff", lines: ["No pressure. Orbit will be here.", p.signoff] },
+      { type: "cta", text: nudge ? "See what's waiting" : "Pick up where you left off", url: p.url("/home") },
+      { type: "signoff", lines: [nudge ? "Back to it." : "No pressure. Orbit will be here - this is the last nudge from us.", p.signoff] },
     ],
   };
 }

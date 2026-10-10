@@ -1,5 +1,5 @@
 /**
- * Lifecycle campaigns (Phase 1: onboarding, activation, checkout recovery).
+ * Lifecycle campaigns: onboarding, activation, checkout recovery, win-back.
  *
  * Each campaign is a rule, not a timer: `eligible` is evaluated against what
  * the owner has ACTUALLY done every time the job runs, right before sending.
@@ -8,9 +8,9 @@
  * preferences/suppression/frequency caps, and sends at most one.
  */
 
-import { activation, ACTIVATION_STEPS, firstValueAchieved, type UserFacts } from "./activation";
+import { activation, ACTIVATION_STEPS, daysSince, firstValueAchieved, type UserFacts } from "./activation";
 import type { EmailContent } from "@/lib/email-design/render";
-import { welcomeEmail, activationClientEmail, bookingLinkEmail } from "@/lib/email-design/templates";
+import { welcomeEmail, activationClientEmail, bookingLinkEmail, reengagementEmail } from "@/lib/email-design/templates";
 
 /** Matches the email_preferences columns. */
 export type EmailCategory = "tips" | "product_updates" | "promotions";
@@ -28,6 +28,18 @@ export interface CampaignContext {
   sent: Map<string, number>;
   /** Builds an absolute app URL. */
   url: (path: string) => string;
+  /** Last sign of life (app open or anything created), else signup. */
+  inactiveSince: string;
+  daysInactive: number;
+  /** Real things waiting in their Orbit right now. */
+  waiting: WaitingItem[];
+}
+
+export interface WaitingItem {
+  icon: "booking" | "payment" | "invoice" | "reminder" | "client";
+  title: string;
+  meta: string;
+  time: string;
 }
 
 export interface Campaign {
@@ -259,4 +271,47 @@ export const CAMPAIGNS: Campaign[] = [
       ],
     }),
   },
+
+  // ── 9 & 10. Win-back - master template 5 (Re-engagement) ─────────────────
+  // One gentle nudge after a week away, one last one after three weeks, then
+  // silence. Both are keyed to this "spell" away (the day they were last
+  // seen), so someone who comes back and drifts off again months later can
+  // get them again - but never twice for the same absence.
+  {
+    id: "winback_7",
+    priority: 70,
+    category: "tips",
+    key: (u, ctx) => `winback_7:${u}:${ctx.inactiveSince.slice(0, 10)}`,
+    eligible: (ctx) => ctx.daysInactive >= 7 && ctx.daysInactive < 21 && hasStarted(ctx),
+    goal: (f) => (daysSince(f.lastActiveAt) ?? Infinity) < 2,
+    subject: (ctx) => ctx.waiting.length ? "A few things are waiting for you in Orbit" : "Quick check-in from Orbit",
+    content: (ctx) => reengagementEmail({ ...winbackParams(ctx), variant: "nudge" }),
+  },
+  {
+    id: "winback_21",
+    priority: 71,
+    category: "tips",
+    key: (u, ctx) => `winback_21:${u}:${ctx.inactiveSince.slice(0, 10)}`,
+    eligible: (ctx) => ctx.daysInactive >= 21 && hasStarted(ctx),
+    goal: (f) => (daysSince(f.lastActiveAt) ?? Infinity) < 2,
+    subject: () => "Your business is still here",
+    content: (ctx) => reengagementEmail({ ...winbackParams(ctx), variant: "last" }),
+  },
 ];
+
+/** Win-back is for people who actually used Orbit; brand-new sign-ups get the onboarding emails instead. */
+function hasStarted(ctx: CampaignContext): boolean {
+  const f = ctx.facts;
+  return f.clientCount + f.bookingCount + f.invoiceCount + f.serviceCount > 0;
+}
+
+function winbackParams(ctx: CampaignContext) {
+  return {
+    firstName: ctx.firstName,
+    clientCount: ctx.facts.clientCount,
+    daysAway: ctx.daysInactive,
+    waiting: ctx.waiting,
+    signoff: SIGNOFF,
+    url: ctx.url,
+  };
+}

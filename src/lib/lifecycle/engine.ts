@@ -25,7 +25,8 @@ import { computeSubscriptionState } from "@/lib/subscription/isPro";
 import {
   activation, firstValueAchieved, lifecycleStage, nextBestAction, daysSince, type UserFacts,
 } from "./activation";
-import { CAMPAIGNS, type Campaign, type CampaignContext } from "./campaigns";
+import { CAMPAIGNS, type Campaign, type CampaignContext, type WaitingItem } from "./campaigns";
+import { formatMoney } from "@/lib/countries";
 import { renderEmail } from "@/lib/email-design/render";
 
 /** Frequency caps for lifecycle/marketing email (transactional email is never counted). */
@@ -42,8 +43,11 @@ interface ProfileRow {
   id: string; email: string | null; full_name: string | null; business_name: string | null;
   subscription_status: string | null; trial_ends_at: string | null; created_at: string;
   last_active_at: string | null; booking_link: { slug?: string; services?: unknown[] } | null;
+  country_code?: string | null;
 }
-interface PaymentRow { user_id: string; status: string; date: string; created_at: string }
+interface PaymentRow { user_id: string; status: string; date: string; created_at: string; amount?: number | null }
+interface BookingRow { user_id: string; status?: string | null; date?: string | null }
+interface ClientRow { user_id: string; status?: string | null }
 interface PrefRow { user_id: string; tips: boolean; product_updates: boolean; promotions: boolean; unsubscribed_at: string | null }
 interface SentRow { id: string; user_id: string; campaign: string; idempotency_key: string; status: string; sent_at: string | null; converted_at: string | null; attempts: number; next_attempt_at: string | null }
 
@@ -68,10 +72,10 @@ export async function runLifecycle(supabase: SupabaseClient, now = new Date()): 
 
   // ── Bulk-load everything once (cheap at Orbit's size; move to SQL views when it grows)
   const [profilesQ, clientsQ, bookingsQ, paymentsQ, remindersQ, prefsQ, suppQ, sentQ, checkoutQ] = await Promise.all([
-    supabase.from("profiles").select("id, email, full_name, business_name, subscription_status, trial_ends_at, created_at, last_active_at, booking_link"),
-    supabase.from("clients").select("user_id, created_at"),
-    supabase.from("bookings").select("user_id, created_at"),
-    supabase.from("payments").select("user_id, status, date, created_at"),
+    supabase.from("profiles").select("id, email, full_name, business_name, subscription_status, trial_ends_at, created_at, last_active_at, booking_link, country_code"),
+    supabase.from("clients").select("user_id, created_at, status"),
+    supabase.from("bookings").select("user_id, created_at, status, date"),
+    supabase.from("payments").select("user_id, status, date, created_at, amount"),
     supabase.from("reminders").select("user_id"),
     supabase.from("email_preferences").select("user_id, tips, product_updates, promotions, unsubscribed_at"),
     supabase.from("email_suppressions").select("email"),
@@ -96,6 +100,13 @@ export async function runLifecycle(supabase: SupabaseClient, now = new Date()): 
     if (r.created_at && r.created_at > (lastRecordAt.get(r.user_id) ?? "")) lastRecordAt.set(r.user_id, r.created_at);
   }
   const bookings = countBy(bookingsQ.data as { user_id: string }[] | null);
+  const groupBy = <T extends { user_id: string }>(rows: T[] | null) => {
+    const m = new Map<string, T[]>();
+    for (const r of rows ?? []) m.set(r.user_id, [...(m.get(r.user_id) ?? []), r]);
+    return m;
+  };
+  const bookingRowsByUser = groupBy(bookingsQ.data as BookingRow[] | null);
+  const clientRowsByUser = groupBy(clientsQ.data as ClientRow[] | null);
   const reminders = countBy(remindersQ.data as { user_id: string }[] | null);
   const paymentsByUser = new Map<string, PaymentRow[]>();
   for (const p of (paymentsQ.data ?? []) as PaymentRow[]) {
@@ -164,6 +175,8 @@ export async function runLifecycle(supabase: SupabaseClient, now = new Date()): 
     const email = p.email?.trim().toLowerCase();
     if (!email) { skip("no_email"); continue; }
     if (suppressed.has(email)) { skip("suppressed"); continue; }
+    // Reserved test domains never deliver - sending only earns a bounce.
+    if (/@(example\.(com|org|net)|[^@]+\.(test|invalid|example|localhost))$/.test(email)) { skip("test_address"); continue; }
     const pref = prefs.get(p.id);
     if (pref?.unsubscribed_at) { skip("unsubscribed"); continue; }
 
@@ -187,6 +200,9 @@ export async function runLifecycle(supabase: SupabaseClient, now = new Date()): 
       lastCheckout: checkout ? { id: checkout.id, hoursAgo: (nowMs - new Date(checkout.created_at).getTime()) / 3_600_000 } : null,
       sent: daysSentAgo,
       url: (path) => `${base}${path}`,
+      inactiveSince: facts.lastActiveAt ?? p.created_at,
+      daysInactive: daysSince(facts.lastActiveAt ?? p.created_at, nowMs) ?? 0,
+      waiting: whatsWaiting(p, payments, bookingRowsByUser.get(p.id) ?? [], clientRowsByUser.get(p.id) ?? [], nowMs),
     };
 
     const byKey = new Map(history.map((r) => [r.idempotency_key, r]));
@@ -320,6 +336,39 @@ async function deliver(
     }).eq("id", rowId);
   }
   return { error };
+}
+
+/**
+ * Real things waiting in an owner's Orbit, for the come-back emails. Only
+ * true statements - an empty list means the email says nothing about it.
+ */
+function whatsWaiting(p: ProfileRow, payments: PaymentRow[], bookings: BookingRow[], clients: ClientRow[], nowMs: number): WaitingItem[] {
+  const items: WaitingItem[] = [];
+  const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
+  const today = new Date(nowMs).toISOString().slice(0, 10);
+  const weekOut = new Date(nowMs + 7 * DAY).toISOString().slice(0, 10);
+
+  const requests = bookings.filter((b) => b.status === "pending" && (b.date ?? "") >= today).length;
+  if (requests) items.push({ icon: "booking", title: `${plural(requests, "booking request")} waiting`, meta: "Clients asked to book you", time: "" });
+
+  const upcoming = bookings.filter((b) => b.status === "confirmed" && (b.date ?? "") >= today && (b.date ?? "") <= weekOut).length;
+  if (upcoming) items.push({ icon: "reminder", title: `${plural(upcoming, "appointment")} this week`, meta: "Already in your calendar", time: "" });
+
+  const unpaid = payments.filter((x) => ["pending", "overdue", "partial"].includes(x.status));
+  if (unpaid.length) {
+    const owed = unpaid.reduce((sum, x) => sum + (Number(x.amount) || 0), 0);
+    items.push({
+      icon: "invoice",
+      title: `${plural(unpaid.length, "unpaid invoice")}`,
+      meta: owed > 0 ? `${formatMoney(owed, p.country_code)} still owed to you` : "Still waiting to be paid",
+      time: "",
+    });
+  }
+
+  const followUps = clients.filter((c) => c.status === "follow_up").length;
+  if (followUps) items.push({ icon: "client", title: `${plural(followUps, "client")} due a follow-up`, meta: "A quick message keeps them coming back", time: "" });
+
+  return items;
 }
 
 /** Errors that mean the SENDER is misconfigured, not that this one email failed. */
