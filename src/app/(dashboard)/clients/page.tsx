@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { Search, Plus, TrendingUp, Lock, ChevronRight } from "lucide-react";
 import { useClients } from "@/hooks/useClients";
@@ -17,6 +17,7 @@ import {
 import { relativeDate } from "@/lib/utils";
 import { useCurrency } from "@/hooks/useCurrency";
 import type { ClientStatus } from "@/types";
+import { track } from "@/lib/analytics/browser";
 
 type Filter = "all" | ClientStatus;
 
@@ -48,6 +49,16 @@ export default function ClientsPage() {
   const { format: formatCurrency } = useCurrency();
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
+  // Searching at all is the signal - once per visit, after typing settles.
+  const searchTracked = useRef(false);
+  useEffect(() => {
+    if (searchTracked.current || search.trim().length < 2) return;
+    const t = setTimeout(() => {
+      searchTracked.current = true;
+      track("client_search_used", { props: { client_count: clients.length } });
+    }, 1200);
+    return () => clearTimeout(t);
+  }, [search, clients.length]);
   const [paywallOpen, setPaywallOpen] = useState(false);
 
   const count = clients.length;

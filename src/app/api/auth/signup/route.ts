@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
+import { track } from "@/lib/analytics/server";
 
 /**
  * POST /api/auth/signup
@@ -116,6 +117,8 @@ export async function POST(request: Request) {
     // belt-and-braces. Log so we can investigate in production logs.
     console.warn("[signup] profile upsert failed:", profileErr.message);
   }
+
+  await track(userId, "signup_completed", { dedupeKey: `signup_completed:${userId}:${userId}` });
 
   return NextResponse.json({
     ok: true,

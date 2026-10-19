@@ -8,6 +8,8 @@ import { createClient } from "@/lib/supabase/client";
 import { useAuthStore } from "@/stores/authStore";
 import { useCurrencyStore } from "@/stores/currencyStore";
 import type { UserProfile } from "@/types";
+import { initAnalytics, identifyUser, resetAnalytics } from "@/lib/analytics/browser";
+import { computeSubscriptionState } from "@/lib/subscription/isPro";
 
 /**
  * Offline support: the query cache (clients, bookings, invoices...) is saved
@@ -86,7 +88,15 @@ export function Providers({ children }: { children: ReactNode }) {
   const { setUser, setProfile, setLoading, reset } = useAuthStore();
   const hydrateCurrency = useCurrencyStore((s) => s.hydrateFromCode);
 
+  /** Product analytics identity - one per account, never per render. */
+  function identify(p: UserProfile | null) {
+    if (!p) return;
+    const s = computeSubscriptionState(p, false);
+    identifyUser({ id: p.id, createdAt: p.created_at, tier: s.isPro ? (s.isOnTrial ? "trial" : "pro") : "free" });
+  }
+
   useEffect(() => {
+    initAnalytics();
     const supabase = createClient();
     // Guards against a stale async result winning a race against a newer
     // one - e.g. React Strict Mode double-invoking this effect in dev (each
@@ -107,7 +117,7 @@ export function Providers({ children }: { children: ReactNode }) {
         if (user) {
           claimCacheFor(user.id);
           pingActivity(user.id);
-          loadProfile(user.id).then((p) => { if (!cancelled) setProfile(p); });
+          loadProfile(user.id).then((p) => { if (!cancelled) { setProfile(p); identify(p); } });
         }
       })
       .catch((err) => {
@@ -128,9 +138,10 @@ export function Providers({ children }: { children: ReactNode }) {
         queryClient.clear();
         clearPersistedCache();
         navigator.serviceWorker?.controller?.postMessage("orbit:clear-cache");
+        resetAnalytics();
       } else if (u) {
         claimCacheFor(u.id);
-        loadProfile(u.id).then((p) => { if (!cancelled) setProfile(p); });
+        loadProfile(u.id).then((p) => { if (!cancelled) { setProfile(p); identify(p); } });
       }
     });
 

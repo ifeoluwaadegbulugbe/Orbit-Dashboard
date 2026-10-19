@@ -202,7 +202,8 @@ export function downloadPdf(bytes: Uint8Array, filename: string) {
 }
 
 /** Opens the phone's share sheet with the PDF attached. Returns false if unsupported. */
-export async function sharePdf(bytes: Uint8Array, filename: string, text: string): Promise<boolean> {
+/** true = shared, "cancelled" = they closed the share sheet, false = sharing unsupported. */
+export async function sharePdf(bytes: Uint8Array, filename: string, text: string): Promise<boolean | "cancelled"> {
   const file = new File([bytes as BlobPart], filename, { type: "application/pdf" });
   if (typeof navigator === "undefined" || !navigator.canShare?.({ files: [file] })) return false;
   try {
@@ -210,6 +211,7 @@ export async function sharePdf(bytes: Uint8Array, filename: string, text: string
   } catch (err) {
     // User closing the share sheet isn't an error.
     if ((err as Error)?.name !== "AbortError") throw err;
+    return "cancelled";
   }
   return true;
 }

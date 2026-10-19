@@ -5,6 +5,7 @@ import { notify } from "@/lib/notifications/server";
 import { getEffectiveRule, fillTemplate, type MessageRuleRow } from "@/lib/automations/rules";
 import { isProServer } from "@/lib/subscription/isPro";
 import { formatMoney } from "@/lib/countries";
+import { track } from "@/lib/analytics/server";
 
 /**
  * Automatically chases unpaid invoices - a real send path for the
@@ -143,6 +144,11 @@ export async function GET(request: Request) {
       if (result.ok) {
         emailSent = true;
         sent++;
+        await track(payment.user_id, "reminder_sent", {
+          actor: "system",
+          dedupeKey: `reminder_sent:${payment.id}:stage${nextStage}:${payment.user_id}`,
+          props: { kind: "payment", stage: nextStage },
+        });
       } else if (!result.skipped) {
         errors.push(`${payment.id}: ${result.error}`);
       }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   TrendingUp, TrendingDown, Minus, Lock, Sparkles, AlertTriangle, CheckCircle2, Info,
@@ -15,6 +15,7 @@ import { usePayments } from "@/hooks/usePayments";
 import { useBookings } from "@/hooks/useBookings";
 import { useCurrency } from "@/hooks/useCurrency";
 import { formatWithSymbol } from "@/lib/countries";
+import { trackOncePerSession } from "@/lib/analytics/browser";
 import { useSubscription } from "@/hooks/useSubscription";
 import { cn } from "@/lib/utils";
 import {
@@ -36,6 +37,7 @@ export default function AnalyticsPage() {
   const { data: payments = [], isLoading: pl } = usePayments();
   const { data: bookings = [], isLoading: bl } = useBookings();
   const { format, symbol, country } = useCurrency();
+  useEffect(() => trackOncePerSession("analytics_viewed", "insights"), []);
   const loading = cl || pl || bl;
 
   const p = PERIODS.find((x) => x.key === period)!;

@@ -19,6 +19,7 @@ import { useCurrency } from "@/hooks/useCurrency";
 import { InvoicePdfActions } from "@/components/invoices/InvoicePdfActions";
 import type { PaymentStatus } from "@/types";
 import { toWhatsAppDigits } from "@/lib/phone";
+import { track } from "@/lib/analytics/browser";
 
 const TONE: Record<PaymentStatus, "success" | "warning" | "danger" | "info" | "neutral"> = {
   paid: "success", pending: "warning", overdue: "danger",
@@ -104,6 +105,7 @@ export default function PaymentDetailPage({ params }: { params: Promise<{ id: st
 
   async function handleCopy(url: string) {
     await navigator.clipboard.writeText(url);
+    if (payment) track("invoice_sent", { dedupeKey: `invoice_sent:${payment.id}:copy`, props: { method: "copy_link", confirmed: true } });
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
   }
@@ -243,6 +245,8 @@ export default function PaymentDetailPage({ params }: { params: Promise<{ id: st
                       href={whatsappPayUrl}
                       target="_blank"
                       rel="noopener noreferrer"
+                      // Hands off to WhatsApp - Orbit can't see if they pressed Send there.
+                      onClick={() => track("invoice_sent", { dedupeKey: `invoice_sent:${payment.id}:whatsapp`, props: { method: "whatsapp", confirmed: false } })}
                       className="inline-flex items-center justify-center gap-2 px-4 py-3 rounded-full bg-[var(--color-success-light)] text-[var(--color-success-deep)] text-small font-semibold hover:opacity-90 transition-opacity"
                     >
                       <MessageCircle className="h-4 w-4" /> Send via WhatsApp

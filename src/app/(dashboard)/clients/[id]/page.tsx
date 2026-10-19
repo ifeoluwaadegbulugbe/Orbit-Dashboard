@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useState } from "react";
+import { use, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -21,6 +21,7 @@ import { formatShortDate, relativeDate } from "@/lib/utils";
 import { useCurrency } from "@/hooks/useCurrency";
 import type { ClientStatus, PaymentStatus } from "@/types";
 import { toWhatsAppDigits } from "@/lib/phone";
+import { trackOncePerSession } from "@/lib/analytics/browser";
 
 const STATUS_TONE: Record<ClientStatus, "success" | "warning" | "danger" | "neutral"> = {
   active: "success",
@@ -46,6 +47,9 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
   const deleteClient = useDeleteClient();
   const { format: formatCurrency, country } = useCurrency();
   const [tab, setTab] = useState<Tab>("overview");
+  useEffect(() => {
+    if (client?.id) trackOncePerSession("client_viewed", client.id);
+  }, [client?.id]);
   const profile = useAuthStore((s) => s.profile);
   const businessName = profile?.business_name || profile?.full_name || "us";
   const todayIso = new Date().toISOString().slice(0, 10);

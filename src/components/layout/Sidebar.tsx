@@ -4,10 +4,12 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Home, Users, Briefcase, Wallet2, LineChart, Settings, Sparkles,
-  Zap, MessageSquare, Bell, Download, BookOpen, CalendarDays,
+  Zap, MessageSquare, Bell, Download, BookOpen, CalendarDays, ShieldCheck,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useAuthStore } from "@/stores/authStore";
+import { ADMIN_EMAILS } from "@/lib/subscription/isPro";
 import { useSubscription } from "@/hooks/useSubscription";
 import { Badge } from "@/components/ui/Badge";
 
@@ -40,6 +42,9 @@ const FEATURE_NAV: NavItem[] = [
 export function Sidebar() {
   const pathname = usePathname();
   const { isPro, isOnTrial, trialDaysLeft } = useSubscription();
+  // Display only - the page itself checks admin access on the server.
+  const email = useAuthStore((s) => s.user?.email?.toLowerCase());
+  const showAdmin = !!email && ADMIN_EMAILS.includes(email);
 
   return (
     <aside className="hidden lg:flex flex-col w-64 h-screen sticky top-0 border-r border-[var(--color-border)] bg-white">
@@ -76,6 +81,7 @@ export function Sidebar() {
         <div className="mt-6 pt-5 border-t border-[var(--color-border)]/60">
           <div className="space-y-1.5">
             <NavLink item={{ href: "/profile", label: "Settings", icon: Settings }} pathname={pathname} />
+            {showAdmin && <NavLink item={{ href: "/admin/analytics", label: "Product analytics", icon: ShieldCheck }} pathname={pathname} />}
           </div>
         </div>
       </nav>

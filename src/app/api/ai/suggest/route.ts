@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { completeChat } from "@/lib/ai/complete";
 import { getEffectiveRule, type MessageRuleRow, type TriggerType } from "@/lib/automations/rules";
+import { track } from "@/lib/analytics/server";
 
 /**
  * Stateless AI suggestions embedded on Home/Clients/Money - a single
@@ -101,6 +102,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Missing required context for this suggestion" }, { status: 400 });
   }
 
-  const { reply } = await completeChat([{ role: "user", content: prompt }], SYSTEM_PROMPT);
+  const { reply, simulated } = await completeChat([{ role: "user", content: prompt }], SYSTEM_PROMPT);
+  if (!simulated) await track(user.id, "ai_assistant_used", { props: { operation: body.kind } });
   return NextResponse.json({ suggestion: reply });
 }

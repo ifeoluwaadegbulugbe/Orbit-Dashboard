@@ -7,6 +7,7 @@ import { useAuthStore } from "@/stores/authStore";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "@/stores/toastStore";
 import { appUrl } from "@/lib/app-url";
+import { track } from "@/lib/analytics/browser";
 
 /**
  * Compact "your public booking link" card with copy / share / open.
@@ -42,6 +43,7 @@ export function BookingLinkCard() {
     if (!url) return;
     try {
       await navigator.clipboard.writeText(url);
+      track("booking_link_shared", { props: { method: "copy", place: "card" } });
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
     } catch {
@@ -55,12 +57,14 @@ export function BookingLinkCard() {
     if (navigator.share) {
       try {
         await navigator.share({ title: "Book an appointment", text, url });
+        track("booking_link_shared", { props: { method: "share_sheet", place: "card" } });
         return;
       } catch (err) {
         if ((err as Error)?.name === "AbortError") return;
       }
     }
     window.open(`https://wa.me/?text=${encodeURIComponent(`${text} ${url}`)}`, "_blank", "noopener,noreferrer");
+    track("booking_link_shared", { props: { method: "whatsapp", place: "card" } });
   }
 
   if (slug === undefined) return <div className="h-[76px] rounded-[var(--radius-2xl)] skeleton" />;

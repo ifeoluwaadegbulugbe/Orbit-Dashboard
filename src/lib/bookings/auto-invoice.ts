@@ -1,6 +1,7 @@
 import "server-only";
 import type { createServiceClient } from "@/lib/supabase/server";
 import { computeServiceAmount } from "@/lib/services/price";
+import { track } from "@/lib/analytics/server";
 
 type ServiceClient = ReturnType<typeof createServiceClient>;
 
@@ -53,7 +54,7 @@ export async function maybeCreateInvoiceForBooking(
 
   const invoiceNumber = `INV-${Date.now().toString().slice(-6)}`;
 
-  const { error } = await supabase.from("payments").insert({
+  const { data: inserted, error } = await supabase.from("payments").insert({
     user_id: booking.user_id,
     client_id: booking.client_id,
     client_name: booking.client_name,
@@ -72,10 +73,16 @@ export async function maybeCreateInvoiceForBooking(
     webhook_verified: null,
     payment_completed_at: null,
     booking_id: booking.id,
-  });
+  }).select("id").single();
   if (error) {
     console.error("[auto-invoice] insert failed:", error);
     return { created: false };
+  }
+  if (inserted?.id) {
+    // Created by Orbit on the owner's confirm - recorded, but not counted twice as their activity.
+    await track(booking.user_id, "invoice_created", {
+      actor: "system", dedupeKey: `invoice_created:${inserted.id}:${booking.user_id}`, props: { source: "auto_from_booking" },
+    });
   }
 
   return { created: true, invoiceNumber, amount };

@@ -7,6 +7,7 @@ import { useForm } from "react-hook-form";
 import { Mail, Lock, Eye, EyeOff, CheckCircle2, ArrowLeft, RefreshCw } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/Button";
+import { track } from "@/lib/analytics/browser";
 
 /* ─── Shared input style ──────────────────────────────────────────────────────
    Height, radius, border, focus ring — all use the app's design tokens.       */
@@ -83,6 +84,7 @@ function LoginInner() {
         email: values.email, password: values.password,
       });
       if (error) { setError(friendly(error.message)); return; }
+      track("login_completed");
       router.replace("/home");
       router.refresh();
     } catch (e) { setError(friendly(e instanceof Error ? e.message : String(e))); }

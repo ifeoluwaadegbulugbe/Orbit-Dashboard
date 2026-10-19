@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { completeChat } from "@/lib/ai/complete";
 import type { AiMessage } from "@/types";
+import { track } from "@/lib/analytics/server";
 
 /**
  * AI Assistant - persistent, freeform chat backed by a free LLM provider.
@@ -90,6 +91,9 @@ export async function POST(request: Request) {
   } catch (err) {
     console.warn("[ai/chat] persistence error:", err);
   }
+
+  // That the assistant was used - never the prompt or the reply.
+  if (!simulated) await track(user.id, "ai_assistant_used", { props: { operation: "chat" } });
 
   return NextResponse.json({
     reply,

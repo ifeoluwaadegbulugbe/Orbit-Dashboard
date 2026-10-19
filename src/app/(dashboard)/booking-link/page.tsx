@@ -15,6 +15,7 @@ import {
   DEFAULT_BOOKING_CONFIG as DEFAULTS, type BookingConfig, type BookingService as Service,
 } from "@/lib/booking-profile";
 import { appUrl } from "@/lib/app-url";
+import { track } from "@/lib/analytics/browser";
 
 const BOOKING_STORAGE_KEY = "orbit_booking_link_v1";
 
@@ -141,6 +142,8 @@ function BookingLinkInner() {
           toast(error.message, "danger");
         }
       } else {
+        if (savedSlug) track("booking_link_updated", { dedupeKey: `booking_link_updated:${new Date().toISOString().slice(0, 16)}` });
+        else track("booking_link_created", { dedupeKey: `booking_link_created:${userId}` });
         setSavedSlug(config.slug);
         toast("Booking link saved", "success");
       }
@@ -165,6 +168,7 @@ function BookingLinkInner() {
   async function handleCopy() {
     if (!url) return;
     await navigator.clipboard.writeText(url);
+    track("booking_link_shared", { props: { method: "copy", place: "booking_link_page" } });
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
   }

@@ -24,6 +24,7 @@ import {
   type Service,
   type UserProfile,
 } from "@/types";
+import { track } from "@/lib/analytics/browser";
 
 type Step = "business_type" | "services" | "currency" | "client" | "booking" | "success";
 
@@ -78,7 +79,13 @@ export default function WelcomePage() {
 
   // ── Helpers ────────────────────────────────────────────────────────────
 
+  // Once per account, whichever device they start on.
+  useEffect(() => {
+    if (user?.id) track("onboarding_started", { dedupeKey: `onboarding_started:${user.id}` });
+  }, [user?.id]);
+
   function next() {
+    if (user?.id) track("onboarding_step_completed", { dedupeKey: `onboarding_step:${step}:${user.id}`, props: { step } });
     const i = STEP_ORDER.indexOf(step);
     if (i < STEP_ORDER.length - 1) setStep(STEP_ORDER[i + 1]);
   }
@@ -274,6 +281,7 @@ export default function WelcomePage() {
   function finishWizard() {
     if (user?.id) {
       localStorage.setItem(`${WIZARD_DONE_KEY}_${user.id}`, "true");
+      track("onboarding_completed", { dedupeKey: `onboarding_completed:${user.id}` });
     }
     router.replace("/home");
   }

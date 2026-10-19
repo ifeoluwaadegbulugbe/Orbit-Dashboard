@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { track } from "@/lib/analytics/server";
 
 type Kind = "clients" | "payments" | "bookings" | "reminders";
 
@@ -29,6 +30,7 @@ export async function GET(
   }
 
   const csv = toCsv(data ?? []);
+  await track(user.id, "data_exported", { props: { kind, rows: data?.length ?? 0 } });
   const filename = `orbit-${kind}-${new Date().toISOString().slice(0, 10)}.csv`;
 
   return new NextResponse(csv, {

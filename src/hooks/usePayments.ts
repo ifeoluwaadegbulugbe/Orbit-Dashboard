@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
 import { useAuthStore } from "@/stores/authStore";
 import type { Payment } from "@/types";
+import { track } from "@/lib/analytics/browser";
 
 const KEY = "payments";
 
@@ -75,7 +76,10 @@ export function useCreatePayment() {
       if (error) throw new Error(error.message);
       return data as Payment;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: [KEY] }),
+    onSuccess: (payment) => {
+      qc.invalidateQueries({ queryKey: [KEY] });
+      track("invoice_created", { dedupeKey: `invoice_created:${payment.id}`, props: { invoice_type: payment.type ?? null } });
+    },
   });
 }
 
@@ -94,7 +98,10 @@ export function useUpdatePayment() {
       if (error) throw new Error(error.message);
       return data as Payment;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: [KEY] }),
+    onSuccess: (payment, { patch }) => {
+      qc.invalidateQueries({ queryKey: [KEY] });
+      if (patch.status === "paid") track("invoice_marked_paid", { dedupeKey: `invoice_marked_paid:${payment.id}` });
+    },
   });
 }
 

@@ -3,6 +3,7 @@ import { createServiceClient } from "@/lib/supabase/server";
 import { notify } from "@/lib/notifications/server";
 import { sendEmail } from "@/lib/email/server";
 import { buildOwnerNewBookingEmail } from "@/lib/email/booking-templates";
+import { track } from "@/lib/analytics/server";
 
 /**
  * Public booking submission. Accepts an unauthenticated POST from /book/<slug>
@@ -118,6 +119,7 @@ export async function POST(request: Request) {
   // Match on email first, then phone. If neither matches an existing client,
   // create a new one so the business owner sees the booking attached to a person.
   let clientId: string | null = null;
+  let createdClient = false;
   const customerName = customer.name.trim();
   const customerEmail = customer.email?.trim() || null;
   const customerPhone = customer.phone?.trim() || null;
@@ -167,6 +169,10 @@ export async function POST(request: Request) {
       );
     }
     clientId = (data?.id as string) ?? null;
+    createdClient = !!clientId;
+    if (clientId) {
+      await track(profile.id, "client_created", { actor: "customer", dedupeKey: `client_created:${clientId}:${profile.id}`, props: { source: "booking_page" } });
+    }
   }
 
   if (!clientId) {
@@ -183,7 +189,7 @@ export async function POST(request: Request) {
     .filter(Boolean)
     .join("\n");
 
-  const { error: bookingErr } = await supabase.from("bookings").insert({
+  const { data: bookingRow, error: bookingErr } = await supabase.from("bookings").insert({
     user_id: profile.id,
     client_id: clientId,
     client_name: customerName,
@@ -194,11 +200,20 @@ export async function POST(request: Request) {
     notes: combinedNotes,
     business_type: profile.business_type,
     duration_minutes: totalDurationMinutes > 0 ? totalDurationMinutes : null,
-  });
+  }).select("id").single();
 
   if (bookingErr) {
     console.error("[public-booking] booking insert failed:", bookingErr.message);
     return NextResponse.json({ error: bookingErr.message }, { status: 500 });
+  }
+
+  // The customer did this, not the owner - recorded, but not owner activity.
+  if (bookingRow?.id) {
+    await track(profile.id, "booking_created", {
+      actor: "customer",
+      dedupeKey: `booking_created:${bookingRow.id}:${profile.id}`,
+      props: { actor_type: "customer", services: serviceNames.length, new_client: createdClient },
+    });
   }
 
   // ── Email the owner about the new booking request ─────────────────────

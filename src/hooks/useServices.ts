@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
 import { useAuthStore } from "@/stores/authStore";
 import type { Service } from "@/types";
+import { track } from "@/lib/analytics/browser";
 
 /**
  * Services live in profiles.booking_link.services (jsonb). Same source the
@@ -71,15 +72,20 @@ export function useUpdateServices() {
       const existing = (row?.booking_link as BookingLinkConfig | null) ?? {};
 
       const merged: BookingLinkConfig = { ...existing, services };
+      const before = new Set((existing.services ?? []).map((s) => s.name.trim().toLowerCase()));
+      const added = services.filter((s) => s.name.trim() && !before.has(s.name.trim().toLowerCase()));
 
       const { error } = await supabase
         .from("profiles")
         .update({ booking_link: merged })
         .eq("id", userId);
       if (error) throw new Error(error.message);
-      return services;
+      return { services, added: added.length };
     },
-    onSuccess: () => {
+    onSuccess: ({ services, added }) => {
+      const minute = new Date().toISOString().slice(0, 16);
+      if (added > 0) track("service_created", { dedupeKey: `service_created:${minute}`, props: { added, total: services.length } });
+      else track("service_updated", { dedupeKey: `service_updated:${minute}`, props: { total: services.length } });
       qc.invalidateQueries({ queryKey: [KEY] });
       // Booking-link page also reads booking_link; keep both fresh.
       qc.invalidateQueries({ queryKey: ["booking_link"] });

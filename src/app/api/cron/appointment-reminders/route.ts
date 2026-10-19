@@ -5,6 +5,7 @@ import { notify } from "@/lib/notifications/server";
 import { zonedTimeToUtcMs, DEFAULT_TIMEZONE } from "@/lib/time/zonedTime";
 import { getEffectiveRule, type MessageRuleRow } from "@/lib/automations/rules";
 import { sendDueReviewRequests } from "@/lib/automations/review-requests";
+import { track } from "@/lib/analytics/server";
 
 /**
  * Sends appointment-reminder emails 60 / 30 / 5 minutes before each upcoming
@@ -148,8 +149,14 @@ export async function GET(request: Request) {
         html: renderClientReminderHtml({ businessName, booking, minutesUntil }),
         text: renderClientReminderText({ businessName, booking, minutesUntil }),
       });
-      if (result.ok) sent++;
-      else if (!result.skipped) errors.push(`client ${booking.id}: ${result.error}`);
+      if (result.ok) {
+        sent++;
+        await track(booking.user_id, "reminder_sent", {
+          actor: "system",
+          dedupeKey: `reminder_sent:${booking.id}:${minutesUntil}:${booking.user_id}`,
+          props: { kind: "appointment", minutes_before: minutesUntil },
+        });
+      } else if (!result.skipped) errors.push(`client ${booking.id}: ${result.error}`);
     }
 
     // Remind the OWNER - their own heads-up.

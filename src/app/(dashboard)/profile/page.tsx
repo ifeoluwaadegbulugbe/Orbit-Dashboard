@@ -22,6 +22,7 @@ import { PRO_PRICE_DISPLAY, PRO_PRICE_PERIOD } from "@/lib/constants";
 import { type Country } from "@/lib/countries";
 import { CountryList } from "@/components/ui/CountryList";
 import { EmailPreferences } from "@/components/settings/EmailPreferences";
+import { track } from "@/lib/analytics/browser";
 
 export default function ProfilePage() {
   return (
@@ -88,6 +89,8 @@ function ProfileInner() {
     }
     // Optimistic update
     setProfile(profile ? { ...profile, ...patch } : profile);
+    // Which fields changed - never their values.
+    track("profile_updated", { dedupeKey: `profile_updated:${Object.keys(patch).sort().join(",")}:${new Date().toISOString().slice(0, 16)}`, props: { fields: Object.keys(patch).sort().join(",") } });
     return true;
   }
 

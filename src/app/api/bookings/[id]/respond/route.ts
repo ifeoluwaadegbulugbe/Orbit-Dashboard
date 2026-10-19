@@ -14,6 +14,7 @@ import {
   buildWhatsAppUrl,
 } from "@/lib/email/booking-templates";
 import { dialCodeFor } from "@/lib/countries";
+import { track } from "@/lib/analytics/server";
 
 /**
  * Owner-side endpoint that the BookingActions buttons call when the business
@@ -132,6 +133,9 @@ export async function POST(
   // does nothing if the title doesn't resolve to a priced service.
   const autoInvoice =
     action === "confirmed" ? await maybeCreateInvoiceForBooking(supabase, booking) : { created: false as const };
+
+  const event = action === "confirmed" ? "booking_confirmed" : "booking_cancelled";
+  await track(userId, event, { dedupeKey: `${event}:${id}:${userId}`, props: { auto_invoice: autoInvoice.created } });
 
   // ── Look up client contact info + owner's business name ────────────────
   const [{ data: clientRow }, { data: profileRow }] = await Promise.all([

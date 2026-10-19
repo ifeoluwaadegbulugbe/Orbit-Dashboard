@@ -15,11 +15,14 @@ const INVOICED = "#F5C2D2";
 // ─── Collected vs invoiced, per month ───────────────────────────────────────
 
 export function TrendChart({
-  data, format, compact,
+  data, format, compact, labels = { collected: "Collected", invoiced: "Invoiced" },
 }: {
-  data: { label: string; collected: number; invoiced: number }[];
+  /** `short`, when given, is the axis label (use "" to leave a gap); `label` stays in the readout. */
+  data: { label: string; collected: number; invoiced: number; short?: string }[];
   format: (n: number) => string;
   compact: (n: number) => string;
+  /** Legend names for the two series (Insights uses money; admin analytics reuses it for counts). */
+  labels?: { collected: string; invoiced: string };
 }) {
   const [sel, setSel] = useState<number | null>(null);
   const max = Math.max(1, ...data.map((d) => Math.max(d.collected, d.invoiced)));
@@ -32,8 +35,8 @@ export function TrendChart({
       {/* Readout for the selected (or latest) month */}
       <div className="flex flex-wrap items-baseline gap-x-5 gap-y-1 mb-4 min-h-[44px]">
         <span className="text-small font-semibold text-[var(--color-ink)] w-full sm:w-auto">{point?.label}</span>
-        <Legend color={COLLECTED} label="Collected" value={point ? format(point.collected) : "-"} />
-        <Legend color={INVOICED} label="Invoiced" value={point ? format(point.invoiced) : "-"} />
+        <Legend color={COLLECTED} label={labels.collected} value={point ? format(point.collected) : "-"} />
+        <Legend color={INVOICED} label={labels.invoiced} value={point ? format(point.invoiced) : "-"} />
       </div>
 
       <div className="flex gap-2">
@@ -53,7 +56,7 @@ export function TrendChart({
                 type="button"
                 onClick={() => setSel(i)}
                 onMouseEnter={() => setSel(i)}
-                aria-label={`${d.label}: collected ${format(d.collected)}, invoiced ${format(d.invoiced)}`}
+                aria-label={`${d.label}: ${labels.collected} ${format(d.collected)}, ${labels.invoiced} ${format(d.invoiced)}`}
                 className={cn(
                   "flex-1 h-full flex items-end justify-center gap-[2px] rounded-md transition-colors",
                   i === active ? "bg-[var(--color-primary-subtle)]/60" : "hover:bg-[var(--color-canvas)]",
@@ -73,10 +76,10 @@ export function TrendChart({
                   i === active ? "text-[var(--color-ink)] font-semibold" : "text-[var(--color-muted)]",
                   // Phones: with 12 months there's only room to label every 3rd one
                   // (plus the selected month); never cut a label to "D...".
-                  data.length > 6 && i % 3 !== (data.length - 1) % 3 && i !== active && "invisible sm:visible",
+                  d.short === undefined && data.length > 6 && i % 3 !== (data.length - 1) % 3 && i !== active && "invisible sm:visible",
                 )}
               >
-                {d.label}
+                {d.short ?? d.label}
               </span>
             ))}
           </div>
@@ -99,11 +102,12 @@ function Legend({ color, label, value }: { color: string; label: string; value: 
 // ─── Simple column chart (weekdays, hours) ──────────────────────────────────
 
 export function ColumnChart({
-  data, highlightMax = true, unit = "booking",
+  data, highlightMax = true, unit = "booking", emptyText = "No bookings in this period",
 }: {
   data: { label: string; value: number; short?: string }[];
   highlightMax?: boolean;
   unit?: string;
+  emptyText?: string;
 }) {
   const [sel, setSel] = useState<number | null>(null);
   const max = Math.max(1, ...data.map((d) => d.value));
@@ -120,7 +124,7 @@ export function ColumnChart({
             <span className="tabular-nums">{data[shown].value}</span> {unit}{data[shown].value === 1 ? "" : "s"}
           </>
         ) : (
-          "No bookings in this period"
+          emptyText
         )}
       </div>
       <div className="h-32 flex items-end gap-1">
@@ -147,7 +151,11 @@ export function ColumnChart({
       </div>
       <div className="flex gap-1 mt-1.5">
         {data.map((d) => (
-          <span key={d.label} className="flex-1 text-center text-[10px] text-[var(--color-muted)] truncate">
+          <span key={d.label} className={cn(
+            "flex-1 min-w-0 text-center text-[10px] text-[var(--color-muted)]",
+            // Sparse short labels (some "") may spill into their empty neighbours.
+            d.short !== undefined ? "whitespace-nowrap overflow-visible" : "truncate",
+          )}>
             {d.short ?? d.label}
           </span>
         ))}

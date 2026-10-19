@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { initializeInvoiceCharge } from "@/lib/paystack/server";
 import { appUrl } from "@/lib/app-url";
 import { DEFAULT_COUNTRY, findCountryByCode } from "@/lib/countries";
+import { track } from "@/lib/analytics/server";
 
 /**
  * Generate a payment link for an invoice, collected into Orbit's OWN
@@ -92,6 +93,8 @@ export async function POST(
     if (updateErr) {
       console.error("[orbit] failed to write payment_link:", updateErr);
     }
+
+    await track(user.id, "payment_link_created", { dedupeKey: `payment_link_created:${payment.id}:${user.id}` });
 
     return NextResponse.json({
       payment_link: result.data.authorization_url,

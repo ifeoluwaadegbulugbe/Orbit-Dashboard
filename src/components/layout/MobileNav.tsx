@@ -5,10 +5,12 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   X, Home, Users, Briefcase, Wallet2, LineChart, Settings, Sparkles,
-  Zap, MessageSquare, Bell, Download, BookOpen, CalendarDays,
+  Zap, MessageSquare, Bell, Download, BookOpen, CalendarDays, ShieldCheck,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useAuthStore } from "@/stores/authStore";
+import { ADMIN_EMAILS } from "@/lib/subscription/isPro";
 
 interface NavItem {
   href: string;
@@ -36,6 +38,9 @@ const FEATURE_NAV: NavItem[] = [
 
 export function MobileNav({ open, onClose }: { open: boolean; onClose: () => void }) {
   const pathname = usePathname();
+  // Display only - the page itself checks admin access on the server.
+  const email = useAuthStore((s) => s.user?.email?.toLowerCase());
+  const showAdmin = !!email && ADMIN_EMAILS.includes(email);
 
   useEffect(() => {
     document.body.style.overflow = open ? "hidden" : "";
@@ -83,6 +88,9 @@ export function MobileNav({ open, onClose }: { open: boolean; onClose: () => voi
                 pathname={pathname}
                 onClose={onClose}
               />
+              {showAdmin && (
+                <Row item={{ href: "/admin/analytics", label: "Product analytics", icon: ShieldCheck }} pathname={pathname} onClose={onClose} />
+              )}
             </div>
           </div>
         </nav>

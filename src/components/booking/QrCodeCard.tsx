@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Download, QrCode } from "lucide-react";
+import { track } from "@/lib/analytics/browser";
 
 /**
  * QR code for the booking link - for the shop wall, business cards and
@@ -43,6 +44,7 @@ export function QrCodeCard({ url, businessName }: { url: string; businessName: s
     a.href = out.toDataURL("image/png");
     a.download = `booking-qr-${businessName.replace(/[^\p{L}\p{N}]+/gu, "-").toLowerCase()}.png`;
     a.click();
+    track("booking_link_shared", { props: { method: "qr_download" } });
   }
 
   return (

@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
 import { useAuthStore } from "@/stores/authStore";
 import type { Booking } from "@/types";
+import { track } from "@/lib/analytics/browser";
 
 const KEY = "bookings";
 
@@ -78,9 +79,11 @@ export function useUpdateBookingStatus() {
       if (error) throw new Error(error.message);
       return id;
     },
-    onSuccess: (id) => {
+    onSuccess: (id, { status }) => {
       qc.invalidateQueries({ queryKey: [KEY] });
       syncToGoogleCalendar(id);
+      const event = status === "cancelled" ? "booking_cancelled" : status === "completed" ? "booking_completed" : null;
+      if (event) track(event, { dedupeKey: `${event}:${id}` });
     },
   });
 }
@@ -106,6 +109,7 @@ export function useCreateBooking() {
     onSuccess: (booking) => {
       qc.invalidateQueries({ queryKey: [KEY] });
       syncToGoogleCalendar(booking.id);
+      track("booking_created", { dedupeKey: `booking_created:${booking.id}`, props: { actor_type: "owner", status: booking.status } });
     },
   });
 }

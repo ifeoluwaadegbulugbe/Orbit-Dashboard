@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
 import { useAuthStore } from "@/stores/authStore";
 import type { Client } from "@/types";
+import { track } from "@/lib/analytics/browser";
 
 const KEY = "clients";
 
@@ -65,7 +66,10 @@ export function useCreateClient() {
       if (error) throw new Error(error.message);
       return data as Client;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: [KEY] }),
+    onSuccess: (client) => {
+      qc.invalidateQueries({ queryKey: [KEY] });
+      track("client_created", { dedupeKey: `client_created:${client.id}` });
+    },
   });
 }
 
@@ -84,7 +88,11 @@ export function useUpdateClient() {
       if (error) throw new Error(error.message);
       return data as Client;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: [KEY] }),
+    onSuccess: (client) => {
+      qc.invalidateQueries({ queryKey: [KEY] });
+      // One per client per minute - a burst of saves is one edit.
+      track("client_updated", { dedupeKey: `client_updated:${client.id}:${new Date().toISOString().slice(0, 16)}` });
+    },
   });
 }
 
@@ -96,7 +104,11 @@ export function useDeleteClient() {
       const supabase = createClient();
       const { error } = await supabase.from("clients").delete().eq("id", id);
       if (error) throw new Error(error.message);
+      return id;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: [KEY] }),
+    onSuccess: (id) => {
+      qc.invalidateQueries({ queryKey: [KEY] });
+      track("client_deleted", { dedupeKey: `client_deleted:${id}` });
+    },
   });
 }

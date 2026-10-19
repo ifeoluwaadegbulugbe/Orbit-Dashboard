@@ -10,6 +10,7 @@ import { sendEmail } from "@/lib/email/server";
 import { appUrl } from "@/lib/app-url";
 import { renderEmail } from "@/lib/email-design/render";
 import { paymentReceivedEmail } from "@/lib/email-design/templates";
+import { track } from "@/lib/analytics/server";
 
 /**
  * Paystack webhook → subscription status sync.
@@ -109,6 +110,16 @@ export async function POST(request: Request) {
           });
         }
 
+        if (paymentRow?.user_id && !error) {
+          // Verified by Paystack's signed webhook; keyed by invoice so a
+          // redelivery or a second charge on the same invoice counts once.
+          await track(paymentRow.user_id, "payment_received", {
+            actor: "system",
+            dedupeKey: `payment_received:${meta.payment_id}:${paymentRow.user_id}`,
+            props: { kind: "invoice", provider: "paystack" },
+          });
+        }
+
         if (paymentRow?.user_id) {
           const formatted = paidAmount != null ? paidAmount.toFixed(2) : "your invoice";
           await notify(supabase, {
@@ -172,6 +183,24 @@ export async function POST(request: Request) {
           .from("profiles")
           .update({ subscription_status: "pro" })
           .eq("email", email);
+      }
+      break;
+    }
+
+    // A Pro renewal charge failed (card declined, expired...). Recorded
+    // for analytics only - the subscription.disable event handles access.
+    case "invoice.payment_failed": {
+      const data = event.data as { customer?: { email?: string }; invoice_code?: string };
+      const email = data.customer?.email;
+      if (email) {
+        const { data: owner } = await supabase.from("profiles").select("id").eq("email", email).maybeSingle();
+        if (owner?.id) {
+          await track(owner.id, "payment_failed", {
+            actor: "system",
+            dedupeKey: `payment_failed:${data.invoice_code ?? providerEventId}:${owner.id}`,
+            props: { kind: "subscription", provider: "paystack" },
+          });
+        }
       }
       break;
     }

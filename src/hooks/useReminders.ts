@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
 import { useAuthStore } from "@/stores/authStore";
 import type { Reminder } from "@/types";
+import { track } from "@/lib/analytics/browser";
 
 const KEY = "reminders";
 
@@ -64,7 +65,10 @@ export function useCreateReminder() {
       if (error) throw new Error(error.message);
       return data as Reminder;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: [KEY] }),
+    onSuccess: (reminder) => {
+      qc.invalidateQueries({ queryKey: [KEY] });
+      track("reminder_created", { dedupeKey: `reminder_created:${reminder.id}`, props: { repeats: reminder.repeat_type ?? "never" } });
+    },
   });
 }
 
@@ -80,7 +84,10 @@ export function useToggleReminder() {
         .eq("id", id);
       if (error) throw new Error(error.message);
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: [KEY] }),
+    onSuccess: (_, { id, isDone }) => {
+      qc.invalidateQueries({ queryKey: [KEY] });
+      if (isDone) track("reminder_completed", { dedupeKey: `reminder_completed:${id}` });
+    },
   });
 }
 

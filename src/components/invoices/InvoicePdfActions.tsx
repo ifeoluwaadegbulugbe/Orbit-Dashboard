@@ -7,6 +7,7 @@ import { useCurrency } from "@/hooks/useCurrency";
 import { loadBranding } from "@/lib/branding";
 import { toast } from "@/stores/toastStore";
 import type { Client, Payment } from "@/types";
+import { track } from "@/lib/analytics/browser";
 
 /**
  * "Download PDF" (everywhere) and "Share PDF" (phones / browsers that can
@@ -70,6 +71,7 @@ export function InvoicePdfActions({ payment, client }: { payment: Payment; clien
         : "Here's your invoice.";
       const shared = await sharePdf(bytes, filename, text);
       if (!shared) downloadPdf(bytes, filename);
+      else if (shared === true) track("invoice_sent", { dedupeKey: `invoice_sent:${payment.id}:pdf`, props: { method: "pdf_share", confirmed: true } });
     } catch (err) {
       console.error("[invoice-pdf]", err);
       toast("Couldn't share the PDF. Try Download instead.", "danger");
