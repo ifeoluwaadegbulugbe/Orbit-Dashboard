@@ -10,6 +10,7 @@ import { createClient } from "@/lib/supabase/client";
 import { ORBIT_PAY_FEES, type Plan } from "@/lib/orbit-pay/fees";
 import { formatShortDate } from "@/lib/utils";
 import { expectedPayoutDate, formatPayoutDate } from "@/lib/orbit-pay/payout";
+import { ymdInZone } from "@/lib/time/ymd";
 
 interface Status {
   enabled: boolean;
@@ -221,8 +222,8 @@ function PayoutStatus({ paidAt, settledAt }: { paidAt: string | null; settledAt:
   if (settledAt) return <Badge tone="success">Paid to your bank</Badge>;
   if (!paidAt) return null;
   const due = expectedPayoutDate(paidAt);
-  const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Africa/Lagos" }).format(new Date());
-  const label = formatPayoutDate(due).replace(/^(\w{3})\w*/, "$1"); // "Mon 26 Oct"
+  const today = ymdInZone(new Date(), "Africa/Lagos");
+  const label = formatPayoutDate(due).replace(/^([A-Za-z]{3})[A-Za-z]*/, "$1"); // "Mon 26 Oct"
   return today > due
     ? <Badge tone="warning">Due {label}</Badge>
     : <Badge tone="info">Arriving {label}</Badge>;

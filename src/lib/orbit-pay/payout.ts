@@ -9,6 +9,8 @@
  * list - on those days the confirmed status is what counts.
  */
 
+import { ymdInZone } from "../time/ymd.ts";
+
 const TZ = "Africa/Lagos";
 const DAY = 86_400_000;
 
@@ -40,14 +42,19 @@ function isBusinessDay(ymd: string): boolean {
 
 /** Lagos calendar date (YYYY-MM-DD) the payout should arrive by. */
 export function expectedPayoutDate(paidAt: string | Date): string {
-  let d = new Intl.DateTimeFormat("en-CA", { timeZone: TZ }).format(new Date(paidAt));
+  let d = ymdInZone(paidAt, TZ);
   do { d = shift(d, 1); } while (!isBusinessDay(d));
   return d;
 }
 
 /** "Monday 26 Oct" */
+const WEEKDAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+/** Spelled out by hand so every phone shows the same thing. */
 export function formatPayoutDate(ymd: string): string {
-  return new Date(`${ymd}T12:00:00Z`).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "short", timeZone: "UTC" });
+  const d = new Date(`${ymd}T12:00:00Z`);
+  return `${WEEKDAYS[d.getUTCDay()]} ${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]}`;
 }
 
 /** "OPay Digital Services Limited (OPay)" -> "OPay" */

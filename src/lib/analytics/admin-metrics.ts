@@ -12,6 +12,7 @@ import {
   ACTIVATION_EVENTS, ADOPTION, ANALYTICS_TIMEZONE, EVENTS, FUNNEL, INACTIVE_AFTER_DAYS, NEW_USER_DAYS,
   isEventName, isMeaningful, type EventName,
 } from "./catalog";
+import { ymdInZone } from "@/lib/time/ymd";
 
 export interface AccountRow {
   id: string;
@@ -67,8 +68,7 @@ const DAY = 86_400_000;
 const MIN_RETENTION_COHORT = 5;
 
 export function dayKey(d: Date | string, timeZone: string): string {
-  // en-CA formats as YYYY-MM-DD.
-  return new Intl.DateTimeFormat("en-CA", { timeZone, year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(d));
+  return ymdInZone(d, timeZone);
 }
 const keyToMs = (k: string) => Date.parse(`${k}T00:00:00Z`);
 const addDays = (k: string, n: number) => new Date(keyToMs(k) + n * DAY).toISOString().slice(0, 10);

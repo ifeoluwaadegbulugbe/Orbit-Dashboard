@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/utils";
 import { EVENTS, type EventName } from "@/lib/analytics/catalog";
 import type { AdminAnalytics as Data, Segment, Tier, UserStatus } from "@/lib/analytics/admin-metrics";
+import { ymdInZone } from "@/lib/time/ymd";
 
 const PRESETS = [
   { key: "7", label: "7 days", days: 7 },
@@ -19,7 +20,7 @@ const PRESETS = [
   { key: "365", label: "1 year", days: 365 },
 ] as const;
 
-const todayKey = () => new Intl.DateTimeFormat("en-CA", { timeZone: "Africa/Lagos" }).format(new Date());
+const todayKey = () => ymdInZone(new Date(), "Africa/Lagos");
 const minusDays = (k: string, n: number) => new Date(Date.parse(`${k}T00:00:00Z`) - n * 86_400_000).toISOString().slice(0, 10);
 const nf = new Intl.NumberFormat("en-NG", { maximumFractionDigits: 1 });
 const n = (v: number) => nf.format(v);
