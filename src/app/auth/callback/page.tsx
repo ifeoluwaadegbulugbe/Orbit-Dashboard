@@ -36,6 +36,7 @@ export default function AuthCallbackPage() {
           router.replace(`/login?verifyError=${reason}`);
           return;
         }
+        await fetch("/api/auth/confirmed", { method: "POST" }).catch(() => {}); // record a confirmed email
         router.replace(destination(type));
         return;
       }
@@ -57,6 +58,7 @@ export default function AuthCallbackPage() {
           router.replace("/login?verifyError=exchange_failed");
           return;
         }
+        await fetch("/api/auth/confirmed", { method: "POST" }).catch(() => {});
         router.replace(destination(hashType));
         return;
       }

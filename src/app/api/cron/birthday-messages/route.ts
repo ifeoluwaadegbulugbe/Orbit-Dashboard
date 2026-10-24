@@ -7,6 +7,7 @@ import {
   buildOwnerBirthdayEmail,
 } from "@/lib/email/booking-templates";
 import { getEffectiveRule, type MessageRuleRow } from "@/lib/automations/rules";
+import { allRows, inBatches } from "@/lib/supabase/all-rows";
 
 /**
  * Sends birthday wishes to clients whose birthday falls on today's date.
@@ -42,12 +43,10 @@ interface ProfileRow {
 
 export async function GET(request: Request) {
   // Optional bearer-token guard
+  // Fail closed: without CRON_SECRET nobody can trigger this (it emails real people).
   const cronSecret = process.env.CRON_SECRET;
-  if (cronSecret) {
-    const auth = request.headers.get("authorization");
-    if (auth !== `Bearer ${cronSecret}`) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+  if (!cronSecret || request.headers.get("authorization") !== `Bearer ${cronSecret}`) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const supabase = createServiceClient();
@@ -63,10 +62,11 @@ export async function GET(request: Request) {
   // does not exist: date ~~ unknown"). Fetch everyone with a birthday set and
   // match month-day in JS instead - the birthday column comes back as an
   // ISO "YYYY-MM-DD" string, so slicing out characters 5-10 gives "MM-DD".
-  const { data: allBirthdays, error } = await supabase
+  const { data: allBirthdays, error } = await allRows(() => supabase
     .from("clients")
     .select("id, user_id, name, email, phone, whatsapp_number, birthday")
-    .not("birthday", "is", null);
+    .not("birthday", "is", null)
+    .order("id"));
 
   if (error) {
     console.error("[birthday-messages] client query failed:", error.message);
@@ -83,15 +83,15 @@ export async function GET(request: Request) {
   // Batch-load the owner profiles so we don't N+1
   const userIds = Array.from(new Set((clients as ClientRow[]).map((c) => c.user_id)));
   const [{ data: profiles }, { data: ruleRows }] = await Promise.all([
-    supabase
+    inBatches(userIds, (ids) => supabase
       .from("profiles")
       .select("id, email, full_name, business_name")
-      .in("id", userIds),
-    supabase
+      .in("id", ids)),
+    inBatches(userIds, (ids) => supabase
       .from("message_rules")
       .select("user_id, trigger_type, enabled, template")
-      .in("user_id", userIds)
-      .eq("trigger_type", "birthday"),
+      .in("user_id", ids)
+      .eq("trigger_type", "birthday")),
   ]);
 
   const profileMap = new Map<string, ProfileRow>(

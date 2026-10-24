@@ -3,6 +3,11 @@
 // app's `src/types/index.ts` is the source of truth.
 
 export type BusinessType =
+  | "hair_stylist"
+  | "barber"
+  | "braider"
+  | "lash_brow"
+  | "fashion_designer"
   | "nail_tech"
   | "makeup_artist"
   | "tutor"
@@ -167,9 +172,15 @@ export interface AiConversation {
   updated_at: string;
 }
 
+// Order = order shown in onboarding: Orbit's biggest markets first.
 export const BUSINESS_TYPE_LABELS: Record<BusinessType, string> = {
+  hair_stylist: "Hair Stylist",
+  barber: "Barber",
+  braider: "Braider",
   nail_tech: "Nail Tech",
   makeup_artist: "Makeup Artist",
+  lash_brow: "Lash & Brow Tech",
+  fashion_designer: "Tailor / Fashion Designer",
   tutor: "Tutor",
   photographer: "Photographer",
   personal_trainer: "Personal Trainer",
@@ -182,6 +193,11 @@ export const BUSINESS_TYPE_LABELS: Record<BusinessType, string> = {
 
 /** What we call "a booking" depends on the kind of business. */
 export const BOOKING_TITLE_LABELS: Record<BusinessType, string> = {
+  hair_stylist:     "Appointment",
+  barber:           "Cut",
+  braider:          "Appointment",
+  lash_brow:        "Appointment",
+  fashion_designer: "Fitting",
   nail_tech:        "Service",
   makeup_artist:    "Session",
   tutor:            "Session",
@@ -213,6 +229,31 @@ export interface Service {
  * remove anything they don't offer.
  */
 export const DEFAULT_SERVICES_BY_TYPE: Record<BusinessType, Service[]> = {
+  hair_stylist: [
+    { name: "Wash and set",            duration_minutes: 60, price: "" },
+    { name: "Wig install",             duration_minutes: 90, price: "" },
+    { name: "Silk press",              duration_minutes: 120, price: "" },
+  ],
+  barber: [
+    { name: "Haircut",                 duration_minutes: 30, price: "" },
+    { name: "Haircut and beard",       duration_minutes: 45, price: "" },
+    { name: "Kids haircut",            duration_minutes: 30, price: "" },
+  ],
+  braider: [
+    { name: "Knotless braids (medium)", duration_minutes: 300, price: "" },
+    { name: "Cornrows",                duration_minutes: 90, price: "" },
+    { name: "Twists",                  duration_minutes: 180, price: "" },
+  ],
+  lash_brow: [
+    { name: "Classic lash set",        duration_minutes: 90, price: "" },
+    { name: "Lash refill",             duration_minutes: 60, price: "" },
+    { name: "Brow lamination",         duration_minutes: 45, price: "" },
+  ],
+  fashion_designer: [
+    { name: "Measurement session",     duration_minutes: 30, price: "" },
+    { name: "Fitting",                 duration_minutes: 45, price: "" },
+    { name: "Alterations",             duration_minutes: 30, price: "" },
+  ],
   nail_tech: [
     { name: "Classic manicure",        duration_minutes: 45, price: "" },
     { name: "Gel pedicure",            duration_minutes: 60, price: "" },

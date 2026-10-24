@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { useAuthStore } from "@/stores/authStore";
 import type { Client } from "@/types";
 import { track } from "@/lib/analytics/browser";
+import { allRows } from "@/lib/supabase/all-rows";
 
 const KEY = "clients";
 
@@ -18,11 +19,12 @@ export function useClients() {
     enabled: !!userId,
     queryFn: async () => {
       const supabase = createClient();
-      const { data, error } = await supabase
+      const { data, error } = await allRows(() => supabase
         .from("clients")
         .select("*")
         .eq("user_id", userId!)
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: false })
+        .order("id"));
       if (error) throw new Error(error.message);
       return (data ?? []) as Client[];
     },

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
 import { verifyTransaction } from "@/lib/paystack/server";
+import { planCodeOf, proPlanCodes } from "@/lib/pricing";
 import { FREE_TRIAL_DAYS } from "@/lib/constants";
 import { appUrl } from "@/lib/app-url";
 
@@ -28,7 +29,15 @@ export async function GET(request: Request) {
     }
 
     const userId = (result.data.metadata?.user_id as string | undefined) ?? null;
-    const kind = (result.data.metadata?.kind as string | undefined) ?? "subscription";
+    const kind = result.data.metadata?.kind as string | undefined;
+
+    // Only an Orbit Pro checkout may grant Pro: one of our Pro plans, started
+    // as a trial or subscription. Any other successful payment (an Orbit Pay
+    // invoice, say) carries a user_id too and must never upgrade anyone.
+    const plan = planCodeOf(result.data.plan);
+    if (!plan || !proPlanCodes().includes(plan) || (kind !== "trial" && kind !== "subscription")) {
+      return NextResponse.redirect(`${baseUrl}/profile?paystack=failed`);
+    }
 
     if (userId) {
       const supabase = createServiceClient();

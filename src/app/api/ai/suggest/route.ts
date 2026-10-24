@@ -4,6 +4,7 @@ import { completeChat } from "@/lib/ai/complete";
 import { getEffectiveRule, type MessageRuleRow, type TriggerType } from "@/lib/automations/rules";
 import { track } from "@/lib/analytics/server";
 import { requirePro } from "@/lib/subscription/server";
+import { overLimit, DAY } from "@/lib/rate-limit";
 
 /**
  * Stateless AI suggestions embedded on Home/Clients/Money - a single
@@ -81,6 +82,10 @@ export async function POST(request: Request) {
   }
   const locked = await requirePro(user.id, user.email, "Orbit AI");
   if (locked) return locked;
+  // Daily cap so one account can't run up the AI bill.
+  if (await overLimit([[`ai:user:${user.id}`, { max: 100, windowMs: DAY }]])) {
+    return NextResponse.json({ error: "You've used Orbit AI a lot today. It resets tomorrow." }, { status: 429 });
+  }
 
   const body = (await request.json().catch(() => ({}))) as SuggestBody;
   if (!body.kind) {

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   Sparkles, Globe, UserPlus, Calendar, Check, Plus, Trash2, Scissors,
-  Brush, Palette, BookOpen, Camera, Dumbbell, Laptop2, Wrench, Home, MoreHorizontal,
+  Brush, Palette, BookOpen, Camera, Dumbbell, Laptop2, Wrench, Home, MoreHorizontal, Crown, Waves, Eye, Shirt,
   type LucideIcon,
 } from "lucide-react";
 import { Input } from "@/components/ui/Input";
@@ -32,6 +32,11 @@ const STEP_ORDER: Step[] = ["business_type", "services", "currency", "client", "
 const PROGRESS_STEPS: Step[] = ["business_type", "services", "currency", "client", "booking"]; // exclude success
 
 const BUSINESS_TYPE_ICONS: Record<BusinessType, LucideIcon> = {
+  hair_stylist:     Scissors,
+  barber:           Crown,
+  braider:          Waves,
+  lash_brow:        Eye,
+  fashion_designer: Shirt,
   nail_tech:        Palette,
   makeup_artist:    Brush,
   tutor:            BookOpen,
@@ -58,8 +63,9 @@ export default function WelcomePage() {
   const updateServices = useUpdateServices();
 
   const [step, setStep] = useState<Step>("business_type");
-  const [businessType, setBusinessType] = useState<BusinessType>(
-    (profile?.business_type as BusinessType) ?? "nail_tech",
+  // Nothing pre-selected: "other" is just the signup default, not a choice.
+  const [businessType, setBusinessType] = useState<BusinessType | null>(
+    profile?.business_type && profile.business_type !== "other" ? (profile.business_type as BusinessType) : null,
   );
   const [createdClientId, setCreatedClientId] = useState<string | null>(null);
   const [createdClientName, setCreatedClientName] = useState<string>("");
@@ -145,7 +151,7 @@ export default function WelcomePage() {
   }, [user?.id, user?.email, user?.user_metadata, profile, setProfile]);
 
   async function persistBusinessType() {
-    if (!user?.id) return;          // only the user.id is required - profile may not be hydrated yet
+    if (!user?.id || !businessType) return; // only the user.id is required - profile may not be hydrated yet
     setSaving(true);
     try {
       const supabase = createSupabase();
@@ -368,8 +374,8 @@ export default function WelcomePage() {
               </div>
 
               <FooterButtons>
-                <Button onClick={persistBusinessType} loading={saving}>
-                  Continue
+                <Button onClick={persistBusinessType} loading={saving} disabled={!businessType}>
+                  {businessType ? "Continue" : "Pick one to continue"}
                 </Button>
               </FooterButtons>
             </StepCard>
@@ -553,7 +559,7 @@ export default function WelcomePage() {
           )}
 
           {step === "success" && (
-            <SuccessStep onFinish={finishWizard} businessTypeLabel={BUSINESS_TYPE_LABELS[businessType]} />
+            <SuccessStep onFinish={finishWizard} businessTypeLabel={BUSINESS_TYPE_LABELS[businessType ?? "other"]} />
           )}
         </motion.div>
       </AnimatePresence>

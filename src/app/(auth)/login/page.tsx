@@ -83,7 +83,14 @@ function LoginInner() {
       const { error } = await createClient().auth.signInWithPassword({
         email: values.email, password: values.password,
       });
-      if (error) { setError(friendly(error.message)); return; }
+      if (error) {
+        if (error.message.toLowerCase().includes("email not confirmed")) {
+          router.replace(`/verify-email?email=${encodeURIComponent(values.email)}`);
+          return;
+        }
+        setError(friendly(error.message));
+        return;
+      }
       track("login_completed");
       router.replace("/home");
       router.refresh();
@@ -136,6 +143,8 @@ function LoginInner() {
       return "Auth service misconfigured. Contact support.";
     if (m.includes("invalid login credentials"))
       return "Email or password is incorrect. Try again or reset your password below.";
+    if (m.includes("email not confirmed"))
+      return "Please confirm your email first. Check your inbox for the link from Orbit.";
     return msg;
   }
 

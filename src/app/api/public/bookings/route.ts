@@ -4,6 +4,10 @@ import { notify } from "@/lib/notifications/server";
 import { sendEmail } from "@/lib/email/server";
 import { buildOwnerNewBookingEmail } from "@/lib/email/booking-templates";
 import { track } from "@/lib/analytics/server";
+import { clientIp, overLimit, HOUR } from "@/lib/rate-limit";
+import { ymdInZone } from "@/lib/time/ymd";
+import { slotsForBusiness } from "@/lib/booking-availability";
+import type { BookingConfig } from "@/lib/booking-profile";
 
 /**
  * Public booking submission. Accepts an unauthenticated POST from /book/<slug>
@@ -41,7 +45,8 @@ interface ProfileRow {
   email: string | null;
   full_name: string | null;
   business_name: string | null;
-  booking_link: { services?: { name: string; duration_minutes: number }[] } | null;
+  booking_link: BookingConfig | null;
+  timezone?: string | null;
 }
 
 export async function POST(request: Request) {
@@ -53,6 +58,16 @@ export async function POST(request: Request) {
   }
 
   const { slug, services: servicesArr, service: legacyService, date, time, customer, notes } = body;
+
+  // Stop anyone flooding a business with fake bookings (and the owner with emails).
+  const ip = clientIp(request);
+  if (await overLimit([
+    [`public-booking:ip:${ip}`, { max: 10, windowMs: HOUR }],
+    [`public-booking:ip-slug:${ip}:${String(slug ?? "").toLowerCase()}`, { max: 4, windowMs: HOUR }],
+    [`public-booking:slug:${String(slug ?? "").toLowerCase()}`, { max: 60, windowMs: HOUR }],
+  ])) {
+    return NextResponse.json({ error: "Too many booking requests. Please try again in a little while, or message the business directly." }, { status: 429 });
+  }
 
   // Normalise: accept new `services[]` array or legacy single `service` string
   const serviceNames: string[] = Array.isArray(servicesArr) && servicesArr.length > 0
@@ -80,6 +95,9 @@ export async function POST(request: Request) {
   if (!date || !time) {
     return NextResponse.json({ error: "Pick a date and time" }, { status: 400 });
   }
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || date < ymdInZone(new Date(), "Africa/Lagos")) {
+    return NextResponse.json({ error: "Pick a date from today onwards" }, { status: 400 });
+  }
   if (serviceNames.length === 0) {
     return NextResponse.json({ error: "Pick at least one service" }, { status: 400 });
   }
@@ -89,7 +107,7 @@ export async function POST(request: Request) {
   // ── 1. Look up the business owner ──────────────────────────────────────
   const { data: profileData, error: profileErr } = await supabase
     .from("profiles")
-    .select("id, business_type, email, full_name, business_name, booking_link")
+    .select("id, business_type, email, full_name, business_name, booking_link, timezone")
     .eq("booking_link->>slug", slug)
     .maybeSingle();
 
@@ -114,6 +132,16 @@ export async function POST(request: Request) {
     const match = configuredServices.find((s) => s.name.trim().toLowerCase() === name.trim().toLowerCase());
     return match ? sum + match.duration_minutes : sum;
   }, 0);
+
+  // With opening hours set, only a time that's really free is accepted
+  // (someone may have taken it since the page loaded).
+  const slots = await slotsForBusiness(supabase, profile, date, totalDurationMinutes || 60);
+  if (slots && !slots.includes(String(time).slice(0, 5))) {
+    return NextResponse.json(
+      { error: "Sorry, that time isn't available any more. Please pick another time.", code: "SLOT_TAKEN" },
+      { status: 409 },
+    );
+  }
 
   // ── 2. Find or create a client record for this customer ───────────────
   // Match on email first, then phone. If neither matches an existing client,

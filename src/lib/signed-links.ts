@@ -24,11 +24,18 @@ export function signId(purpose: Purpose, id: string): string {
   return createHmac("sha256", secret()).update(`${purpose}:${id}`).digest("base64url").slice(0, 32);
 }
 
+/**
+ * Accepts links signed with LINK_SIGNING_SECRET and, so links already sent
+ * keep working after it's set, links signed with the old fallback key.
+ */
 export function verifyId(purpose: Purpose, id: string, token: string | null | undefined): boolean {
   if (!token) return false;
-  const expected = Buffer.from(signId(purpose, id));
   const given = Buffer.from(token);
-  return expected.length === given.length && timingSafeEqual(expected, given);
+  const keys = [process.env.LINK_SIGNING_SECRET, process.env.SUPABASE_SERVICE_ROLE_KEY].filter((k): k is string => !!k);
+  return keys.some((k) => {
+    const expected = Buffer.from(createHmac("sha256", k).update(`${purpose}:${id}`).digest("base64url").slice(0, 32));
+    return expected.length === given.length && timingSafeEqual(expected, given);
+  });
 }
 
 export function appOrigin(request?: Request): string {

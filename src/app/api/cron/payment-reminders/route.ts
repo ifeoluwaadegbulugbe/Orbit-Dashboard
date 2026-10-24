@@ -6,6 +6,7 @@ import { getEffectiveRule, fillTemplate, type MessageRuleRow } from "@/lib/autom
 import { isProServer } from "@/lib/subscription/isPro";
 import { formatMoney } from "@/lib/countries";
 import { track } from "@/lib/analytics/server";
+import { allRows, inBatches } from "@/lib/supabase/all-rows";
 
 /**
  * Automatically chases unpaid invoices - a real send path for the
@@ -52,23 +53,22 @@ interface ProfileRow {
 }
 
 export async function GET(request: Request) {
+  // Fail closed: without CRON_SECRET nobody can trigger this (it emails real people).
   const cronSecret = process.env.CRON_SECRET;
-  if (cronSecret) {
-    const auth = request.headers.get("authorization");
-    if (auth !== `Bearer ${cronSecret}`) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+  if (!cronSecret || request.headers.get("authorization") !== `Bearer ${cronSecret}`) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const supabase = createServiceClient();
   const today = new Date().toISOString().slice(0, 10);
 
-  const { data: payments, error } = await supabase
+  const { data: payments, error } = await allRows(() => supabase
     .from("payments")
     .select("id, user_id, client_id, client_name, amount, date, status, reminder_stage")
     .in("status", ["pending", "overdue"])
     .lt("date", today)
-    .lt("reminder_stage", STAGE_THRESHOLDS.length);
+    .lt("reminder_stage", STAGE_THRESHOLDS.length)
+    .order("id"));
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
@@ -91,9 +91,9 @@ export async function GET(request: Request) {
   const clientIds = Array.from(new Set(dueNow.map((p) => p.client_id)));
 
   const [{ data: profiles }, { data: clients }, { data: ruleRows }] = await Promise.all([
-    supabase.from("profiles").select("id, email, full_name, business_name, subscription_status, trial_ends_at, country_code").in("id", userIds),
-    supabase.from("clients").select("id, email").in("id", clientIds),
-    supabase.from("message_rules").select("user_id, trigger_type, enabled, template").in("user_id", userIds).eq("trigger_type", "payment_reminder"),
+    inBatches(userIds, (ids) => supabase.from("profiles").select("id, email, full_name, business_name, subscription_status, trial_ends_at, country_code").in("id", ids)),
+    inBatches(clientIds, (ids) => supabase.from("clients").select("id, email").in("id", ids)),
+    inBatches(userIds, (ids) => supabase.from("message_rules").select("user_id, trigger_type, enabled, template").in("user_id", ids).eq("trigger_type", "payment_reminder")),
   ]);
 
   const profileMap = new Map<string, ProfileRow>((profiles ?? []).map((p) => [p.id as string, p as ProfileRow]));

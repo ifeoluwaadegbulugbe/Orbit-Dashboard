@@ -16,6 +16,8 @@ import {
 } from "@/lib/booking-profile";
 import { appUrl } from "@/lib/app-url";
 import { track } from "@/lib/analytics/browser";
+import { OpeningHoursEditor, DEFAULT_HOURS } from "@/components/booking/OpeningHoursEditor";
+import { hoursLabel, validHours } from "@/lib/booking-hours";
 
 const BOOKING_STORAGE_KEY = "orbit_booking_link_v1";
 
@@ -119,10 +121,18 @@ function BookingLinkInner() {
       toast("Pick a URL slug first", "danger");
       return;
     }
+    // Save the hours the owner sees in the editor (defaults included).
+    const hours = config.hours ?? DEFAULT_HOURS;
+    if (!validHours(hours)) {
+      toast("Check your opening hours: closing time must be after opening time.", "danger");
+      return;
+    }
+    const toSave: BookingConfig = { ...config, hours, availability: hoursLabel(hours) };
+    setConfig(toSave);
     setSaving(true);
 
     // Always write to localStorage for fast local hydration next time
-    localStorage.setItem(`${BOOKING_STORAGE_KEY}:${userId}`, JSON.stringify(config));
+    localStorage.setItem(`${BOOKING_STORAGE_KEY}:${userId}`, JSON.stringify(toSave));
 
     // Persist to the database so the public /book/<slug> page can look it up.
     // Falls back gracefully if the booking_link column doesn't exist yet.
@@ -130,10 +140,12 @@ function BookingLinkInner() {
       const supabase = createSupabaseClient();
       const { error } = await supabase
         .from("profiles")
-        .update({ booking_link: config })
+        .update({ booking_link: toSave })
         .eq("id", userId);
       if (error) {
-        if (error.message?.toLowerCase().includes("column") || error.code === "42703") {
+        if (error.code === "23505") {
+          toast("That link is already taken by another business. Try adding your area or a number.", "danger");
+        } else if (error.message?.toLowerCase().includes("column") || error.code === "42703") {
           toast(
             "Saved locally. Run: ALTER TABLE profiles ADD COLUMN booking_link jsonb; to enable the public page.",
             "danger",
@@ -144,7 +156,7 @@ function BookingLinkInner() {
       } else {
         if (savedSlug) track("booking_link_updated", { dedupeKey: `booking_link_updated:${new Date().toISOString().slice(0, 16)}` });
         else track("booking_link_created", { dedupeKey: `booking_link_created:${userId}` });
-        setSavedSlug(config.slug);
+        setSavedSlug(toSave.slug);
         toast("Booking link saved", "success");
       }
     } catch (err) {
@@ -254,13 +266,9 @@ function BookingLinkInner() {
           onChange={(e) => update("intro", e.target.value)}
         />
 
-        <Input
-          label="Availability summary"
-          icon={<Calendar className="h-4 w-4" />}
-          placeholder="e.g. Mon–Fri · 9am–6pm"
-          value={config.availability}
-          onChange={(e) => update("availability", e.target.value)}
-          hint="Shown on your booking page as your opening hours."
+        <OpeningHoursEditor
+          value={config.hours}
+          onChange={(h) => setConfig((c) => ({ ...c, hours: h, availability: hoursLabel(h) }))}
         />
 
         <Input

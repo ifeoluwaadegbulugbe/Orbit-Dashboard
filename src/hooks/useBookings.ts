@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { useAuthStore } from "@/stores/authStore";
 import type { Booking } from "@/types";
 import { track } from "@/lib/analytics/browser";
+import { allRows } from "@/lib/supabase/all-rows";
 
 const KEY = "bookings";
 
@@ -37,12 +38,13 @@ export function useBookings() {
     enabled: !!userId,
     queryFn: async () => {
       const supabase = createClient();
-      const { data, error } = await supabase
+      const { data, error } = await allRows(() => supabase
         .from("bookings")
         .select("*")
         .eq("user_id", userId!)
         .order("date", { ascending: true })
-        .order("time", { ascending: true });
+        .order("time", { ascending: true })
+        .order("id"));
       if (error) throw new Error(error.message);
       return (data ?? []) as Booking[];
     },

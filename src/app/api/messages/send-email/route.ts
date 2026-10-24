@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { sendEmail } from "@/lib/email/server";
+import { requirePro } from "@/lib/subscription/server";
+import { overLimit, DAY } from "@/lib/rate-limit";
 
 /**
  * Sends an ad-hoc plain-text message (an AI-drafted payment reminder,
@@ -27,8 +29,23 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Missing recipient or message" }, { status: 400 });
   }
 
+  // Not a free mail relay: Pro only (it sends AI drafts), only to an email
+  // address that's on one of this business's own clients, and capped.
+  const locked = await requirePro(user.id, user.email, "Emailing drafts");
+  if (locked) return locked;
+  const to = body.to.trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) return NextResponse.json({ error: "That email address isn't valid." }, { status: 400 });
+  const { data: client } = await supabase.from("clients").select("id").eq("user_id", user.id).ilike("email", to.replace(/[%_\\]/g, "\\$&")) /* exact match, case-insensitive: wildcards escaped */.limit(1).maybeSingle();
+  if (!client) {
+    return NextResponse.json({ error: "You can only email clients saved in Orbit. Add their email to the client first." }, { status: 400 });
+  }
+  if (await overLimit([[`send-email:user:${user.id}`, { max: 50, windowMs: DAY }]])) {
+    return NextResponse.json({ error: "You've sent a lot of emails today. Try again tomorrow, or use WhatsApp." }, { status: 429 });
+  }
+  body.text = body.text.slice(0, 5000);
+
   const result = await sendEmail({
-    to: body.to,
+    to,
     subject: body.subject?.trim() || "A message from your service provider",
     html: `<p style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; white-space: pre-wrap;">${escapeHtml(body.text)}</p>`,
     text: body.text,

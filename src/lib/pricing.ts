@@ -67,3 +67,15 @@ export function yearlySaving(countryCode: string | null | undefined): string {
 export function planEnvVar(interval: BillingInterval): string {
   return `PAYSTACK_PLAN_NGN_${interval.toUpperCase()}`;
 }
+
+/** The Paystack plan codes that are Orbit Pro (only these may grant Pro). */
+export function proPlanCodes(): string[] {
+  return [process.env.PAYSTACK_PLAN_NGN_MONTHLY, process.env.PAYSTACK_PLAN_NGN_YEARLY].filter((c): c is string => !!c);
+}
+
+/** Paystack sends a transaction's plan as a code or as an object. */
+export function planCodeOf(plan: unknown): string | null {
+  if (typeof plan === "string") return plan || null;
+  if (plan && typeof plan === "object" && "plan_code" in plan) return String((plan as { plan_code: unknown }).plan_code ?? "") || null;
+  return null;
+}

@@ -9,6 +9,8 @@ const PUBLIC_PATHS = [
   "/forgot-password",            // step 1: enter email
   "/reset-password",             // step 2: set new password (auth via recovery session)
   "/auth/callback",              // Supabase email-link target
+  "/auth/confirm",               // "Confirm your email" link (token used on button tap)
+  "/api/auth/resend-confirmation", // new confirmation link - called before the user can sign in
   "/terms",
   "/privacy",
   "/book/",                      // public booking pages (/book/<slug>) - trailing slash so the owner's /booking-link editor stays private

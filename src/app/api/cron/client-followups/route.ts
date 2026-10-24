@@ -4,6 +4,7 @@ import { sendEmail } from "@/lib/email/server";
 import { notify } from "@/lib/notifications/server";
 import { getEffectiveRule, fillTemplate, type MessageRuleRow } from "@/lib/automations/rules";
 import { isProServer } from "@/lib/subscription/isPro";
+import { allRows, inBatches } from "@/lib/supabase/all-rows";
 
 /**
  * Re-engages clients who've gone quiet 30+ days - a real send path for the
@@ -39,22 +40,21 @@ interface ProfileRow {
 }
 
 export async function GET(request: Request) {
+  // Fail closed: without CRON_SECRET nobody can trigger this (it emails real people).
   const cronSecret = process.env.CRON_SECRET;
-  if (cronSecret) {
-    const auth = request.headers.get("authorization");
-    if (auth !== `Bearer ${cronSecret}`) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+  if (!cronSecret || request.headers.get("authorization") !== `Bearer ${cronSecret}`) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const supabase = createServiceClient();
   const cutoff = new Date(Date.now() - QUIET_DAYS * 86_400_000).toISOString();
 
-  const { data: clients, error } = await supabase
+  const { data: clients, error } = await allRows(() => supabase
     .from("clients")
     .select("id, user_id, name, email, last_contacted")
     .neq("status", "inactive")
-    .or(`last_contacted.is.null,last_contacted.lt.${cutoff}`);
+    .or(`last_contacted.is.null,last_contacted.lt.${cutoff}`)
+    .order("id"));
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
@@ -67,8 +67,8 @@ export async function GET(request: Request) {
   const userIds = Array.from(new Set(rows.map((c) => c.user_id)));
 
   const [{ data: profiles }, { data: ruleRows }] = await Promise.all([
-    supabase.from("profiles").select("id, full_name, business_name, subscription_status, trial_ends_at").in("id", userIds),
-    supabase.from("message_rules").select("user_id, trigger_type, enabled, template").in("user_id", userIds).eq("trigger_type", "client_followup"),
+    inBatches(userIds, (ids) => supabase.from("profiles").select("id, full_name, business_name, subscription_status, trial_ends_at").in("id", ids)),
+    inBatches(userIds, (ids) => supabase.from("message_rules").select("user_id, trigger_type, enabled, template").in("user_id", ids).eq("trigger_type", "client_followup")),
   ]);
 
   const profileMap = new Map<string, ProfileRow>((profiles ?? []).map((p) => [p.id as string, p as ProfileRow]));

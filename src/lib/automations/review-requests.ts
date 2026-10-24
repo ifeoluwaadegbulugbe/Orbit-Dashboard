@@ -12,6 +12,7 @@ import { sendEmail } from "@/lib/email/server";
 import { reviewUrl } from "@/lib/signed-links";
 import { getEffectiveRule, type MessageRuleRow } from "@/lib/automations/rules";
 import { zonedTimeToUtcMs, DEFAULT_TIMEZONE } from "@/lib/time/zonedTime";
+import { allRows, inBatches } from "@/lib/supabase/all-rows";
 
 const DELAY_AFTER_END_MS = 2 * 60 * 60 * 1000;
 const GIVE_UP_AFTER_MS = 24 * 60 * 60 * 1000; // don't ask about old appointments
@@ -42,8 +43,8 @@ export async function sendDueReviewRequests(
   const bookings = data as Row[];
   const userIds = [...new Set(bookings.map((b) => b.user_id))];
   const [{ data: profiles }, { data: rules }] = await Promise.all([
-    supabase.from("profiles").select("id, business_name, full_name, timezone").in("id", userIds),
-    supabase.from("message_rules").select("user_id, trigger_type, enabled, template").in("user_id", userIds).eq("trigger_type", "review_request"),
+    inBatches(userIds, (ids) => supabase.from("profiles").select("id, business_name, full_name, timezone").in("id", ids)),
+    inBatches(userIds, (ids) => supabase.from("message_rules").select("user_id, trigger_type, enabled, template").in("user_id", ids).eq("trigger_type", "review_request")),
   ]);
   const profileById = new Map((profiles ?? []).map((p) => [p.id as string, p]));
   const rulesByUser = new Map<string, MessageRuleRow[]>();
@@ -61,10 +62,10 @@ export async function sendDueReviewRequests(
   });
   if (!due.length) return { sent: 0, errors };
 
-  const { data: clients } = await supabase
+  const { data: clients } = await inBatches([...new Set(due.map((b) => b.client_id as string))], (ids) => supabase
     .from("clients")
     .select("id, email")
-    .in("id", [...new Set(due.map((b) => b.client_id))]);
+    .in("id", ids));
   const clientById = new Map((clients ?? []).map((c) => [c.id as string, c]));
 
   let sent = 0;

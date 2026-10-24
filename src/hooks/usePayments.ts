@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { useAuthStore } from "@/stores/authStore";
 import type { Payment } from "@/types";
 import { track } from "@/lib/analytics/browser";
+import { allRows } from "@/lib/supabase/all-rows";
 
 const KEY = "payments";
 
@@ -16,11 +17,12 @@ export function usePayments() {
     enabled: !!userId,
     queryFn: async () => {
       const supabase = createClient();
-      const { data, error } = await supabase
+      const { data, error } = await allRows(() => supabase
         .from("payments")
         .select("*")
         .eq("user_id", userId!)
-        .order("date", { ascending: false });
+        .order("date", { ascending: false })
+        .order("id"));
       if (error) throw new Error(error.message);
       return (data ?? []) as Payment[];
     },

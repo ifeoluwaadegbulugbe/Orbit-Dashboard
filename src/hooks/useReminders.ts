@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { useAuthStore } from "@/stores/authStore";
 import type { Reminder } from "@/types";
 import { track } from "@/lib/analytics/browser";
+import { allRows } from "@/lib/supabase/all-rows";
 
 const KEY = "reminders";
 
@@ -18,11 +19,12 @@ export function useReminders() {
     enabled: !!userId,
     queryFn: async () => {
       const supabase = createClient();
-      const { data, error } = await supabase
+      const { data, error } = await allRows(() => supabase
         .from("reminders")
         .select("*")
         .eq("user_id", userId!)
-        .order("due_date", { ascending: true });
+        .order("due_date", { ascending: true })
+        .order("id"));
       if (error) throw new Error(error.message);
       return (data ?? []) as Reminder[];
     },

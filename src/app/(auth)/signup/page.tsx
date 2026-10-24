@@ -7,7 +7,6 @@ import { useForm } from "react-hook-form";
 import { User, Mail, Lock, Building2, Eye, EyeOff } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/Button";
-import { BUSINESS_TYPE_LABELS, type BusinessType } from "@/types";
 
 /* ─── Shared input style ──────────────────────────────────────────────────────
    Matches login/page.tsx — height, radius, border, focus ring all use tokens. */
@@ -20,22 +19,19 @@ const inputCls =
 interface FormValues {
   fullName: string;
   businessName: string;
-  businessType: BusinessType;
   email: string;
   password: string;
 }
 
-const BUSINESS_TYPES = Object.entries(BUSINESS_TYPE_LABELS) as [BusinessType, string][];
 
 export default function SignUpPage() {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [showPw, setShowPw] = useState(false);
 
-  const { register, handleSubmit, setValue, watch, formState } = useForm<FormValues>({
-    defaultValues: { businessType: "nail_tech" },
+  const { register, handleSubmit, formState } = useForm<FormValues>({
+    defaultValues: {},
   });
-  const businessType = watch("businessType");
 
   async function onSubmit(values: FormValues) {
     setError(null);
@@ -52,7 +48,6 @@ export default function SignUpPage() {
           password: values.password,
           fullName: values.fullName,
           businessName: values.businessName || null,
-          businessType: values.businessType,
         }),
       });
       const json = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
@@ -61,21 +56,9 @@ export default function SignUpPage() {
         return;
       }
 
-      // Step 2: sign in with the credentials we just used.
-      const supabase = createClient();
-      const { error: signInErr } = await supabase.auth.signInWithPassword({
-        email: values.email,
-        password: values.password,
-      });
-      if (signInErr) {
-        // Account created but sign-in failed — send to login with banner.
-        router.replace("/login?signedUp=1");
-        return;
-      }
-
-      // Step 3: through to the welcome wizard.
-      router.replace("/welcome");
-      router.refresh();
+      // Step 2: they confirm their email from the link we sent, which
+      // signs them in and takes them to the welcome wizard.
+      router.replace(`/verify-email?email=${encodeURIComponent(values.email)}`);
     } catch (err) {
       setError(friendlyError(err instanceof Error ? err.message : String(err)));
     }
@@ -150,32 +133,6 @@ export default function SignUpPage() {
               className={`${inputCls} pl-10`}
               {...register("businessName")}
             />
-          </div>
-        </div>
-
-        {/* Business type */}
-        <div>
-          <label className="block text-small font-semibold text-[var(--color-ink)] mb-2">
-            What kind of work do you do?
-          </label>
-          <div className="flex flex-wrap gap-2">
-            {BUSINESS_TYPES.map(([type, label]) => {
-              const active = businessType === type;
-              return (
-                <button
-                  key={type}
-                  type="button"
-                  onClick={() => setValue("businessType", type)}
-                  className={`px-3.5 py-1.5 rounded-full text-tiny font-semibold border transition-colors ${
-                    active
-                      ? "bg-[var(--color-primary-subtle)] border-[var(--color-primary)] text-[var(--color-primary-dark)]"
-                      : "bg-white border-[var(--color-border)] text-[var(--color-ink-light)] hover:border-[var(--color-primary)]/40"
-                  }`}
-                >
-                  {label}
-                </button>
-              );
-            })}
           </div>
         </div>
 

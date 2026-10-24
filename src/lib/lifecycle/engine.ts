@@ -28,6 +28,7 @@ import {
 import { CAMPAIGNS, type Campaign, type CampaignContext, type WaitingItem } from "./campaigns";
 import { formatMoney } from "@/lib/countries";
 import { renderEmail } from "@/lib/email-design/render";
+import { allRows } from "@/lib/supabase/all-rows";
 
 /** Frequency caps for lifecycle/marketing email (transactional email is never counted). */
 const MAX_PER_DAY = Number(process.env.LIFECYCLE_MAX_PER_DAY ?? 1);
@@ -44,6 +45,7 @@ interface ProfileRow {
   subscription_status: string | null; trial_ends_at: string | null; created_at: string;
   last_active_at: string | null; booking_link: { slug?: string; services?: unknown[] } | null;
   country_code?: string | null;
+  email_confirmed?: boolean | null;
 }
 interface PaymentRow { user_id: string; status: string; date: string; created_at: string; amount?: number | null }
 interface BookingRow { user_id: string; status?: string | null; date?: string | null }
@@ -70,16 +72,16 @@ export async function runLifecycle(supabase: SupabaseClient, now = new Date()): 
   const nowMs = now.getTime();
   const base = appUrl();
 
-  // ── Bulk-load everything once (cheap at Orbit's size; move to SQL views when it grows)
+  // ── Bulk-load everything once, page by page (Supabase caps a request at 1,000 rows)
   const [profilesQ, clientsQ, bookingsQ, paymentsQ, remindersQ, prefsQ, suppQ, sentQ, checkoutQ] = await Promise.all([
-    supabase.from("profiles").select("id, email, full_name, business_name, subscription_status, trial_ends_at, created_at, last_active_at, booking_link, country_code"),
-    supabase.from("clients").select("user_id, created_at, status"),
-    supabase.from("bookings").select("user_id, created_at, status, date"),
-    supabase.from("payments").select("user_id, status, date, created_at, amount"),
-    supabase.from("reminders").select("user_id"),
-    supabase.from("email_preferences").select("user_id, tips, product_updates, promotions, unsubscribed_at"),
-    supabase.from("email_suppressions").select("email"),
-    supabase.from("lifecycle_emails").select("id, user_id, campaign, idempotency_key, status, sent_at, converted_at, attempts, next_attempt_at"),
+    allRows(() => supabase.from("profiles").select("id, email, full_name, business_name, subscription_status, trial_ends_at, created_at, last_active_at, booking_link, country_code, email_confirmed").order("id")),
+    allRows(() => supabase.from("clients").select("user_id, created_at, status").order("id")),
+    allRows(() => supabase.from("bookings").select("user_id, created_at, status, date").order("id")),
+    allRows(() => supabase.from("payments").select("user_id, status, date, created_at, amount").order("id")),
+    allRows(() => supabase.from("reminders").select("user_id").order("id")),
+    allRows(() => supabase.from("email_preferences").select("user_id, tips, product_updates, promotions, unsubscribed_at").order("user_id")),
+    allRows(() => supabase.from("email_suppressions").select("email").order("email")),
+    allRows(() => supabase.from("lifecycle_emails").select("id, user_id, campaign, idempotency_key, status, sent_at, converted_at, attempts, next_attempt_at").order("id")),
     supabase.from("user_product_events").select("id, user_id, created_at").eq("event", "checkout_started")
       .gte("created_at", new Date(nowMs - 3 * DAY).toISOString()).order("created_at", { ascending: false }),
   ]);
@@ -175,6 +177,8 @@ export async function runLifecycle(supabase: SupabaseClient, now = new Date()): 
     const email = p.email?.trim().toLowerCase();
     if (!email) { skip("no_email"); continue; }
     if (suppressed.has(email)) { skip("suppressed"); continue; }
+    // Never email an address whose owner hasn't confirmed it's theirs.
+    if (p.email_confirmed === false) { skip("unconfirmed"); continue; }
     // Reserved test domains never deliver - sending only earns a bounce.
     if (/@(example\.(com|org|net)|[^@]+\.(test|invalid|example|localhost))$/.test(email)) { skip("test_address"); continue; }
     const pref = prefs.get(p.id);

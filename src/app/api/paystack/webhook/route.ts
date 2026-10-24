@@ -5,6 +5,7 @@ import { recordWebhookEvent, markWebhookProcessed } from "@/lib/ledger/server";
 import { chargeMetadata, handleDispute, handleDisputeResolved, handleLegacyInvoiceCharge, handleOrbitPaySuccess, handleRefundEvent } from "@/lib/orbit-pay/webhook";
 import { notify } from "@/lib/notifications/server";
 import { trackEvent } from "@/lib/lifecycle/events";
+import { planCodeOf, proPlanCodes } from "@/lib/pricing";
 import { track } from "@/lib/analytics/server";
 
 /**
@@ -86,6 +87,13 @@ export async function POST(request: Request) {
       }
 
       // ── 2. Subscription charges (trial → paid, renewals) ──
+      // Only charges on one of Orbit's Pro plans grant Pro - nothing else
+      // that happens to carry a user_id or a matching email.
+      const planCode = planCodeOf((event.data as { plan?: unknown }).plan);
+      if (!planCode || !proPlanCodes().includes(planCode)) {
+        console.warn("[paystack] charge.success not on an Orbit Pro plan - ignored", data.reference);
+        break;
+      }
       const userId = meta.user_id;
       const email = data.customer?.email;
       if (userId || email) {
@@ -125,7 +133,7 @@ export async function POST(request: Request) {
         subscription_code?: string;
       };
       const email = data.customer?.email;
-      if (email) {
+      if (email && proPlanCodes().includes(planCodeOf(data.plan) ?? "")) {
         await supabase
           .from("profiles")
           .update({ subscription_status: "pro" })

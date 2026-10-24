@@ -1,10 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Calendar, Clock, User, Mail, Phone, MessageSquare, Check, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
 import { Button } from "@/components/ui/Button";
+import { ymdInZone } from "@/lib/time/ymd";
+import { displayPrice, prettyTime } from "@/lib/booking-hours";
 
 interface Service {
   name: string;
@@ -23,17 +25,24 @@ interface PublicBookingFormProps {
   initialName?: string;
   initialPhone?: string;
   initialEmail?: string;
+  /** The business has opening hours set: clients pick from free times. */
+  hasHours?: boolean;
+  /** Currency symbol for plain-number prices ("5000" -> "₦5,000"). */
+  currencySymbol?: string;
 }
 
 export function PublicBookingForm({
-  slug, businessName, services, initialServices = [], initialName = "", initialPhone = "", initialEmail = "", dialCode = "234",
+  slug, businessName, services, initialServices = [], initialName = "", initialPhone = "", initialEmail = "", dialCode = "234", hasHours = false, currencySymbol = "₦",
 }: PublicBookingFormProps) {
   const [selectedIndices, setSelectedIndices] = useState<number[]>(() => {
     const wanted = initialServices.map((n) => n.trim().toLowerCase());
     return services.map((s, i) => (wanted.includes(s.name.trim().toLowerCase()) ? i : -1)).filter((i) => i >= 0);
   });
   const [date, setDate] = useState(() => new Date(Date.now() + 86400000).toISOString().slice(0, 10));
-  const [time, setTime] = useState("10:00");
+  const [time, setTime] = useState(hasHours ? "" : "10:00");
+  // Free start times for the chosen date (only when the business set hours).
+  const [slots, setSlots] = useState<string[] | null>(null);
+  const [slotsLoading, setSlotsLoading] = useState(false);
   const [name, setName] = useState(initialName);
   const [email, setEmail] = useState(initialEmail);
   const [phone, setPhone] = useState(initialPhone);
@@ -51,8 +60,31 @@ export function PublicBookingForm({
   const selectedServices = selectedIndices.map((i) => services[i]).filter(Boolean);
   const totalMinutes = selectedServices.reduce((sum, s) => sum + (s.duration_minutes || 0), 0);
 
+  // Fetch free times whenever the date or the chosen services' length changes.
+  const durationForSlots = totalMinutes || 60;
+  useEffect(() => {
+    if (!hasHours || !date) return;
+    let cancelled = false;
+    setSlotsLoading(true);
+    fetch(`/api/public/availability?slug=${encodeURIComponent(slug)}&date=${date}&duration=${durationForSlots}`)
+      .then((r) => r.json())
+      .then((j) => {
+        if (cancelled) return;
+        const list: string[] = Array.isArray(j.slots) ? j.slots : [];
+        setSlots(list);
+        setTime((t) => (list.includes(t) ? t : ""));
+      })
+      .catch(() => { if (!cancelled) setSlots([]); })
+      .finally(() => { if (!cancelled) setSlotsLoading(false); });
+    return () => { cancelled = true; };
+  }, [hasHours, date, durationForSlots, slug]);
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (hasHours && !time) {
+      setError("Please pick a time.");
+      return;
+    }
     if (!name.trim() || (!phone.trim() && !email.trim())) {
       setError("Please add your name and at least one way to reach you (phone or email)");
       return;
@@ -163,7 +195,7 @@ export function PublicBookingForm({
                   </div>
                   <div className="flex-shrink-0 text-right">
                     <div className="text-body font-bold text-[var(--color-ink)]">
-                      {s.price || "Price on request"}
+                      {displayPrice(s.price, currencySymbol)}
                     </div>
                   </div>
                 </button>
@@ -194,18 +226,47 @@ export function PublicBookingForm({
           type="date"
           icon={<Calendar className="h-4 w-4" />}
           value={date}
+          min={ymdInZone(new Date(), "Africa/Lagos")}
           onChange={(e) => setDate(e.target.value)}
           required
         />
-        <Input
-          label="Preferred time"
-          type="time"
-          icon={<Clock className="h-4 w-4" />}
-          value={time}
-          onChange={(e) => setTime(e.target.value)}
-          required
-        />
+        {!hasHours && (
+          <Input
+            label="Preferred time"
+            type="time"
+            icon={<Clock className="h-4 w-4" />}
+            value={time}
+            onChange={(e) => setTime(e.target.value)}
+            required
+          />
+        )}
       </div>
+
+      {hasHours && (
+        <div>
+          <span className="flex items-center gap-2 text-small font-semibold text-[var(--color-ink)] mb-2">
+            <Clock className="h-4 w-4 text-[var(--color-muted)]" /> Available times
+          </span>
+          {slotsLoading ? (
+            <div className="h-11 rounded-[var(--radius-lg)] skeleton" />
+          ) : slots && slots.length > 0 ? (
+            <div className="grid grid-cols-3 sm:grid-cols-4 gap-2" role="radiogroup" aria-label="Available times">
+              {slots.map((s) => (
+                <button key={s} type="button" role="radio" aria-checked={time === s} onClick={() => setTime(s)}
+                  className={`h-11 rounded-[var(--radius-lg)] border text-small font-semibold transition-colors ${time === s
+                    ? "border-[var(--color-primary)] bg-[var(--color-primary)] text-white"
+                    : "border-[var(--color-border)] bg-white text-[var(--color-ink)] hover:border-[var(--color-primary)]/50"}`}>
+                  {prettyTime(s)}
+                </button>
+              ))}
+            </div>
+          ) : (
+            <p className="text-small text-[var(--color-ink-light)] bg-[var(--color-canvas)] rounded-[var(--radius-lg)] px-4 py-3">
+              No free times on this day. Please pick another date.
+            </p>
+          )}
+        </div>
+      )}
 
       {/* Customer info */}
       <div className="space-y-4">

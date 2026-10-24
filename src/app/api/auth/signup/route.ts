@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
 import { track } from "@/lib/analytics/server";
+import { clientIp, overLimit, HOUR } from "@/lib/rate-limit";
+import { confirmUrl, resendConfirmation, sendConfirmationEmail } from "@/lib/auth/confirm-email";
+import { appUrl } from "@/lib/app-url";
+import { BUSINESS_TYPE_LABELS } from "@/types";
 
 /**
  * POST /api/auth/signup
@@ -40,11 +44,17 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
+  // Slow down bulk/bot signups (each one triggers emails to that address).
+  if (await overLimit([[`signup:ip:${clientIp(request)}`, { max: 5, windowMs: HOUR }]])) {
+    return NextResponse.json({ error: "Too many sign-ups from this connection. Please try again in an hour." }, { status: 429 });
+  }
+
   const email = body.email?.trim().toLowerCase();
   const password = body.password ?? "";
   const fullName = body.fullName?.trim() ?? "";
   const businessName = body.businessName?.trim() || null;
-  const businessType = body.businessType ?? "other";
+  // Only known types; anything else (or nothing - signup no longer asks) is "other".
+  const businessType = body.businessType && body.businessType in BUSINESS_TYPE_LABELS ? body.businessType : "other";
 
   // ── Validation ─────────────────────────────────────────────────────────
   if (!email || !email.includes("@")) {
@@ -67,23 +77,25 @@ export async function POST(request: Request) {
 
   const supabase = createServiceClient();
 
-  // ── 1. Create the user (auto-confirmed, no verification email) ─────────
-  const { data: created, error: createErr } = await supabase.auth.admin.createUser({
+  // ── 1. Create the user UNCONFIRMED and get a one-time confirmation token.
+  // generateLink creates the account but sends nothing; we email the link
+  // ourselves (Resend), so it works reliably and looks like Orbit.
+  const origin = appUrl(request.headers.get("origin") || "http://localhost:3000");
+  const { data: link, error: createErr } = await supabase.auth.admin.generateLink({
+    type: "signup",
     email,
     password,
-    email_confirm: true,                 // <- key: skip Supabase SMTP
-    user_metadata: {
-      full_name: fullName,
-      business_name: businessName,
-      business_type: businessType,
-    },
+    options: { data: { full_name: fullName, business_name: businessName, business_type: businessType } },
   });
+  const created = link ? { user: link.user } : null;
 
-  if (createErr || !created.user) {
+  if (createErr || !created?.user) {
     const msg = (createErr?.message ?? "Could not create account").toLowerCase();
     if (msg.includes("already") || msg.includes("registered") || msg.includes("exists")) {
+      // Unconfirmed earlier attempt? Send them a fresh link instead of a dead end.
+      await resendConfirmation(supabase, email, origin);
       return NextResponse.json(
-        { error: "An account with this email already exists. Sign in instead." },
+        { error: "An account with this email already exists. Sign in, or check your inbox for a confirmation link.", code: "EXISTS" },
         { status: 409 },
       );
     }
@@ -93,10 +105,8 @@ export async function POST(request: Request) {
         { status: 400 },
       );
     }
-    return NextResponse.json(
-      { error: createErr?.message ?? "Could not create account" },
-      { status: 500 },
-    );
+    console.error("[signup] generateLink failed:", createErr?.message);
+    return NextResponse.json({ error: "Could not create your account. Please try again." }, { status: 500 });
   }
 
   const userId = created.user.id;
@@ -111,6 +121,7 @@ export async function POST(request: Request) {
     business_name: businessName,
     business_type: businessType,
     subscription_status: "free",
+    email_confirmed: false,
   });
   if (profileErr) {
     // Not fatal - /welcome's mount effect upserts the profile too as a
@@ -120,9 +131,13 @@ export async function POST(request: Request) {
 
   await track(userId, "signup_completed", { dedupeKey: `signup_completed:${userId}:${userId}` });
 
-  return NextResponse.json({
-    ok: true,
-    userId,
+  const sent = await sendConfirmationEmail(
     email,
-  });
+    confirmUrl(origin, link!.properties.hashed_token, link!.properties.verification_type),
+    fullName.split(/\s+/)[0] || null,
+    origin,
+  );
+  if (!sent.ok) console.error("[signup] confirmation email failed:", sent.error);
+
+  return NextResponse.json({ ok: true, needsConfirmation: true, email, emailSent: sent.ok });
 }

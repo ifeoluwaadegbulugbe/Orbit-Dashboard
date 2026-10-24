@@ -7,7 +7,8 @@ import { PublicBookingForm } from "@/components/public/PublicBookingForm";
 import {
   type BookingConfig, directionsUrl, instagramUrl, whatsappUrl,
 } from "@/lib/booking-profile";
-import { dialCodeFor } from "@/lib/countries";
+import { dialCodeFor, findCountryByCode, DEFAULT_COUNTRY } from "@/lib/countries";
+import { validHours } from "@/lib/booking-hours";
 
 interface ProfileRow {
   country_code?: string | null;
@@ -181,24 +182,6 @@ export default async function PublicBookingPage({
           </section>
         )}
 
-        {/* ── Services ── */}
-        {config.services?.length > 0 && (
-          <section className="bg-white rounded-[var(--radius-2xl)] border border-[var(--color-border)] shadow-soft-sm p-5 sm:p-7">
-            <h2 className="text-card-title font-semibold mb-2">Services</h2>
-            <ul className="divide-y divide-[var(--color-border)]">
-              {config.services.filter((s) => s.name?.trim()).map((s) => (
-                <li key={s.name} className="flex items-baseline justify-between gap-4 py-3">
-                  <div className="min-w-0">
-                    <div className="text-body font-semibold">{s.name}</div>
-                    {s.duration_minutes > 0 && <div className="text-small text-[var(--color-muted)]">{formatDuration(s.duration_minutes)}</div>}
-                  </div>
-                  <div className="text-body font-bold whitespace-nowrap">{s.price || "Price on request"}</div>
-                </li>
-              ))}
-            </ul>
-          </section>
-        )}
-
         {/* ── Reviews ── */}
         {reviews.length > 0 && (
           <section id="reviews" className="bg-white rounded-[var(--radius-2xl)] border border-[var(--color-border)] shadow-soft-sm p-5 sm:p-7 scroll-mt-4">
@@ -237,6 +220,8 @@ export default async function PublicBookingPage({
           <h2 className="text-card-title font-semibold mb-5">Book an appointment</h2>
           <PublicBookingForm
             dialCode={dialCodeFor(profile.country_code)}
+            hasHours={validHours(config.hours)}
+            currencySymbol={(findCountryByCode(profile.country_code) ?? DEFAULT_COUNTRY).symbol}
             slug={slug}
             businessName={name}
             services={config.services ?? []}

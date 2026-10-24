@@ -1,4 +1,5 @@
 import { toWhatsAppDigits } from "@/lib/phone";
+import type { OpeningHours } from "@/lib/booking-hours";
 /**
  * The public booking profile stored in profiles.booking_link (jsonb).
  * Edited on /booking-link, rendered on /book/<slug>.
@@ -14,8 +15,10 @@ export interface BookingConfig {
   slug: string;
   intro: string;
   services: BookingService[];
-  /** Free-text opening hours, e.g. "Mon–Sat · 9am–7pm". */
+  /** Free-text opening hours, e.g. "Mon–Sat · 9am–7pm" (kept in sync with `hours`). */
   availability: string;
+  /** Structured opening hours. When set, clients pick from real free times. */
+  hours?: OpeningHours;
   /** Area / address shown on the page and used for the Directions button. */
   location?: string;
   /** Instagram handle without @. */

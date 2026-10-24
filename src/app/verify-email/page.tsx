@@ -4,8 +4,6 @@ import { Suspense, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Mail, Loader2, CheckCircle2, ArrowLeft, AlertCircle } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
-import { appUrl } from "@/lib/app-url";
 
 /**
  * Shown right after signup when Supabase has email confirmation enabled.
@@ -22,7 +20,8 @@ export default function VerifyEmailPage() {
 
 function VerifyInner() {
   const search = useSearchParams();
-  const email = search.get("email") ?? "";
+  const [email, setEmail] = useState(search.get("email") ?? "");
+  const emailFromLink = !!search.get("email");
   const warn = search.get("warn");                        // "email_send_failed" -> show banner
   const [resendState, setResendState] = useState<"idle" | "sending" | "sent" | "failed">("idle");
   const [resendError, setResendError] = useState<string | null>(null);
@@ -32,14 +31,13 @@ function VerifyInner() {
     setResendState("sending");
     setResendError(null);
     try {
-      const supabase = createClient();
-      const base = appUrl(typeof window !== "undefined" ? window.location.origin : "");
-      const { error } = await supabase.auth.resend({
-        type: "signup",
-        email,
-        options: { emailRedirectTo: `${base}/auth/callback` },
+      const res = await fetch("/api/auth/resend-confirmation", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
       });
-      if (error) throw new Error(error.message);
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json.error ?? "Could not resend");
       setResendState("sent");
     } catch (err) {
       setResendState("failed");
@@ -97,6 +95,16 @@ function VerifyInner() {
 
           {/* Resend button */}
           <div className="mt-5 flex flex-col items-center gap-3">
+            {!emailFromLink && (
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="Your email address"
+                aria-label="Your email address"
+                className="w-full h-11 px-4 rounded-full border border-[var(--color-border)] text-body focus:outline-none focus:border-[var(--color-primary)]"
+              />
+            )}
             <button
               onClick={handleResend}
               disabled={!email || resendState === "sending" || resendState === "sent"}
@@ -111,7 +119,7 @@ function VerifyInner() {
                   <CheckCircle2 className="h-4 w-4" /> Sent again
                 </>
               ) : (
-                <>Resend verification email</>
+                <>Send me a new link</>
               )}
             </button>
 

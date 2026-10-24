@@ -6,6 +6,7 @@ import { zonedTimeToUtcMs, DEFAULT_TIMEZONE } from "@/lib/time/zonedTime";
 import { getEffectiveRule, type MessageRuleRow } from "@/lib/automations/rules";
 import { sendDueReviewRequests } from "@/lib/automations/review-requests";
 import { track } from "@/lib/analytics/server";
+import { allRows, inBatches } from "@/lib/supabase/all-rows";
 
 /**
  * Sends appointment-reminder emails 60 / 30 / 5 minutes before each upcoming
@@ -52,12 +53,10 @@ interface ClientRow {
 
 export async function GET(request: Request) {
   // Optional bearer-token check for cron callers
+  // Fail closed: without CRON_SECRET nobody can trigger this (it emails real people).
   const cronSecret = process.env.CRON_SECRET;
-  if (cronSecret) {
-    const auth = request.headers.get("authorization");
-    if (auth !== `Bearer ${cronSecret}`) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+  if (!cronSecret || request.headers.get("authorization") !== `Bearer ${cronSecret}`) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const supabase = createServiceClient();
@@ -90,10 +89,10 @@ export async function GET(request: Request) {
   // for every candidate booking's owner, not just matches, since we don't
   // know which ones match until after this conversion.
   const candidateUserIds = Array.from(new Set((bookings as BookingRow[]).map((b) => b.user_id)));
-  const { data: candidateProfiles } = await supabase
+  const { data: candidateProfiles } = await inBatches(candidateUserIds, (ids) => supabase
     .from("profiles")
     .select("id,email,full_name,business_name,timezone")
-    .in("id", candidateUserIds);
+    .in("id", ids));
   const profileMap = new Map<string, ProfileRow>(
     (candidateProfiles ?? []).map((p) => [p.id as string, p as ProfileRow]),
   );
@@ -118,14 +117,14 @@ export async function GET(request: Request) {
 
   // Client emails for just the bookings we're actually sending for
   const clientIds = Array.from(new Set(toSend.map((s) => s.booking.client_id)));
-  const { data: clientRows } = await supabase.from("clients").select("id,email").in("id", clientIds);
+  const { data: clientRows } = await inBatches(clientIds, (ids) => supabase.from("clients").select("id,email").in("id", ids));
 
   // Owners can switch client reminders off on the Automations page.
-  const { data: ruleRows } = await supabase
+  const { data: ruleRows } = await inBatches(Array.from(new Set(toSend.map((s) => s.booking.user_id))), (ids) => supabase
     .from("message_rules")
     .select("user_id,trigger_type,enabled,template")
-    .in("user_id", Array.from(new Set(toSend.map((s) => s.booking.user_id))))
-    .eq("trigger_type", "appointment_reminder");
+    .in("user_id", ids)
+    .eq("trigger_type", "appointment_reminder"));
   const remindersOn = (userId: string) =>
     getEffectiveRule(((ruleRows ?? []) as (MessageRuleRow & { user_id: string })[]).filter((r) => r.user_id === userId), "appointment_reminder").enabled;
   const clientMap = new Map<string, ClientRow>(
