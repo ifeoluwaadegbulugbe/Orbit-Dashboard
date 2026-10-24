@@ -181,6 +181,11 @@ const FAQS: { q: string; a: React.ReactNode }[] = [
         Add to Home screen). <strong>iPhone:</strong> open Orbit in Safari, tap <strong>Share</strong>, then{" "}
         <strong>Add to Home Screen</strong>. Orbit then opens full screen from its own icon, and recent clients and
         bookings still show with no network.
+        <br /><br />
+        <strong>To get notifications like a normal app</strong> (new bookings, payments, appointment reminders): open Orbit
+        from the <strong>home-screen icon</strong>, go to <strong>Settings → Phone notifications</strong>, tap{" "}
+        <strong>Turn on notifications</strong>, then <strong>Allow</strong>. On iPhone this only works from the home-screen
+        icon, not from Safari.
       </>
     ),
   },

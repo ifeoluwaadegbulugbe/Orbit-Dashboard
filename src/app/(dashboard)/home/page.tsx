@@ -11,6 +11,7 @@ import { StatCard } from "@/components/dashboard/StatCard";
 import { QuickAction } from "@/components/dashboard/QuickAction";
 import { SetupChecklist } from "@/components/dashboard/SetupChecklist";
 import { InstallAppCard } from "@/components/dashboard/InstallAppCard";
+import { EnableNotificationsCard } from "@/components/dashboard/EnableNotificationsCard";
 import { Avatar } from "@/components/ui/Avatar";
 import { Badge } from "@/components/ui/Badge";
 import { BookingActions } from "@/components/bookings/BookingActions";
@@ -111,6 +112,7 @@ export default function HomePage() {
       {/* ─── Setup checklist - only until the owner is activated ─── */}
       <SetupChecklist />
       <InstallAppCard />
+      <EnableNotificationsCard />
 
       {/* ─── Stat cards ─── */}
       <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-5">

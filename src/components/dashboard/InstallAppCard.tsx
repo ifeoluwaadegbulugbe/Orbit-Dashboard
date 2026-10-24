@@ -72,6 +72,9 @@ export function InstallAppCard() {
       {platform === "android" && canPrompt ? (
         <div className="mt-4">
           <Button fullWidth onClick={install} leftIcon={<Download className="h-4 w-4" />}>Install Orbit</Button>
+          <p className="mt-3 text-tiny text-[var(--color-muted)]">
+            Then open Orbit from its icon and turn on <strong>Settings → Phone notifications</strong> to get bookings and payments like any other app.
+          </p>
         </div>
       ) : (
         <ol className="mt-4 space-y-2.5 text-small text-[var(--color-ink-mid)]">
@@ -80,11 +83,13 @@ export function InstallAppCard() {
               <Step n={1}>Open this page in <strong>Safari</strong></Step>
               <Step n={2}>Tap <Share className="inline h-4 w-4 -mt-0.5 text-[var(--color-info)]" aria-label="Share" /> <strong>Share</strong> at the bottom of the screen</Step>
               <Step n={3}>Tap <PlusSquare className="inline h-4 w-4 -mt-0.5" aria-hidden /> <strong>Add to Home Screen</strong>, then <strong>Add</strong></Step>
+              <Step n={4}>Open Orbit from the <strong>new icon</strong> (not Safari), then go to <strong>Settings → Phone notifications</strong> and tap <strong>Turn on notifications</strong></Step>
             </>
           ) : (
             <>
               <Step n={1}>Tap the <MoreVertical className="inline h-4 w-4 -mt-0.5" aria-label="menu" /> menu at the top right of your browser</Step>
               <Step n={2}>Tap <strong>Install app</strong> or <strong>Add to Home screen</strong></Step>
+              <Step n={3}>Open Orbit from the <strong>new icon</strong>, then go to <strong>Settings → Phone notifications</strong> and tap <strong>Turn on notifications</strong></Step>
             </>
           )}
         </ol>
