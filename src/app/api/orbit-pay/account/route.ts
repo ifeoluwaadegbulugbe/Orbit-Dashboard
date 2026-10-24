@@ -6,11 +6,10 @@ import { orbitPayCountryOk, orbitPayEnabled, planFor } from "@/lib/orbit-pay/ser
 /**
  * Orbit Pay settings for the signed-in owner.
  *
- *   GET   → { enabled, available, plan, account: { bankName, last4, accountName, feeBearer } | null }
+ *   GET   → { enabled, available, plan, account: { bankName, last4, accountName } | null }
  *   POST  { bankCode, accountNumber, confirmedName } → connect or change the payout bank
  *         The account is re-checked with Paystack here (never trusting the
  *         browser) and must match the name the owner confirmed.
- *   PATCH { feeBearer: "merchant" | "client" } → who pays the processing fee
  */
 
 async function owner() {
@@ -25,13 +24,13 @@ export async function GET() {
   const service = createServiceClient();
   const [{ data: profile }, { data: acct }] = await Promise.all([
     service.from("profiles").select("email, country_code, subscription_status, trial_ends_at").eq("id", user.id).maybeSingle(),
-    service.from("orbit_pay_accounts").select("bank_name, account_last4, account_name, fee_bearer").eq("user_id", user.id).maybeSingle(),
+    service.from("orbit_pay_accounts").select("bank_name, account_last4, account_name").eq("user_id", user.id).maybeSingle(),
   ]);
   return NextResponse.json({
     enabled: orbitPayEnabled(),
     available: orbitPayCountryOk(profile?.country_code),
     plan: planFor({ ...profile, email: profile?.email ?? user.email }),
-    account: acct ? { bankName: acct.bank_name, last4: acct.account_last4, accountName: acct.account_name, feeBearer: acct.fee_bearer } : null,
+    account: acct ? { bankName: acct.bank_name, last4: acct.account_last4, accountName: acct.account_name } : null,
   });
 }
 
@@ -94,19 +93,4 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Couldn't save. Try again." }, { status: 500 });
   }
   return NextResponse.json({ ok: true, account: { bankName, last4: accountNumber.slice(-4), accountName } });
-}
-
-export async function PATCH(request: Request) {
-  const user = await owner();
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const body = (await request.json().catch(() => null)) as { feeBearer?: unknown } | null;
-  if (body?.feeBearer !== "merchant" && body?.feeBearer !== "client") {
-    return NextResponse.json({ error: "Choose who pays the processing fee." }, { status: 400 });
-  }
-  const { data, error } = await createServiceClient().from("orbit_pay_accounts")
-    .update({ fee_bearer: body.feeBearer, updated_at: new Date().toISOString() })
-    .eq("user_id", user.id).select("user_id");
-  if (error) return NextResponse.json({ error: "Couldn't save. Try again." }, { status: 500 });
-  if (!data?.length) return NextResponse.json({ error: "Add your bank account first." }, { status: 412 });
-  return NextResponse.json({ ok: true, feeBearer: body.feeBearer });
 }

@@ -66,11 +66,9 @@ Fees are rounded up to the nearest naira. The fee is fixed when you create the
 payment link, at the plan you are on at that moment. Orbit pays Paystack's
 processing charges out of its own fee; you are not charged them separately.
 
-**2.7 Who pays the fee.** You choose in your settings whether you absorb the
-fee (your client pays the invoice amount and you receive that amount minus
-the fee) or your client pays it (your client pays the invoice amount plus a
-separately shown "Processing fee" and you receive the full invoice amount).
-Links you already sent keep the setting they were created with.
+**2.7 Who pays the fee.** The Orbit Pay fee is paid by your client. Your client
+pays the invoice amount plus the fee, shown to them as a separate "Processing
+fee" line before they pay, and you receive the full invoice amount.
 
 **2.8 Fee changes.** We may change Orbit Pay fees with at least [30] days'
 notice by email and in the app. New fees apply only to payment links created
@@ -227,5 +225,6 @@ Protection Commission (or your local regulator).
 7. Record retention period (B5): is six years correct for these records?
 8. The terms currently provide for arbitration in Nigeria; is that suitable
    for businesses outside Nigeria?
-9. Any wording needed because the client, not only the business, sees and
-   pays the "Processing fee" (consumer surcharge rules)?
+9. The client always pays the "Processing fee" on top of the invoice. Is that
+   surcharge allowed, and is any wording or disclosure needed under consumer
+   protection or card scheme surcharging rules?

@@ -39,7 +39,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const service = createServiceClient();
   const [{ data: owner }, { data: account }] = await Promise.all([
     service.from("profiles").select("email, country_code, subscription_status, trial_ends_at").eq("id", user.id).maybeSingle(),
-    service.from("orbit_pay_accounts").select("subaccount_code, fee_bearer").eq("user_id", user.id).maybeSingle(),
+    service.from("orbit_pay_accounts").select("subaccount_code").eq("user_id", user.id).maybeSingle(),
   ]);
   if (!orbitPayCountryOk(owner?.country_code)) {
     return NextResponse.json({ error: "Orbit Pay is only available for businesses in Nigeria for now." }, { status: 400 });
@@ -53,7 +53,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   if (!(serviceKobo >= 100_00)) return NextResponse.json({ error: "Orbit Pay needs an amount of at least ₦100." }, { status: 400 });
 
   const plan = planFor({ ...owner, email: owner?.email ?? user.email });
-  const bearer = account.fee_bearer as FeeBearer;
+  // The client always pays Orbit's fee, as a separate "Processing fee"
+  // line, so the business receives the full invoice amount.
+  const bearer: FeeBearer = "client";
   const local = quote(serviceKobo, plan, bearer, "local");
   const intl = quote(serviceKobo, plan, bearer, "international");
 

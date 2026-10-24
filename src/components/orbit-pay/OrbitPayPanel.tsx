@@ -7,14 +7,14 @@ import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { toast } from "@/stores/toastStore";
 import { createClient } from "@/lib/supabase/client";
-import { ORBIT_PAY_FEES, type FeeBearer, type Plan } from "@/lib/orbit-pay/fees";
+import { ORBIT_PAY_FEES, type Plan } from "@/lib/orbit-pay/fees";
 import { formatShortDate } from "@/lib/utils";
 
 interface Status {
   enabled: boolean;
   available: boolean;
   plan: Plan;
-  account: { bankName: string; last4: string; accountName: string; feeBearer: FeeBearer } | null;
+  account: { bankName: string; last4: string; accountName: string } | null;
 }
 interface ChargeRow {
   id: string; payment_id: string; status: string; service_kobo: number; paid_kobo: number | null;
@@ -56,7 +56,8 @@ export function OrbitPayPanel() {
             <h3 className="text-card-title font-semibold">Orbit Pay</h3>
             <p className="text-small text-[var(--color-ink-light)] mt-1 leading-relaxed">
               Clients pay deposits and invoices by card or bank transfer. Payments are processed by Paystack and settle
-              straight into your own bank account. Orbit never holds your money.
+              straight into your own bank account. Orbit never holds your money. The processing fee is added to your
+              client&apos;s total as a separate line, so you receive the full invoice amount.
             </p>
             <p className="text-small text-[var(--color-ink-mid)] mt-2">
               Your fee on {status.plan === "pro" ? "Pro" : "Free"}: <strong>{feeText(status.plan)}</strong>
@@ -92,7 +93,6 @@ export function OrbitPayPanel() {
               <Button variant="ghost" size="sm" onClick={() => setEditing(true)}>Change</Button>
             </div>
           </Card>
-          <FeeBearerSetting value={status.account.feeBearer} onSaved={(feeBearer) => setStatus({ ...status, account: { ...status.account!, feeBearer } })} />
         </>
       )}
 
@@ -163,36 +163,6 @@ function BankForm({ onDone, onCancel }: { onDone: () => void; onCancel?: () => v
         </div>
       )}
       {err && <p className="mt-3 text-small text-[var(--color-danger)]" role="alert">{err}</p>}
-    </Card>
-  );
-}
-
-function FeeBearerSetting({ value, onSaved }: { value: FeeBearer; onSaved: (v: FeeBearer) => void }) {
-  const [saving, setSaving] = useState(false);
-  async function pick(v: FeeBearer) {
-    if (v === value || saving) return;
-    setSaving(true);
-    const res = await fetch("/api/orbit-pay/account", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ feeBearer: v }) });
-    setSaving(false);
-    if (res.ok) { onSaved(v); toast("Saved. New payment links use this.", "success"); } else toast("Couldn't save. Try again.", "danger");
-  }
-  const options: { v: FeeBearer; title: string; body: string }[] = [
-    { v: "merchant", title: "I absorb it", body: "Your client pays the invoice amount. The fee comes out of what you receive." },
-    { v: "client", title: "Client pays it", body: "Your client pays the invoice amount plus a \"Processing fee\" line. You receive the full amount." },
-  ];
-  return (
-    <Card>
-      <h3 className="text-card-title font-semibold">Who pays the processing fee?</h3>
-      <div className="mt-4 grid sm:grid-cols-2 gap-3" role="radiogroup">
-        {options.map((o) => (
-          <button key={o.v} type="button" role="radio" aria-checked={value === o.v} onClick={() => pick(o.v)} disabled={saving}
-            className={`text-left rounded-[var(--radius-lg)] border p-4 transition-colors ${value === o.v ? "border-[var(--color-primary)] bg-[var(--color-primary-subtle)]" : "border-[var(--color-border)] hover:bg-[var(--color-canvas)]"}`}>
-            <span className="block text-body font-semibold">{o.title}</span>
-            <span className="block text-small text-[var(--color-ink-light)] mt-1">{o.body}</span>
-          </button>
-        ))}
-      </div>
-      <p className="mt-3 text-tiny text-[var(--color-muted)]">Links you already sent keep the setting they were made with.</p>
     </Card>
   );
 }

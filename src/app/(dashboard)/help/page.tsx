@@ -159,8 +159,8 @@ const SECTIONS: GuideSection[] = [
         ),
       },
       {
-        title: "Choose who pays the processing fee",
-        body: <>Absorb it yourself, or let your client pay it as a separate &quot;Processing fee&quot; line.</>,
+        title: "The fee is added for your client",
+        body: <>Your client sees the invoice amount plus a separate &quot;Processing fee&quot; line, so you receive the full amount.</>,
       },
       {
         title: "Send a payment link",
@@ -190,7 +190,7 @@ const FAQS: { q: string; a: React.ReactNode }[] = [
   },
   {
     q: "Are there any fees?",
-    a: `Orbit Pay costs ${feeText("free")} on Free, and ${feeText("pro")} on Pro. You choose whether you or your client pays it. Invoices you mark as paid yourself are free.`,
+    a: `Orbit Pay costs ${feeText("free")} on Free, and ${feeText("pro")} on Pro. It's added to your client's total as a separate "Processing fee" line, so you receive the full invoice amount. Invoices you mark as paid yourself are free.`,
   },
   {
     q: "Where does my money go?",
