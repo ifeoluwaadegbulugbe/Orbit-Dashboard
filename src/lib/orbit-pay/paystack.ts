@@ -114,3 +114,23 @@ export async function refundTransaction(reference: string, amountKobo?: number) 
     body: JSON.stringify({ transaction: reference, ...(amountKobo ? { amount: amountKobo } : {}) }),
   });
 }
+
+// ── Payouts (read-only) ─────────────────────────────────────────────────
+// GET /settlement?subaccount=      payouts made for a subaccount
+// GET /settlement/:id/transactions the payments a payout included
+
+export interface Settlement {
+  id: number;
+  status?: string;
+  settlement_date?: string;
+  settled_at?: string;
+  updatedAt?: string;
+}
+
+export async function listSubaccountSettlements(subaccountCode: string): Promise<Settlement[]> {
+  return call<Settlement[]>(`/settlement?subaccount=${encodeURIComponent(subaccountCode)}&perPage=50`);
+}
+
+export async function listSettlementTransactions(settlementId: number): Promise<{ reference?: string }[]> {
+  return call<{ reference?: string }[]>(`/settlement/${settlementId}/transactions?perPage=100`);
+}

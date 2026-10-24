@@ -122,15 +122,18 @@ export function paymentReceivedEmail(p: {
   invoiceNumber: string | null;
   paymentPath: string;
   url: Url;
+  /** Orbit Pay: when the money reaches their bank. */
+  payoutNote?: string;
 }): EmailContent {
   return {
-    preheader: `${p.clientName} just paid ${p.amount}.`,
+    preheader: p.payoutNote ?? `${p.clientName} just paid ${p.amount}.`,
     eyebrow: "Payment",
     title: "Someone paid you",
     blocks: [
       { type: "statement", size: "xl", text: "Paid. *Finally.*" },
       { type: "text", paragraphs: [`**${p.clientName}** just paid${p.invoiceNumber ? ` invoice ${p.invoiceNumber}` : ""}. No chasing required.`] },
       { type: "card", cursor: true, card: { kind: "payment", amount: p.amount, client: p.clientName, note: p.invoiceNumber ? `Invoice ${p.invoiceNumber}` : undefined, status: "✓ Paid" } },
+      ...(p.payoutNote ? [{ type: "text" as const, paragraphs: [p.payoutNote] }] : []),
       { type: "cta", text: "See the payment", url: p.url(p.paymentPath) },
     ],
   };

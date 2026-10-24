@@ -15,6 +15,7 @@ import { sendEmail } from "@/lib/email/server";
 import { appUrl } from "@/lib/app-url";
 import { renderEmail } from "@/lib/email-design/render";
 import { paymentReceivedEmail } from "@/lib/email-design/templates";
+import { expectedPayoutDate, formatPayoutDate, shortBankName } from "./payout";
 
 const naira = (kobo: number) => `₦${(kobo / 100).toLocaleString("en-NG", { maximumFractionDigits: 2 })}`;
 
@@ -84,11 +85,13 @@ export async function handleOrbitPaySuccess(supabase: SupabaseClient, data: Char
 
   const settles = Number(charge.charge_kobo) === paid ? paid - Number(charge.fee_kobo) : paid - Number(charge.intl_fee_kobo);
   const client = payment?.client_name ?? "A client";
+  const { data: acct } = await supabase.from("orbit_pay_accounts").select("bank_name").eq("user_id", userId).maybeSingle();
+  const arrives = `${naira(settles)} arrives in your ${shortBankName(acct?.bank_name)} account by ${formatPayoutDate(expectedPayoutDate(data.paid_at ?? now))}.`;
   await notify(supabase, {
     userId,
     type: "payment_received",
     title: `${client} paid ${naira(Number(charge.service_kobo))}`,
-    body: `${payment?.invoice_number ? `Invoice ${payment.invoice_number}. ` : ""}${naira(settles)} will be paid into your bank account by Paystack.`,
+    body: `${payment?.invoice_number ? `Invoice ${payment.invoice_number}. ` : ""}${arrives}`,
     actionUrl: `/payments/${charge.payment_id}`,
     metadata: { payment_id: charge.payment_id, charge_id: charge.id },
   });
@@ -104,6 +107,7 @@ export async function handleOrbitPaySuccess(supabase: SupabaseClient, data: Char
         invoiceNumber: payment?.invoice_number ?? null,
         paymentPath: `/payments/${charge.payment_id}`,
         url: (path) => `${base}${path}`,
+        payoutNote: `${arrives} Paystack pays out on the next business day.`,
       }),
       { appUrl: base, reason: "You're getting this because a client paid you through Orbit Pay." },
     );

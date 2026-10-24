@@ -9,6 +9,7 @@ import { toast } from "@/stores/toastStore";
 import { createClient } from "@/lib/supabase/client";
 import { ORBIT_PAY_FEES, type Plan } from "@/lib/orbit-pay/fees";
 import { formatShortDate } from "@/lib/utils";
+import { expectedPayoutDate, formatPayoutDate } from "@/lib/orbit-pay/payout";
 
 interface Status {
   enabled: boolean;
@@ -19,6 +20,7 @@ interface Status {
 interface ChargeRow {
   id: string; payment_id: string; status: string; service_kobo: number; paid_kobo: number | null;
   fee_kobo: number; intl_fee_kobo: number; card_region: string | null; refunded_kobo: number; paid_at: string | null;
+  settled_at: string | null;
 }
 
 const naira = (kobo: number) => `₦${(kobo / 100).toLocaleString("en-NG", { maximumFractionDigits: 2 })}`;
@@ -59,6 +61,7 @@ export function OrbitPayPanel() {
               straight into your own bank account. Orbit never holds your money. The processing fee is added to your
               client&apos;s total as a separate line, so you receive the full invoice amount.
             </p>
+            <p className="text-small font-semibold text-[var(--color-ink)] mt-2">Payments reach your bank the next business day.</p>
             <p className="text-small text-[var(--color-ink-mid)] mt-2">
               Your fee on {status.plan === "pro" ? "Pro" : "Free"}: <strong>{feeText(status.plan)}</strong>
               {status.plan === "free" && <> · Pro: {feeText("pro")}</>}
@@ -88,6 +91,7 @@ export function OrbitPayPanel() {
                   <p className="text-tiny font-semibold uppercase tracking-wider text-[var(--color-muted)]">Payments settle into</p>
                   <p className="text-body font-semibold mt-1 truncate">{status.account.accountName}</p>
                   <p className="text-small text-[var(--color-ink-light)]">{status.account.bankName} · ••••{status.account.last4}</p>
+                  <p className="text-tiny text-[var(--color-muted)] mt-1">Payments reach this account the next business day.</p>
                 </div>
               </div>
               <Button variant="ghost" size="sm" onClick={() => setEditing(true)}>Change</Button>
@@ -131,7 +135,7 @@ function BankForm({ onDone, onCancel }: { onDone: () => void; onCancel?: () => v
   return (
     <Card>
       <h3 className="text-card-title font-semibold">Where should clients&apos; payments go?</h3>
-      <p className="text-small text-[var(--color-ink-light)] mt-1">Use a Nigerian bank account in your name or your business&apos;s name.</p>
+      <p className="text-small text-[var(--color-ink-light)] mt-1">Use a Nigerian bank account in your name or your business&apos;s name. Payments reach it the next business day.</p>
       <div className="mt-4 grid sm:grid-cols-2 gap-3">
         <select value={bankCode} onChange={(e) => { setBankCode(e.target.value); setResolved(null); }} className={inputCls} aria-label="Bank">
           <option value="">Choose your bank</option>
@@ -171,7 +175,7 @@ function PaymentsReceived() {
   const [rows, setRows] = useState<ChargeRow[] | null>(null);
   useEffect(() => {
     createClient().from("orbit_pay_charges")
-      .select("id, payment_id, status, service_kobo, paid_kobo, fee_kobo, intl_fee_kobo, card_region, refunded_kobo, paid_at")
+      .select("id, payment_id, status, service_kobo, paid_kobo, fee_kobo, intl_fee_kobo, card_region, refunded_kobo, paid_at, settled_at")
       .in("status", ["success", "refunded", "partially_refunded", "disputed"])
       .order("paid_at", { ascending: false }).limit(50)
       .then(({ data }) => setRows((data as ChargeRow[] | null) ?? []), () => setRows([]));
@@ -180,7 +184,7 @@ function PaymentsReceived() {
   return (
     <Card>
       <h3 className="text-card-title font-semibold">Payments received</h3>
-      <p className="text-small text-[var(--color-muted)] mt-1">Paystack pays these into your bank account on its normal settlement schedule.</p>
+      <p className="text-small text-[var(--color-muted)] mt-1">Paystack pays each one into your bank account the next business day.</p>
       {rows === null ? <div className="mt-4 h-20 rounded-[var(--radius-lg)] skeleton" /> : rows.length === 0 ? (
         <p className="mt-4 text-small text-[var(--color-ink-light)]">No Orbit Pay payments yet.</p>
       ) : (
@@ -197,11 +201,11 @@ function PaymentsReceived() {
                       {r.paid_at ? formatShortDate(r.paid_at) : ""} · Orbit Pay fee {naira(Number(fee))} · To your bank {naira(paid - Number(fee))}
                     </span>
                   </span>
-                  {r.status !== "success" && (
+                  {r.status !== "success" ? (
                     <Badge tone={r.status === "disputed" ? "danger" : "neutral"}>
                       {r.status === "disputed" ? "Disputed" : r.status === "refunded" ? "Refunded" : `Refunded ${naira(Number(r.refunded_kobo))}`}
                     </Badge>
-                  )}
+                  ) : <PayoutStatus paidAt={r.paid_at} settledAt={r.settled_at} />}
                 </Link>
               </li>
             );
@@ -210,6 +214,18 @@ function PaymentsReceived() {
       )}
     </Card>
   );
+}
+
+/** "Paid to your bank" once Paystack confirms it; until then, the expected day. */
+function PayoutStatus({ paidAt, settledAt }: { paidAt: string | null; settledAt: string | null }) {
+  if (settledAt) return <Badge tone="success">Paid to your bank</Badge>;
+  if (!paidAt) return null;
+  const due = expectedPayoutDate(paidAt);
+  const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Africa/Lagos" }).format(new Date());
+  const label = formatPayoutDate(due).replace(/^(\w{3})\w*/, "$1"); // "Mon 26 Oct"
+  return today > due
+    ? <Badge tone="warning">Due {label}</Badge>
+    : <Badge tone="info">Arriving {label}</Badge>;
 }
 
 const inputCls = "w-full h-11 px-3 rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-white text-body text-[var(--color-ink)] focus:outline-none focus:border-[var(--color-primary)]";
