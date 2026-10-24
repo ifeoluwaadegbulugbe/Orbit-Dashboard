@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { completeChat } from "@/lib/ai/complete";
 import { getEffectiveRule, type MessageRuleRow, type TriggerType } from "@/lib/automations/rules";
 import { track } from "@/lib/analytics/server";
+import { requirePro } from "@/lib/subscription/server";
 
 /**
  * Stateless AI suggestions embedded on Home/Clients/Money - a single
@@ -78,6 +79,8 @@ export async function POST(request: Request) {
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+  const locked = await requirePro(user.id, user.email, "Orbit AI");
+  if (locked) return locked;
 
   const body = (await request.json().catch(() => ({}))) as SuggestBody;
   if (!body.kind) {

@@ -1,22 +1,21 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
-import { Receipt, AlertCircle, Clock, CheckCircle2, Wallet2, Sparkles, ArrowRight, CalendarClock } from "lucide-react";
+import { Receipt, AlertCircle, Clock, CheckCircle2, ShieldCheck, CalendarClock, Sparkles, ArrowRight } from "lucide-react";
 import { usePayments } from "@/hooks/usePayments";
 import { useClients } from "@/hooks/useClients";
-import { useWalletBalances } from "@/hooks/useWallet";
 import { useSubscription } from "@/hooks/useSubscription";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { PaywallModal } from "@/components/paywall/PaywallModal";
 import { SuggestButton } from "@/components/ai/SuggestButton";
 import { formatShortDate, relativeDate } from "@/lib/utils";
-import { formatMinor } from "@/lib/wallet/format";
+import { OrbitPayPanel } from "@/components/orbit-pay/OrbitPayPanel";
 import { useCurrency } from "@/hooks/useCurrency";
 import type { PaymentStatus } from "@/types";
 
-type Tab = "invoices" | "wallet";
+type Tab = "invoices" | "pay";
 
 const STATUS_STYLE: Record<PaymentStatus, { tone: "success" | "warning" | "danger" | "info" | "neutral"; label: string }> = {
   paid:     { tone: "success", label: "Paid" },
@@ -32,7 +31,12 @@ export default function PaymentsPage() {
   const { isPro } = useSubscription();
   const { data: payments = [], isLoading } = usePayments();
   const { data: clients = [] } = useClients();
-  const { format: formatCurrency } = useCurrency();
+  const { format: formatCurrency, country } = useCurrency();
+  // Orbit Pay is Nigeria-only for now (naira, Nigerian bank accounts).
+  const orbitPayAvailable = country.code === "NG";
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("tab") === "pay") setTab("pay");
+  }, []);
   const [paywallOpen, setPaywallOpen] = useState(false);
   // "Draft reminder" needs phone/email, which the payment row doesn't carry.
   const clientById = useMemo(() => new Map(clients.map((c) => [c.id, c])), [clients]);
@@ -54,13 +58,13 @@ export default function PaymentsPage() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-page font-bold">Money</h1>
-          <p className="text-lead text-[var(--color-ink-light)] mt-2">Invoices, payments, and your Orbit Wallet.</p>
+          <p className="text-lead text-[var(--color-ink-light)] mt-2">Invoices and payments.</p>
         </div>
       </div>
 
       {/* Tabs */}
       <div className="flex items-center gap-2 border-b border-[var(--color-border)]">
-        {(["invoices", "wallet"] as const).map((key) => (
+        {(orbitPayAvailable ? (["invoices", "pay"] as const) : (["invoices"] as const)).map((key) => (
           <button
             key={key}
             onClick={() => setTab(key)}
@@ -70,13 +74,13 @@ export default function PaymentsPage() {
                 : "border-transparent text-[var(--color-ink-light)] hover:text-[var(--color-ink)]"
             }`}
           >
-            {key === "invoices" ? <Receipt className="h-4 w-4" /> : <Wallet2 className="h-4 w-4" />}
-            {key === "invoices" ? "Invoices" : "Wallet"}
+            {key === "invoices" ? <Receipt className="h-4 w-4" /> : <ShieldCheck className="h-4 w-4" />}
+            {key === "invoices" ? "Invoices" : "Orbit Pay"}
           </button>
         ))}
       </div>
 
-      {tab === "invoices" ? (
+      {tab === "invoices" || !orbitPayAvailable ? (
         <div className="space-y-8">
           {/* Headline totals */}
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-5 [&>*:first-child]:col-span-2 sm:[&>*:first-child]:col-span-1">
@@ -103,10 +107,10 @@ export default function PaymentsPage() {
             />
           </div>
 
-          {/* Wallet nudge - the headline reason to upgrade (orbit-overhaul.md §10) */}
-          {!isPro && unpaidCount > 0 && (
+          {/* Orbit Pay nudge: unpaid invoices are the moment a pay link helps most */}
+          {orbitPayAvailable && unpaidCount > 0 && (
             <button
-              onClick={() => setPaywallOpen(true)}
+              onClick={() => setTab("pay")}
               className="w-full flex items-center gap-4 px-4 sm:px-6 py-5 bg-[var(--color-primary-subtle)] rounded-[var(--radius-2xl)] border border-[var(--color-primary)]/20 text-left hover:border-[var(--color-primary)]/40 transition-colors"
             >
               <div className="w-11 h-11 rounded-xl bg-white text-[var(--color-primary)] flex items-center justify-center flex-shrink-0">
@@ -117,7 +121,7 @@ export default function PaymentsPage() {
                   {unpaidCount} {unpaidCount === 1 ? "invoice is" : "invoices are"} unpaid
                 </div>
                 <div className="text-small text-[var(--color-ink-light)] mt-0.5">
-                  Turn on Orbit Wallet to get paid automatically - no more manual chasing.
+                  Send an Orbit Pay link so clients can pay by card or bank transfer, straight into your bank.
                 </div>
               </div>
               <ArrowRight className="h-4 w-4 text-[var(--color-primary)] flex-shrink-0" />
@@ -196,71 +200,10 @@ export default function PaymentsPage() {
           </div>
         </div>
       ) : (
-        <WalletTab isPro={isPro} onUpgrade={() => setPaywallOpen(true)} />
+        <OrbitPayPanel />
       )}
 
       <PaywallModal open={paywallOpen} onClose={() => setPaywallOpen(false)} />
-    </div>
-  );
-}
-
-function WalletTab({ isPro, onUpgrade }: { isPro: boolean; onUpgrade: () => void }) {
-  // Only fetch wallet data once the tab is actually opened by a Pro user -
-  // Free users just see the upsell card below, no wallet query needed.
-  const { data: balances = [], isLoading } = useWalletBalances({ enabled: isPro });
-
-  if (!isPro) {
-    return (
-      <div className="bg-white rounded-[var(--radius-2xl)] border border-[var(--color-border)] shadow-soft-sm p-6 sm:p-10 text-center">
-        <div className="w-12 h-12 rounded-2xl bg-[var(--color-primary-subtle)] flex items-center justify-center mx-auto mb-4">
-          <Wallet2 className="h-5 w-5 text-[var(--color-primary)]" />
-        </div>
-        <h3 className="text-card-title font-semibold text-[var(--color-ink)] mb-2">
-          Get paid automatically with Orbit Wallet
-        </h3>
-        <p className="text-small text-[var(--color-ink-light)] max-w-sm mx-auto mb-5">
-          Invoice payments land straight in your Orbit Wallet - no manual reconciling, withdraw to your bank whenever you like.
-        </p>
-        <Button leftIcon={<Sparkles className="h-4 w-4" />} onClick={onUpgrade}>
-          Unlock with Pro
-        </Button>
-      </div>
-    );
-  }
-
-  if (isLoading) {
-    return <div className="h-32 rounded-[var(--radius-2xl)] skeleton" />;
-  }
-
-  return (
-    <div className="space-y-4">
-      {balances.length === 0 ? (
-        <div className="bg-white rounded-[var(--radius-2xl)] border border-[var(--color-border)] p-5 sm:p-8 text-center">
-          <Wallet2 className="h-8 w-8 text-[var(--color-muted)] mx-auto mb-3" />
-          <p className="text-small text-[var(--color-ink-light)]">No wallet activity yet.</p>
-        </div>
-      ) : (
-        balances.map((b) => (
-          <div
-            key={b.wallet_id}
-            className="bg-white rounded-[var(--radius-2xl)] border border-[var(--color-border)] shadow-soft-sm p-5 sm:p-8"
-          >
-            <span className="text-tiny font-semibold uppercase tracking-wider text-[var(--color-muted)]">
-              {b.currency} balance
-            </span>
-            <div className="mt-2 text-stat font-bold">{formatMinor(b.balance_minor, b.currency)}</div>
-          </div>
-        ))
-      )}
-      <Link
-        href="/wallet"
-        className="flex items-center justify-between px-4 sm:px-6 py-4 bg-white rounded-[var(--radius-xl)] border border-[var(--color-border)] hover:border-[var(--color-ink-light)] transition-colors"
-      >
-        <span className="text-body font-semibold text-[var(--color-ink)]">
-          Bank accounts &amp; withdrawals
-        </span>
-        <ArrowRight className="h-4 w-4 text-[var(--color-muted)]" />
-      </Link>
     </div>
   );
 }

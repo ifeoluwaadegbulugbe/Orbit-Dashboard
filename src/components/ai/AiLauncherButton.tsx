@@ -10,7 +10,7 @@ import { PaywallModal } from "@/components/paywall/PaywallModal";
  * Persistent "ready to help" entry point for the AI Assistant - floats over
  * every dashboard page instead of AI being a nav destination. Free users see
  * the same button but get the upgrade prompt instead of the chat, same
- * pattern used elsewhere (Money's Wallet tab, Insights) rather than hiding
+ * pattern used elsewhere (Insights) rather than hiding
  * the feature outright.
  */
 export function AiLauncherButton() {

@@ -18,10 +18,11 @@ import { useSubscription } from "@/hooks/useSubscription";
 import { useCurrencyStore } from "@/stores/currencyStore";
 import { createClient } from "@/lib/supabase/client";
 import { BUSINESS_TYPE_LABELS } from "@/types";
-import { PRO_PRICE_DISPLAY, PRO_PRICE_PERIOD } from "@/lib/constants";
+import { priceLabel } from "@/lib/pricing";
 import { type Country } from "@/lib/countries";
 import { CountryList } from "@/components/ui/CountryList";
 import { EmailPreferences } from "@/components/settings/EmailPreferences";
+import { PhoneNotifications } from "@/components/settings/PhoneNotifications";
 import { track } from "@/lib/analytics/browser";
 
 export default function ProfilePage() {
@@ -271,8 +272,8 @@ function ProfileInner() {
                 </div>
                 <div className="text-small text-[var(--color-muted)] mt-1">
                   {isOnTrial
-                    ? `Auto-renews to ${PRO_PRICE_DISPLAY}${PRO_PRICE_PERIOD} after trial ends.`
-                    : `${PRO_PRICE_DISPLAY}${PRO_PRICE_PERIOD} · billed monthly`}
+                    ? `Auto-renews to ${priceLabel(country.code, "monthly")} after trial ends.`
+                    : `${priceLabel(country.code, "monthly")} or ${priceLabel(country.code, "yearly")}`}
                 </div>
               </div>
             </div>
@@ -355,6 +356,7 @@ function ProfileInner() {
       </SectionCard>
 
       {/* ─── Security ─── */}
+      <PhoneNotifications />
       <EmailPreferences />
 
       <SectionCard title="Security" icon={<Lock className="h-4 w-4 text-[var(--color-primary)]" />}>

@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { completeChat } from "@/lib/ai/complete";
 import type { AiMessage } from "@/types";
 import { track } from "@/lib/analytics/server";
+import { requirePro } from "@/lib/subscription/server";
 
 /**
  * AI Assistant - persistent, freeform chat backed by a free LLM provider.
@@ -45,6 +46,8 @@ export async function POST(request: Request) {
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+  const locked = await requirePro(user.id, user.email, "Orbit AI");
+  if (locked) return locked;
 
   const body = (await request.json().catch(() => ({}))) as {
     messages?: AiMessage[];

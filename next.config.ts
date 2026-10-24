@@ -14,6 +14,11 @@ const nextConfig: NextConfig = {
 
   // PostHog through our own domain (/ingest), as PostHog recommends, so
   // privacy/ad blockers don't silently drop product analytics.
+  // The old Wallet page is now Money -> Orbit Pay.
+  async redirects() {
+    return [{ source: "/wallet", destination: "/payments?tab=pay", permanent: false }];
+  },
+
   async rewrites() {
     const ingest = (process.env.NEXT_PUBLIC_POSTHOG_HOST || "https://us.i.posthog.com").replace(/\/+$/, "");
     const assets = ingest.replace("://us.i.", "://us-assets.i.").replace("://eu.i.", "://eu-assets.i.");

@@ -4,6 +4,8 @@ import { initializeSubscription } from "@/lib/paystack/server";
 import { FREE_TRIAL_DAYS } from "@/lib/constants";
 import { appUrl } from "@/lib/app-url";
 import { trackEvent } from "@/lib/lifecycle/events";
+import { createServiceClient } from "@/lib/supabase/server";
+import { NGN_PRICE, planEnvVar, type BillingInterval } from "@/lib/pricing";
 
 /** Detects placeholder env values left over from .env.local.example. */
 function looksLikePlaceholder(value: string | undefined): boolean {
@@ -39,14 +41,21 @@ export async function POST(request: Request) {
     );
   }
 
-  const { startTrial } = (await request.json().catch(() => ({}))) as { startTrial?: boolean };
+  const { startTrial, interval: rawInterval } = (await request.json().catch(() => ({}))) as { startTrial?: boolean; interval?: string };
+  const interval: BillingInterval = rawInterval === "yearly" ? "yearly" : "monthly";
+
+  // Everyone is billed in naira (Orbit's Paystack account is Nigerian);
+  // other countries see a local price - see src/lib/pricing.ts.
+  const { data: profile } = await createServiceClient().from("profiles").select("country_code").eq("id", userId!).maybeSingle();
 
   // For the "Still thinking about Orbit Pro?" email - cancelled automatically if they finish.
   if (userId) await trackEvent(userId, "checkout_started", { trial: !!startTrial });
 
   const secretKey = process.env.PAYSTACK_SECRET_KEY;
-  const planCode = process.env.NEXT_PUBLIC_PAYSTACK_PLAN_CODE;
-  const amountKobo = Number(process.env.PAYSTACK_PLAN_AMOUNT_KOBO ?? 900000); // ₦9,000 ≈ $17
+  const planVar = planEnvVar(interval);
+  const planCode = process.env[planVar];
+  // Smallest unit (kobo / cents). The Paystack plan's own amount must match.
+  const amountKobo = NGN_PRICE[interval] * 100;
   const baseUrl = appUrl();
 
   // ── 2. Config sanity checks - fail with a CLEAR message ──
@@ -65,7 +74,7 @@ export async function POST(request: Request) {
     return NextResponse.json(
       {
         error:
-          "Paystack plan not configured. Create a plan in Paystack Dashboard → Plans, then add its code (PLN_xxx…) to NEXT_PUBLIC_PAYSTACK_PLAN_CODE in .env.local. Or set NEXT_PUBLIC_FORCE_PRO=true to test Pro without real payment.",
+          `Paystack plan not configured: create the plan in Paystack Dashboard → Plans and put its code (PLN_xxx) in ${planVar}.`,
         code: "PAYSTACK_PLAN_MISSING",
       },
       { status: 503 },
@@ -90,6 +99,8 @@ export async function POST(request: Request) {
       metadata: {
         user_id: userId!,
         kind: startTrial ? "trial" : "subscription",
+        country: profile?.country_code ?? null,
+        interval,
       },
     });
 

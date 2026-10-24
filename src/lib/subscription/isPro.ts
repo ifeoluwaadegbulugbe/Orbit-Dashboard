@@ -8,6 +8,7 @@
  * Owner override - these emails always get Pro access, regardless of
  * subscription status. Keep in sync with src/hooks/useSubscription.ts.
  */
+// Also listed in supabase/migrations/022 (client limit) - keep both in sync.
 export const ADMIN_EMAILS = ["ifeoluwaadegbulugbe@gmail.com"];
 
 export interface ProfileSubscriptionFields {

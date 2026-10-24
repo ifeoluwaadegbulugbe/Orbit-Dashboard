@@ -63,7 +63,13 @@ export function useCreateClient() {
         .insert({ ...payload, user_id: userId!, total_paid: 0, outstanding_balance: 0 })
         .select()
         .single();
-      if (error) throw new Error(error.message);
+      if (error) {
+        // The database enforces the Free limit too (migration 022).
+        if (error.message.includes("FREE_CLIENT_LIMIT")) {
+          throw new Error("You've reached the 10-client limit on Free. Your clients are safe. Upgrade to Pro for unlimited clients and a lower Orbit Pay fee.");
+        }
+        throw new Error(error.message);
+      }
       return data as Client;
     },
     onSuccess: (client) => {

@@ -6,12 +6,13 @@
 
 import { useState, useMemo } from "react";
 import Link from "next/link";
-import { PLATFORM_FEE_PERCENT } from "@/lib/wallet/fees";
+import { feeText } from "@/components/orbit-pay/OrbitPayPanel";
 import {
   CreditCard, Receipt, MessageCircle, Search, Users,
   ChevronDown, ExternalLink, AlertCircle,
   type LucideIcon,
 } from "lucide-react";
+import { ContactSupport } from "@/components/settings/ContactSupport";
 
 // ─── Content model ───────────────────────────────────────────────────────────
 
@@ -138,32 +139,32 @@ const SECTIONS: GuideSection[] = [
     ],
   },
   {
-    id: "wallet",
+    id: "orbit-pay",
     icon: CreditCard,
     iconColor: "#4F46E5",
     iconBg: "#EEF2FF",
-    title: "Your Orbit Wallet",
-    intro: "Payments your clients make through payment links land here. Withdraw to your bank anytime.",
+    title: "Orbit Pay",
+    intro: "Let clients pay deposits and invoices by card or bank transfer. Payments are processed by Paystack and go straight into your own bank account. Orbit never holds your money.",
     steps: [
       {
-        title: "Check your balance",
+        title: "Connect your bank account",
         body: (
           <>
-            Open{" "}
-            <Link href="/wallet" className="underline font-semibold text-[var(--color-primary)]">
-              Wallet
-            </Link>{" "}
-            to see your balance and every payment that has come in.
+            Go to{" "}
+            <Link href="/payments?tab=pay" className="underline font-semibold text-[var(--color-primary)]">
+              Money → Orbit Pay
+            </Link>
+            , pick your bank and enter your account number. Check the account name the bank shows, then confirm.
           </>
         ),
       },
       {
-        title: "Add your bank account",
-        body: <>In Wallet, tap <strong>Add bank account</strong> and enter your account details.</>,
+        title: "Choose who pays the processing fee",
+        body: <>Absorb it yourself, or let your client pay it as a separate &quot;Processing fee&quot; line.</>,
       },
       {
-        title: "Withdraw",
-        body: <>Tap <strong>Withdraw</strong>, then choose your bank account and the amount.</>,
+        title: "Send a payment link",
+        body: <>Open an invoice and tap <strong>Create payment link</strong>. When your client pays, the invoice is marked paid and Paystack pays you on its normal settlement schedule.</>,
       },
     ],
   },
@@ -173,16 +174,31 @@ const SECTIONS: GuideSection[] = [
 
 const FAQS: { q: string; a: React.ReactNode }[] = [
   {
+    q: "Can I put Orbit on my phone like an app?",
+    a: (
+      <>
+        Yes. <strong>Android:</strong> open Orbit in Chrome, tap the ⋮ menu, then <strong>Install app</strong> (or
+        Add to Home screen). <strong>iPhone:</strong> open Orbit in Safari, tap <strong>Share</strong>, then{" "}
+        <strong>Add to Home Screen</strong>. Orbit then opens full screen from its own icon, and recent clients and
+        bookings still show with no network.
+      </>
+    ),
+  },
+  {
     q: "How can my clients pay me?",
-    a: "Send them a payment link from any invoice - they can pay by card, bank transfer or USSD. You can also mark an invoice as paid when a client pays you directly.",
+    a: "With Orbit Pay, send a payment link from any invoice and they pay by card or bank transfer. If they pay you by transfer or cash directly, tap Mark paid on the invoice. That's free.",
   },
   {
     q: "Are there any fees?",
-    a: `Payments collected through an Orbit payment link have a ${PLATFORM_FEE_PERCENT}% processing fee. Invoices you mark as paid yourself are free.`,
+    a: `Orbit Pay costs ${feeText("free")} on Free, and ${feeText("pro")} on Pro. You choose whether you or your client pays it. Invoices you mark as paid yourself are free.`,
   },
   {
-    q: "How do I get money out of my Wallet?",
-    a: "Add your bank account in Wallet, then tap Withdraw and choose how much to send.",
+    q: "Where does my money go?",
+    a: "Straight into your own bank account. Payments are processed by Paystack, a licensed payment processor, and settled to the account you connected. Orbit is business software, not a bank, and never holds your money.",
+  },
+  {
+    q: "How do refunds work?",
+    a: "Open the paid invoice and tap Refund. Paystack returns the money to your client and takes it from your next settlement.",
   },
   {
     q: "Can I invoice in my local currency?",
@@ -352,6 +368,8 @@ export default function HelpPage() {
           })}
         </div>
       </div>
+
+      <ContactSupport />
     </div>
   );
 }

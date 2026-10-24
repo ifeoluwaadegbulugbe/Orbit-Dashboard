@@ -10,6 +10,8 @@ import { useCurrencyStore } from "@/stores/currencyStore";
 import type { UserProfile } from "@/types";
 import { initAnalytics, identifyUser, resetAnalytics } from "@/lib/analytics/browser";
 import { computeSubscriptionState } from "@/lib/subscription/isPro";
+import { captureInstallPrompt } from "@/lib/pwa-install";
+import { forgetPushOnThisDevice } from "@/lib/push/browser";
 
 /**
  * Offline support: the query cache (clients, bookings, invoices...) is saved
@@ -97,6 +99,7 @@ export function Providers({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     initAnalytics();
+    captureInstallPrompt();
     const supabase = createClient();
     // Guards against a stale async result winning a race against a newer
     // one - e.g. React Strict Mode double-invoking this effect in dev (each
@@ -139,6 +142,7 @@ export function Providers({ children }: { children: ReactNode }) {
         clearPersistedCache();
         navigator.serviceWorker?.controller?.postMessage("orbit:clear-cache");
         resetAnalytics();
+        forgetPushOnThisDevice(); // the next person on this phone doesn't get this account's alerts
       } else if (u) {
         claimCacheFor(u.id);
         loadProfile(u.id).then((p) => { if (!cancelled) { setProfile(p); identify(p); } });

@@ -10,12 +10,12 @@
  *    Paystack), and private client links (/c/, /review/) or auth pages.
  */
 
-const VERSION = "orbit-v1";
+const VERSION = "orbit-v2";
 const STATIC_CACHE = `${VERSION}-static`;
 const PAGE_CACHE = `${VERSION}-pages`;
 const OFFLINE_URL = "/offline";
 
-const NEVER_CACHE = [/^\/api\//, /^\/c\//, /^\/review\//, /^\/auth\//, /^\/reset-password/, /^\/login/, /^\/signup/, /^\/forgot-password/];
+const NEVER_CACHE = [/^\/api\//, /^\/c\//, /^\/pay\//, /^\/review\//, /^\/auth\//, /^\/reset-password/, /^\/login/, /^\/signup/, /^\/forgot-password/];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(caches.open(PAGE_CACHE).then((c) => c.add(OFFLINE_URL)).then(() => self.skipWaiting()));
@@ -74,4 +74,39 @@ self.addEventListener("message", (event) => {
   if (event.data === "orbit:clear-cache") {
     event.waitUntil(caches.delete(PAGE_CACHE));
   }
+});
+
+// ── Push notifications (bookings, payments, reminders...) ─────────────────
+// Sent by the server (src/lib/push/server.ts) even when Orbit is closed.
+self.addEventListener("push", (event) => {
+  let data = {};
+  try { data = event.data ? event.data.json() : {}; } catch { data = { title: "Orbit", body: event.data ? event.data.text() : "" }; }
+  const title = data.title || "Orbit";
+  event.waitUntil(
+    self.registration.showNotification(title, {
+      body: data.body || "",
+      icon: "/icons/icon-192.png",
+      badge: "/icons/icon-192.png",
+      tag: data.tag || undefined,
+      data: { url: data.url || "/home" },
+    }),
+  );
+});
+
+// Tapping a notification opens (or focuses) Orbit on the right page.
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const path = (event.notification.data && event.notification.data.url) || "/home";
+  const parsed = new URL(path, self.location.origin);
+  const target = parsed.origin === self.location.origin ? parsed.href : new URL("/home", self.location.origin).href;
+  event.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((wins) => {
+      for (const w of wins) {
+        if (new URL(w.url).origin === self.location.origin && "focus" in w) {
+          return w.focus().then(() => ("navigate" in w ? w.navigate(target) : undefined));
+        }
+      }
+      return self.clients.openWindow(target);
+    }),
+  );
 });

@@ -1,15 +1,10 @@
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
 import { verifyWebhookSignature } from "@/lib/paystack/server";
-import { recordWebhookEvent, markWebhookProcessed, postInvoicePaymentWithFee } from "@/lib/ledger/server";
-import { recalcClientBalance } from "@/lib/payments/recalc-client-balance";
+import { recordWebhookEvent, markWebhookProcessed } from "@/lib/ledger/server";
+import { chargeMetadata, handleDispute, handleDisputeResolved, handleLegacyInvoiceCharge, handleOrbitPaySuccess, handleRefundEvent } from "@/lib/orbit-pay/webhook";
 import { notify } from "@/lib/notifications/server";
-import { splitPaymentMinor } from "@/lib/wallet/fees";
 import { trackEvent } from "@/lib/lifecycle/events";
-import { sendEmail } from "@/lib/email/server";
-import { appUrl } from "@/lib/app-url";
-import { renderEmail } from "@/lib/email-design/render";
-import { paymentReceivedEmail } from "@/lib/email-design/templates";
 import { track } from "@/lib/analytics/server";
 
 /**
@@ -71,87 +66,22 @@ export async function POST(request: Request) {
       };
       const meta = data.metadata ?? {};
 
-      // ── 1. Invoice charges - collected into Orbit's own account, split
-      // between the payer's wallet and Orbit's platform fee. ──
+      // ── 1. Orbit Pay: paid through a split, so the business's share is
+      // already on its way to their own bank. We only record it. ──
+      const orbitMeta = chargeMetadata(event.data as Parameters<typeof chargeMetadata>[0]);
+      if (orbitMeta.kind === "orbit_pay") {
+        const problem = await handleOrbitPaySuccess(supabase, event.data as Parameters<typeof handleOrbitPaySuccess>[1]);
+        if (problem) {
+          console.error("[orbit-pay]", problem);
+          await markWebhookProcessed(supabase, { provider: "paystack", providerEventId, error: problem });
+        }
+        break;
+      }
+
+      // ── Old-style invoice links (before Orbit Pay) - see the handler. ──
       if (meta.kind === "invoice" && meta.payment_id) {
-        const paidAmount = data.amount ? data.amount / 100 : null;
-        const { error } = await supabase
-          .from("payments")
-          .update({
-            status: "paid",
-            paid_amount: paidAmount,
-            remaining_balance: 0,
-            payment_completed_at: new Date().toISOString(),
-            transaction_reference: data.reference ?? null,
-            webhook_verified: true,
-          })
-          .eq("id", meta.payment_id);
-        if (error) console.error("[paystack] invoice charge.success update failed:", error);
-
-        const { data: paymentRow } = await supabase
-          .from("payments")
-          .select("client_id, client_name, user_id, invoice_number")
-          .eq("id", meta.payment_id)
-          .single();
-
-        if (paymentRow?.client_id) {
-          await recalcClientBalance(supabase, paymentRow.client_id);
-        }
-
-        if (paymentRow?.user_id && data.amount) {
-          const { userAmountMinor, feeAmountMinor } = splitPaymentMinor(data.amount);
-          await postInvoicePaymentWithFee(supabase, {
-            paymentId: meta.payment_id,
-            userId: paymentRow.user_id,
-            netAmountMinor: userAmountMinor,
-            feeAmountMinor,
-            currency: "NGN",
-            provider: "paystack",
-          });
-        }
-
-        if (paymentRow?.user_id && !error) {
-          // Verified by Paystack's signed webhook; keyed by invoice so a
-          // redelivery or a second charge on the same invoice counts once.
-          await track(paymentRow.user_id, "payment_received", {
-            actor: "system",
-            dedupeKey: `payment_received:${meta.payment_id}:${paymentRow.user_id}`,
-            props: { kind: "invoice", provider: "paystack" },
-          });
-        }
-
-        if (paymentRow?.user_id) {
-          const formatted = paidAmount != null ? paidAmount.toFixed(2) : "your invoice";
-          await notify(supabase, {
-            userId: paymentRow.user_id,
-            type: "payment_received",
-            title: `${paymentRow.client_name ?? "A client"} paid your invoice`,
-            body: paymentRow.invoice_number
-              ? `Invoice ${paymentRow.invoice_number} - ${formatted} received into your Orbit Wallet.`
-              : `${formatted} received into your Orbit Wallet.`,
-            actionUrl: `/payments/${meta.payment_id}`,
-            metadata: { payment_id: meta.payment_id, amount: paidAmount, provider: "paystack" },
-          });
-
-          // Transactional "Someone paid you" email to the owner (not marketing -
-          // it's about their money, so email preferences don't apply).
-          const { data: owner } = await supabase.from("profiles").select("email").eq("id", paymentRow.user_id).maybeSingle();
-          if (owner?.email && paidAmount != null) {
-            const base = appUrl();
-            const { html, text } = renderEmail(
-              paymentReceivedEmail({
-                amount: `₦${paidAmount.toLocaleString("en-NG", { maximumFractionDigits: 2 })}`,
-                clientName: paymentRow.client_name ?? "A client",
-                invoiceNumber: paymentRow.invoice_number ?? null,
-                paymentPath: `/payments/${meta.payment_id}`,
-                url: (path) => `${base}${path}`,
-              }),
-              { appUrl: base, reason: "You're getting this because a client paid you through Orbit." },
-            );
-            const sent = await sendEmail({ to: owner.email, subject: "Someone paid you", html, text });
-            if (!sent.ok && !sent.skipped) console.warn("[paystack] payment email failed:", sent.error);
-          }
-        }
+        const problem = await handleLegacyInvoiceCharge(supabase, data, meta.payment_id);
+        await markWebhookProcessed(supabase, { provider: "paystack", providerEventId, error: problem });
         break;
       }
 
@@ -168,6 +98,23 @@ export async function POST(request: Request) {
         if (error) console.error("[paystack] charge.success subscription update failed:", error);
         else if (userId) await trackEvent(userId, "subscription_started", { reference: data.reference ?? null });
       }
+      break;
+    }
+
+    // ── Orbit Pay refunds and disputes ──
+    case "refund.processed":
+    case "refund.failed":
+    case "refund.pending": {
+      const problem = await handleRefundEvent(supabase, event.event, event.data as Parameters<typeof handleRefundEvent>[2]);
+      if (problem) console.error("[orbit-pay]", problem);
+      break;
+    }
+    case "charge.dispute.resolve": {
+      await handleDisputeResolved(supabase, event.data as Parameters<typeof handleDisputeResolved>[1]);
+      break;
+    }
+    case "charge.dispute.create": {
+      await handleDispute(supabase, event.data as Parameters<typeof handleDispute>[1]);
       break;
     }
 
@@ -218,32 +165,7 @@ export async function POST(request: Request) {
       break;
     }
 
-    // Withdrawal payouts. `reference` is the withdrawal id we passed as the
-    // idempotency key in initiatePayout() - that's what ties this event
-    // back to the right withdrawals row.
-    case "transfer.success": {
-      const data = event.data as { reference?: string; transfer_code?: string };
-      if (data.reference) {
-        await supabase.rpc("settle_withdrawal", {
-          p_withdrawal_id: data.reference,
-          p_provider_payout_reference: data.transfer_code ?? null,
-        });
-      }
-      break;
-    }
-
-    case "transfer.failed":
-    case "transfer.reversed": {
-      const data = event.data as { reference?: string; failure_reason?: string };
-      if (data.reference) {
-        await supabase.rpc("fail_withdrawal", {
-          p_withdrawal_id: data.reference,
-          p_failure_reason: data.failure_reason ?? "Transfer failed",
-        });
-      }
-      break;
-    }
-
+    // Orbit no longer makes payouts (transfer.* events are ignored).
     default:
       // Acknowledge but don't act on unknown events
       break;

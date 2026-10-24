@@ -2,20 +2,25 @@
 
 import { useState, useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { X, Sparkles, Zap, Wallet2, BarChart3, Receipt, Wand2, Check, Lock } from "lucide-react";
+import { X, Sparkles, Zap, Wallet2, BarChart3, Receipt, Check, Lock, Users, MessageSquare, Download, Headphones } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { useSubscription } from "@/hooks/useSubscription";
-import { PRO_PRICE_DISPLAY, PRO_PRICE_PERIOD, FREE_TRIAL_DAYS } from "@/lib/constants";
+import { FREE_TRIAL_DAYS } from "@/lib/constants";
+import { useCurrency } from "@/hooks/useCurrency";
+import { NGN_PRICE, billedInNaira, localPriceFor, priceLabel, yearlySaving, type BillingInterval } from "@/lib/pricing";
 
-// Orbit Wallet leads - it's the single biggest reason to upgrade (get paid
-// automatically instead of manually reconciling), per orbit-overhaul.md §10.
+// Matches the Pro card on the pricing page. Unlimited clients and the lower
+// Orbit Pay fee lead - the two concrete reasons to upgrade.
 const FEATURES = [
-  { icon: Wallet2,    label: "Get paid automatically with Orbit Wallet" },
-  { icon: Sparkles,   label: "AI business assistant" },
-  { icon: BarChart3,  label: "Advanced insights & reports" },
-  { icon: Zap,        label: "Smart automations & reminders" },
-  { icon: Receipt,    label: "Professional invoices & branding" },
-  { icon: Wand2,      label: "Unlimited clients & exports" },
+  { icon: Users,         label: "Unlimited clients" },
+  { icon: Wallet2,       label: "Lower Orbit Pay fee: 2% + ₦100, capped at ₦2,500", ngOnly: true },
+  { icon: Zap,           label: "Automations and follow-ups" },
+  { icon: BarChart3,     label: "Advanced insights" },
+  { icon: MessageSquare, label: "Custom templates" },
+  { icon: Sparkles,      label: "Orbit AI assistant" },
+  { icon: Receipt,       label: "Your branding on invoices" },
+  { icon: Download,      label: "Export your data" },
+  { icon: Headphones,    label: "Priority support" },
 ];
 
 interface PaywallModalProps {
@@ -28,6 +33,12 @@ interface PaywallModalProps {
 export function PaywallModal({ open, onClose, reason }: PaywallModalProps) {
   const { trialUsed } = useSubscription();
   const [loading, setLoading] = useState<"trial" | "subscribe" | null>(null);
+  const [interval, setBillingInterval] = useState<BillingInterval>("monthly");
+  const { country } = useCurrency();
+  const local = localPriceFor(country.code);
+  const price = priceLabel(country.code, interval);
+  const inNaira = billedInNaira(country.code);
+  const features = FEATURES.filter((f) => !("ngOnly" in f) || country.code === "NG");
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -41,7 +52,7 @@ export function PaywallModal({ open, onClose, reason }: PaywallModalProps) {
       const res = await fetch("/api/paystack/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ startTrial: kind === "trial" }),
+        body: JSON.stringify({ startTrial: kind === "trial", interval }),
       });
 
       // Read response as text first so we can handle non-JSON error pages
@@ -129,7 +140,7 @@ export function PaywallModal({ open, onClose, reason }: PaywallModalProps) {
               {/* Features - tighter rows */}
               <div className="px-4 sm:px-6 pb-3">
                 <div className="space-y-1.5">
-                  {FEATURES.map((f) => {
+                  {features.map((f) => {
                     const Icon = f.icon;
                     return (
                       <div key={f.label} className="flex items-center gap-2.5">
@@ -147,14 +158,25 @@ export function PaywallModal({ open, onClose, reason }: PaywallModalProps) {
               {/* Price */}
               <div className="px-4 sm:px-6 pt-2 pb-1 flex items-baseline justify-center gap-1.5 flex-wrap">
                 <span className="text-2xl font-extrabold tracking-tight text-[var(--color-ink)]">
-                  {PRO_PRICE_DISPLAY}
+                  {local.format(local[interval])}
                 </span>
-                <span className="text-[13px] text-[var(--color-muted)] font-medium">{PRO_PRICE_PERIOD}</span>
+                <span className="text-[13px] text-[var(--color-muted)] font-medium">/{interval === "monthly" ? "month" : "year"}</span>
                 {!trialUsed && (
                   <span className="ml-2 inline-flex items-center bg-[var(--color-success-light)] text-[var(--color-success-deep)] text-[10px] font-bold px-2 py-0.5 rounded-full">
                     {FREE_TRIAL_DAYS}-day free trial
                   </span>
                 )}
+              </div>
+
+              <div className="mt-2 flex justify-center">
+                <div className="inline-flex p-1 rounded-full bg-[var(--color-canvas)] border border-[var(--color-border)]" role="radiogroup" aria-label="Billing">
+                  {(["monthly", "yearly"] as const).map((iv) => (
+                    <button key={iv} type="button" role="radio" aria-checked={interval === iv} onClick={() => setBillingInterval(iv)}
+                      className={`px-3 py-1 rounded-full text-[12px] font-semibold transition-colors ${interval === iv ? "bg-[var(--color-ink)] text-white" : "text-[var(--color-ink-light)]"}`}>
+                      {iv === "monthly" ? "Monthly" : `Yearly · save ${yearlySaving(country.code)}`}
+                    </button>
+                  ))}
+                </div>
               </div>
 
               {error && (
@@ -174,7 +196,7 @@ export function PaywallModal({ open, onClose, reason }: PaywallModalProps) {
                   leftIcon={<Lock className="h-4 w-4" />}
                   onClick={() => handleCheckout("subscribe")}
                 >
-                  Subscribe - {PRO_PRICE_DISPLAY}{PRO_PRICE_PERIOD}
+                  Subscribe - {price}
                 </Button>
               ) : (
                 <>
@@ -200,7 +222,8 @@ export function PaywallModal({ open, onClose, reason }: PaywallModalProps) {
               <p className="text-[10px] text-center text-[var(--color-muted)] leading-snug pt-1">
                 {trialUsed
                   ? "Cancel anytime from your subscription settings."
-                  : `Card required. After ${FREE_TRIAL_DAYS} days, ${PRO_PRICE_DISPLAY}${PRO_PRICE_PERIOD} auto-renews unless cancelled.`}
+                  : `Card required. After ${FREE_TRIAL_DAYS} days, ${price} auto-renews unless cancelled.`}
+                {inNaira && ` Charged as ${NGN_PRICE.format(NGN_PRICE[interval])}; your bank converts it.`}
               </p>
             </div>
           </motion.div>

@@ -12,7 +12,7 @@ import "server-only";
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { appUrl } from "@/lib/app-url";
 
-type Purpose = "review" | "client" | "unsub";
+type Purpose = "review" | "client" | "unsub" | "pay";
 
 function secret(): string {
   const s = process.env.LINK_SIGNING_SECRET || process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -41,4 +41,9 @@ export function reviewUrl(bookingId: string, request?: Request): string {
 
 export function clientPortalUrl(clientId: string, request?: Request): string {
   return `${appOrigin(request)}/c/${clientId}?t=${signId("client", clientId)}`;
+}
+
+/** The client's Orbit Pay page for one charge: shows the fee breakdown, then hands over to Paystack. */
+export function payUrl(chargeId: string, request?: Request): string {
+  return `${appOrigin(request)}/pay/${chargeId}?t=${signId("pay", chargeId)}`;
 }

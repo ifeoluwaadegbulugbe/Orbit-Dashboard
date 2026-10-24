@@ -130,8 +130,8 @@ export default function ClientsPage() {
             </div>
             <div className="text-small text-[var(--color-ink-mid)] leading-relaxed mt-1">
               {atLimit
-                ? "Upgrade to Pro for unlimited clients and automations."
-                : `${FREE_CLIENT_LIMIT - count} ${FREE_CLIENT_LIMIT - count === 1 ? "spot" : "spots"} left on Free. Upgrade to Pro for unlimited clients and automations.`}
+                ? "Your clients are safe. Upgrade to Pro to add more: unlimited clients and a lower Orbit Pay fee."
+                : `${FREE_CLIENT_LIMIT - count} ${FREE_CLIENT_LIMIT - count === 1 ? "spot" : "spots"} left on Free. Pro gives you unlimited clients and a lower Orbit Pay fee.`}
             </div>
           </div>
           <ChevronRight className="h-5 w-5 text-[var(--color-primary)] flex-shrink-0" />

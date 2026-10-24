@@ -17,6 +17,7 @@ import { Avatar } from "@/components/ui/Avatar";
 import { formatShortDate, relativeDate } from "@/lib/utils";
 import { useCurrency } from "@/hooks/useCurrency";
 import { InvoicePdfActions } from "@/components/invoices/InvoicePdfActions";
+import { RefundButton } from "@/components/orbit-pay/RefundButton";
 import type { PaymentStatus } from "@/types";
 import { toWhatsAppDigits } from "@/lib/phone";
 import { track } from "@/lib/analytics/browser";
@@ -209,7 +210,7 @@ export default function PaymentDetailPage({ params }: { params: Promise<{ id: st
             <div className="min-w-0">
               <h3 className="text-card-title font-semibold">Get paid online</h3>
               <p className="text-small text-[var(--color-ink-light)] mt-0.5">
-                Send your client a secure payment link - they pay by card, bank transfer or USSD.
+                Send your client an Orbit Pay link - they pay by card or bank transfer.
               </p>
             </div>
           </div>
@@ -277,15 +278,21 @@ export default function PaymentDetailPage({ params }: { params: Promise<{ id: st
                   </div>
                 )}
                 <Button onClick={handleGenerateLink} loading={linking} leftIcon={<Link2 className="h-4 w-4" />}>
-                  Generate payment link
+                  Create payment link
                 </Button>
                 <p className="text-tiny text-[var(--color-muted)]">
-                  Paid straight into your <Link href="/wallet" className="font-semibold underline">Orbit Wallet</Link> - no setup needed.
+                  Processed by Paystack and paid straight into your own bank account. Set it up in{" "}
+                  <Link href="/payments?tab=pay" className="font-semibold underline">Money → Orbit Pay</Link>.
                 </p>
               </div>
             )}
           </div>
         </div>
+      )}
+
+      {/* Orbit Pay refund */}
+      {payment.status === "paid" && payment.transaction_reference?.startsWith("orbitpay_") && (
+        <RefundButton paymentId={payment.id} />
       )}
 
       {/* Reminder action */}

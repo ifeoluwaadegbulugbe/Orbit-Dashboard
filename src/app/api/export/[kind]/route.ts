@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { track } from "@/lib/analytics/server";
+import { requirePro } from "@/lib/subscription/server";
 
 type Kind = "clients" | "payments" | "bookings" | "reminders";
 
@@ -20,6 +21,8 @@ export async function GET(
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+  const locked = await requirePro(user.id, user.email, "Exporting data");
+  if (locked) return locked;
 
   const { data, error } = await supabase
     .from(kind)

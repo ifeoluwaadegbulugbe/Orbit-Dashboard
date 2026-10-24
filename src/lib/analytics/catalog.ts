@@ -59,6 +59,8 @@ export const EVENTS = {
   reminder_created:     { feature: "reminders", meaningful: true, fromBrowser: true,  label: "Created a reminder" },
   reminder_completed:   { feature: "reminders", meaningful: true, fromBrowser: true,  label: "Ticked off a reminder" },
   reminder_sent:        { feature: "reminders", meaningful: false, fromBrowser: false, label: "Automatic reminder sent" },
+  // ── App
+  app_installed:        { feature: "account", meaningful: false, fromBrowser: true, label: "Installed the app" },
   // ── AI, Insights, export
   ai_assistant_used:    { feature: "ai", meaningful: true, fromBrowser: false, label: "Used Orbit AI" },
   analytics_viewed:     { feature: "insights", meaningful: false, fromBrowser: true, label: "Viewed Insights" },

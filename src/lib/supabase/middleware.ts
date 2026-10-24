@@ -18,6 +18,7 @@ const PUBLIC_PATHS = [
   "/email/",                     // unsubscribe page (signed link)
   "/api/email/unsubscribe",      // one-click unsubscribe POSTed by mail apps
   "/c/",                         // client "my appointments" page (signed link) - trailing slash so /clients stays private
+  "/pay/",                       // client's Orbit Pay page (signed link) - trailing slash so /payments stays private
   "/api/auth/signup",            // account creation — called before the user has a session
   "/api/auth/forgot-password",   // password reset email — called before the user has a session
   "/api/public",                 // unauthed booking + review submission endpoints

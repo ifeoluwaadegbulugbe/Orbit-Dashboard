@@ -100,7 +100,7 @@ export default function NewClientPage() {
           <div className="flex-1">
             <div className="text-sm font-bold">You&apos;ve reached your client limit</div>
             <div className="text-xs text-[var(--color-ink-mid)] mt-0.5">
-              Upgrade to Pro for unlimited clients and automations.
+              Your existing clients are safe. Upgrade to Pro to add more: unlimited clients and a lower Orbit Pay fee.
             </div>
           </div>
         </button>
