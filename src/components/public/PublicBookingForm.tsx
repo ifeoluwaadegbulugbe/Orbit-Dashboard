@@ -186,15 +186,15 @@ export function PublicBookingForm({
                   </div>
 
                   <div className="min-w-0 flex-1">
-                    <div className="text-body font-semibold text-[var(--color-ink)] truncate">
+                    <div className="text-body font-semibold text-[var(--color-ink)] break-words leading-snug">
                       {s.name || "Untitled service"}
                     </div>
                     <div className="text-small text-[var(--color-muted)] mt-0.5">
                       {s.duration_minutes ? `${s.duration_minutes} min` : "Duration TBC"}
                     </div>
                   </div>
-                  <div className="flex-shrink-0 text-right">
-                    <div className="text-body font-bold text-[var(--color-ink)]">
+                  <div className="flex-shrink-0 text-right max-w-[45%]">
+                    <div className="text-body font-bold text-[var(--color-ink)] leading-snug">
                       {displayPrice(s.price, currencySymbol)}
                     </div>
                   </div>

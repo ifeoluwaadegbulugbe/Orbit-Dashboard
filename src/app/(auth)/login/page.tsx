@@ -303,7 +303,7 @@ function LoginInner() {
 
       {/* Header */}
       <div className="mb-7">
-        <h1 className="text-section font-bold text-[var(--color-ink)]">Sign In</h1>
+        <h1 className="text-section font-bold text-[var(--color-ink)]">Sign in</h1>
         <p className="mt-2 text-small text-[var(--color-ink-light)]">Welcome back! Please enter your details.</p>
       </div>
 
@@ -333,7 +333,7 @@ function LoginInner() {
             <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--color-muted)] pointer-events-none" />
             <input
               type={showPw ? "text" : "password"}
-              placeholder="••••••••"
+              placeholder="Your password"
               autoComplete="current-password"
               className={`${inputCls} pl-10 pr-11`}
               {...signInForm.register("password", { required: true })}
@@ -341,7 +341,7 @@ function LoginInner() {
             <button
               type="button"
               onClick={() => setShowPw(v => !v)}
-              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[var(--color-muted)] hover:text-[var(--color-ink-light)] transition-colors"
+              className="absolute right-1 top-1/2 -translate-y-1/2 w-11 h-11 flex items-center justify-center rounded-full text-[var(--color-muted)] hover:text-[var(--color-ink-light)] transition-colors"
               aria-label={showPw ? "Hide password" : "Show password"}
             >
               {showPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -351,20 +351,20 @@ function LoginInner() {
 
         {/* Remember + Forgot */}
         <div className="flex items-center justify-between">
-          <label className="flex items-center gap-2 cursor-pointer select-none">
+          <label className="flex items-center gap-2.5 min-h-11 pr-2 cursor-pointer select-none">
             <input
               type="checkbox"
-              className="w-4 h-4 rounded-[var(--radius-sm)] border border-[var(--color-border)] text-[var(--color-primary)] accent-[var(--color-primary)] cursor-pointer"
+              className="w-5 h-5 rounded-[var(--radius-sm)] border border-[var(--color-border)] text-[var(--color-primary)] accent-[var(--color-primary)] cursor-pointer"
               {...signInForm.register("remember")}
             />
-            <span className="text-small text-[var(--color-ink-light)]">Remember for 30 Days</span>
+            <span className="text-small text-[var(--color-ink-light)] whitespace-nowrap">Remember me</span>
           </label>
           <button
             type="button"
             onClick={() => { setMode("forgot"); setError(null); }}
-            className="text-small font-semibold text-[var(--color-primary)] hover:text-[var(--color-primary-dark)] transition-colors"
+            className="min-h-11 whitespace-nowrap text-small font-semibold text-[var(--color-primary)] hover:text-[var(--color-primary-dark)] transition-colors"
           >
-            Forgot password
+            Forgot password?
           </button>
         </div>
 

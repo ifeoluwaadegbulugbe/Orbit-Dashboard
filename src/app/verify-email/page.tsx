@@ -89,7 +89,7 @@ function VerifyInner() {
             <ul className="list-disc pl-4 space-y-0.5">
               <li>Check spam / promotions folder</li>
               <li>Make sure the email above is right (typos happen)</li>
-              <li>Tap &quot;Resend&quot; below to send a fresh one</li>
+              <li>Tap &quot;Send me a new link&quot; below</li>
             </ul>
           </div>
 
@@ -133,7 +133,7 @@ function VerifyInner() {
             )}
           </div>
 
-          <div className="mt-7 pt-6 border-t border-[var(--color-border)] flex items-center justify-between text-small">
+          <div className="mt-7 pt-6 border-t border-[var(--color-border)] flex flex-col-reverse sm:flex-row items-center sm:justify-between gap-3 text-small">
             <Link
               href="/signup"
               className="inline-flex items-center gap-1.5 text-[var(--color-ink-light)] hover:text-[var(--color-ink)] font-semibold"
@@ -142,7 +142,7 @@ function VerifyInner() {
               Use a different email
             </Link>
             <Link href="/login" className="text-[var(--color-primary)] hover:text-[var(--color-primary-dark)] font-semibold">
-              I&apos;ve verified, sign in
+              Already confirmed? Sign in
             </Link>
           </div>
         </div>
