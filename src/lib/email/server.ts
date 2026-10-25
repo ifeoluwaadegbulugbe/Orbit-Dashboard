@@ -34,6 +34,8 @@ export interface SendEmailParams {
   text?: string;
   /** Extra headers, e.g. List-Unsubscribe for lifecycle/marketing mail. */
   headers?: Record<string, string>;
+  /** Where replies go for this one email (overrides EMAIL_REPLY_TO). */
+  replyTo?: string;
 }
 
 export interface SendEmailResult {
@@ -100,7 +102,7 @@ async function sendViaSmtp(
       html: params.html,
       text: params.text,
       headers: params.headers,
-      replyTo: envValue("EMAIL_REPLY_TO"),
+      replyTo: params.replyTo ?? envValue("EMAIL_REPLY_TO"),
     });
     // Some servers accept the message but list the address as rejected.
     if (info.rejected?.length) {
@@ -130,7 +132,7 @@ async function sendViaResend(apiKey: string, params: SendEmailParams): Promise<S
         html: params.html,
         text: params.text,
         headers: params.headers,
-        ...(envValue("EMAIL_REPLY_TO") ? { reply_to: envValue("EMAIL_REPLY_TO") } : {}),
+        ...((params.replyTo ?? envValue("EMAIL_REPLY_TO")) ? { reply_to: params.replyTo ?? envValue("EMAIL_REPLY_TO") } : {}),
       }),
     });
     const json = (await res.json()) as { id?: string; message?: string };
