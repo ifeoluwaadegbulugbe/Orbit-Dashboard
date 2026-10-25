@@ -7,6 +7,8 @@ import { useForm } from "react-hook-form";
 import { User, Mail, Lock, Building2, Eye, EyeOff } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/Button";
+import { PasswordChecklist } from "@/components/ui/PasswordChecklist";
+import { passwordProblem } from "@/lib/password-rules";
 
 /* ─── Shared input style ──────────────────────────────────────────────────────
    Matches login/page.tsx — height, radius, border, focus ring all use tokens. */
@@ -29,9 +31,12 @@ export default function SignUpPage() {
   const [error, setError] = useState<string | null>(null);
   const [showPw, setShowPw] = useState(false);
 
-  const { register, handleSubmit, formState } = useForm<FormValues>({
+  const { register, handleSubmit, formState, watch } = useForm<FormValues>({
     defaultValues: {},
   });
+  const password = watch("password") ?? "";
+  const email = watch("email") ?? "";
+  const passwordOk = !passwordProblem(password, email);
 
   async function onSubmit(values: FormValues) {
     setError(null);
@@ -162,10 +167,11 @@ export default function SignUpPage() {
             <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--color-muted)] pointer-events-none" />
             <input
               type={showPw ? "text" : "password"}
-              placeholder="At least 8 characters"
+              placeholder="Create a strong password"
               autoComplete="new-password"
+              aria-describedby="password-rules"
               className={`${inputCls} pl-10 pr-11`}
-              {...register("password", { required: true, minLength: 8 })}
+              {...register("password", { required: true, validate: (v) => !passwordProblem(v, watch("email")) || "Check the password rules below." })}
             />
             <button
               type="button"
@@ -176,9 +182,10 @@ export default function SignUpPage() {
               {showPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
             </button>
           </div>
+          <div id="password-rules"><PasswordChecklist password={password} email={email} /></div>
         </div>
 
-        <Button type="submit" size="lg" fullWidth loading={formState.isSubmitting}>
+        <Button type="submit" size="lg" fullWidth loading={formState.isSubmitting} disabled={!passwordOk}>
           Create account
         </Button>
 

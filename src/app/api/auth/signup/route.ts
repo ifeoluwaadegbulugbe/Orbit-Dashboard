@@ -5,6 +5,7 @@ import { clientIp, overLimit, HOUR } from "@/lib/rate-limit";
 import { confirmUrl, resendConfirmation, sendConfirmationEmail } from "@/lib/auth/confirm-email";
 import { appUrl } from "@/lib/app-url";
 import { BUSINESS_TYPE_LABELS } from "@/types";
+import { passwordProblem } from "@/lib/password-rules";
 
 /**
  * POST /api/auth/signup
@@ -59,6 +60,10 @@ export async function POST(request: Request) {
   // ── Validation ─────────────────────────────────────────────────────────
   if (!email || !email.includes("@")) {
     return NextResponse.json({ error: "Enter a valid email address." }, { status: 400 });
+  }
+  const pwProblem = passwordProblem(password, email);
+  if (pwProblem) {
+    return NextResponse.json({ error: pwProblem }, { status: 400 });
   }
   if (!password || password.length < 8) {
     return NextResponse.json({ error: "Password must be at least 8 characters." }, { status: 400 });

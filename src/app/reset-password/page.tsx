@@ -6,6 +6,8 @@ import { useForm } from "react-hook-form";
 import { Lock, Eye, EyeOff, CheckCircle2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/Button";
+import { PasswordChecklist } from "@/components/ui/PasswordChecklist";
+import { passwordProblem } from "@/lib/password-rules";
 
 /* ─── Shared input style (matches login / signup pages) ─────────────────── */
 const inputCls =
@@ -67,6 +69,11 @@ export default function ResetPasswordPage() {
 
   /* ── Submit ───────────────────────────────────────────────────────────── */
   async function onSubmit(values: FormValues) {
+    const problem = passwordProblem(values.password);
+    if (problem) {
+      setError(problem);
+      return;
+    }
     if (values.password !== values.confirmPassword) {
       setError("Passwords don't match.");
       return;
@@ -190,26 +197,23 @@ export default function ResetPasswordPage() {
                 <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--color-muted)] pointer-events-none" />
                 <input
                   type={showPw ? "text" : "password"}
-                  placeholder="At least 8 characters"
+                  placeholder="Create a strong password"
                   autoComplete="new-password"
                   autoFocus
+                  aria-describedby="password-rules"
                   className={`${inputCls} pl-10 pr-11`}
-                  {...register("password", { required: true, minLength: 8 })}
+                  {...register("password", { required: true })}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPw(v => !v)}
-                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[var(--color-muted)] hover:text-[var(--color-ink-light)] transition-colors"
+                  className="absolute right-1 top-1/2 -translate-y-1/2 w-11 h-11 flex items-center justify-center rounded-full text-[var(--color-muted)] hover:text-[var(--color-ink-light)] transition-colors"
                   aria-label={showPw ? "Hide password" : "Show password"}
                 >
                   {showPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
-              {formState.errors.password?.type === "minLength" && (
-                <p className="mt-1.5 text-tiny text-[var(--color-danger-deep)]">
-                  Password must be at least 8 characters
-                </p>
-              )}
+              <div id="password-rules"><PasswordChecklist password={password} /></div>
             </div>
 
             {/* Confirm password */}
@@ -245,7 +249,7 @@ export default function ResetPasswordPage() {
               )}
             </div>
 
-            <Button type="submit" size="lg" fullWidth loading={formState.isSubmitting}>
+            <Button type="submit" size="lg" fullWidth loading={formState.isSubmitting} disabled={!!passwordProblem(password)}>
               Update password
             </Button>
 
