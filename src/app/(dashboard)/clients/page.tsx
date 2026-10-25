@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { primaryContact } from "@/lib/social";
 import Link from "next/link";
 import { Search, Plus, TrendingUp, Lock, ChevronRight } from "lucide-react";
 import { useClients } from "@/hooks/useClients";
@@ -70,7 +71,9 @@ export default function ClientsPage() {
       clients.filter((c) => {
         const matchSearch =
           c.name.toLowerCase().includes(search.toLowerCase()) ||
-          c.phone.includes(search);
+          c.phone.includes(search) ||
+          !!c.instagram?.includes(search.toLowerCase().replace(/^@/, "")) ||
+          !!c.tiktok?.includes(search.toLowerCase().replace(/^@/, ""));
         const matchFilter = filter === "all" || c.status === filter;
         return matchSearch && matchFilter;
       }),
@@ -145,7 +148,7 @@ export default function ClientsPage() {
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search by name or phone..."
+            placeholder="Search by name, phone or @username..."
             className="w-full h-11 pl-10 pr-4 rounded-full bg-white border border-[var(--color-border)] text-sm placeholder:text-[var(--color-muted)] focus:outline-none focus:border-[var(--color-primary)]/40 focus:ring-2 focus:ring-[var(--color-primary)]/10 transition-colors"
           />
         </div>
@@ -198,7 +201,7 @@ export default function ClientsPage() {
                       </span>
                     )}
                   </div>
-                  <div className="text-small text-[var(--color-muted)] mt-1">{c.phone}</div>
+                  <div className="text-small text-[var(--color-muted)] mt-1 truncate">{primaryContact(c)}</div>
                   <div className="flex items-center gap-3 mt-2.5">
                     <Badge tone={STATUS_TONE[c.status]}>{STATUS_LABEL[c.status]}</Badge>
                     <span className="text-tiny text-[var(--color-muted)]">
@@ -221,6 +224,8 @@ export default function ClientsPage() {
                   locked={!isPro}
                   onLocked={() => setPaywallOpen(true)}
                   clientPhone={c.whatsapp_number || c.phone}
+                  clientInstagram={c.instagram}
+                  clientTiktok={c.tiktok}
                   clientEmail={c.email}
                 />
               )}

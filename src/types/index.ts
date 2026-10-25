@@ -50,8 +50,12 @@ export interface Client {
   id: string;
   user_id: string;
   name: string;
+  /** '' when the owner only reaches them on Instagram/TikTok. */
   phone: string;
   whatsapp_number: string;
+  /** Usernames without the @ (see src/lib/social.ts). */
+  instagram?: string | null;
+  tiktok?: string | null;
   email: string | null;
   business_type: BusinessType;
   notes: string | null;

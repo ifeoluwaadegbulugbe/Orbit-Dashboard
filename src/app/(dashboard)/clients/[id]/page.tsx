@@ -21,6 +21,9 @@ import { formatShortDate, relativeDate } from "@/lib/utils";
 import { useCurrency } from "@/hooks/useCurrency";
 import type { ClientStatus, PaymentStatus } from "@/types";
 import { toWhatsAppDigits } from "@/lib/phone";
+import { socialProfileUrl } from "@/lib/social";
+import { InstagramIcon, TikTokIcon } from "@/components/ui/SocialIcons";
+import { SocialSendButton, firstSocial } from "@/components/clients/SocialSendButton";
 import { trackOncePerSession } from "@/lib/analytics/browser";
 
 const STATUS_TONE: Record<ClientStatus, "success" | "warning" | "danger" | "neutral"> = {
@@ -74,7 +77,8 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
     );
   }
 
-  const whatsappUrl = `https://wa.me/${toWhatsAppDigits(client.phone, country.dialCode) ?? ""}`;
+  const waDigits = toWhatsAppDigits(client.whatsapp_number || client.phone, country.dialCode);
+  const social = firstSocial(client);
 
   const TABS: { key: Tab; label: string; count?: number }[] = [
     { key: "overview", label: "Overview" },
@@ -113,7 +117,17 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
               </span>
             </div>
             <div className="mt-3 flex items-center gap-4 flex-wrap text-sm text-[var(--color-ink-mid)]">
-              <span className="inline-flex items-center gap-1.5"><Phone className="h-3.5 w-3.5" /> {client.phone}</span>
+              {client.phone && <span className="inline-flex items-center gap-1.5"><Phone className="h-3.5 w-3.5" /> {client.phone}</span>}
+              {client.instagram && (
+                <a href={socialProfileUrl(client.instagram, "instagram")} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 hover:text-[var(--color-primary)]">
+                  <InstagramIcon className="h-3.5 w-3.5" /> @{client.instagram}
+                </a>
+              )}
+              {client.tiktok && (
+                <a href={socialProfileUrl(client.tiktok, "tiktok")} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 hover:text-[var(--color-primary)]">
+                  <TikTokIcon className="h-3.5 w-3.5" /> @{client.tiktok}
+                </a>
+              )}
               {client.email && <span className="inline-flex items-center gap-1.5 min-w-0 max-w-full"><Mail className="h-3.5 w-3.5 flex-shrink-0" /> <span className="truncate">{client.email}</span></span>}
               {client.birthday && <span className="inline-flex items-center gap-1.5"><Cake className="h-3.5 w-3.5" /> {formatShortDate(client.birthday)}</span>}
             </div>
@@ -132,7 +146,13 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
 
         {/* Quick actions */}
         <div className="mt-6 pt-5 border-t border-[var(--color-border)] grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-          <QuickAction icon={<MessageCircle className="h-4 w-4" />} label="WhatsApp" href={whatsappUrl} external />
+          {waDigits ? (
+            <QuickAction icon={<MessageCircle className="h-4 w-4" />} label="WhatsApp" href={`https://wa.me/${waDigits}`} external />
+          ) : social ? (
+            <SocialSendButton platform={social.platform} handle={social.handle} className={QUICK_ACTION_CLASS} />
+          ) : (
+            <QuickAction icon={<Phone className="h-4 w-4" />} label="Add contact" href={`/clients/${id}/edit`} />
+          )}
           <QuickAction icon={<Receipt className="h-4 w-4" />}        label="Add payment" href={`/payments/new?clientId=${id}`} />
           <QuickAction icon={<BellPlus className="h-4 w-4" />}       label="Add reminder" href={`/reminders?clientId=${id}`} />
           <QuickAction icon={<Calendar className="h-4 w-4" />}       label="Book session" href={`/work?clientId=${id}`} />
@@ -141,6 +161,7 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
           kind="client"
           id={id}
           phone={client.whatsapp_number || client.phone}
+          social={social}
           message={(url) => `Hi ${client.name.split(" ")[0]}! Here's your personal page with ${businessName} - see your appointments, pay invoices and book again anytime: ${url}`}
           className="mt-2.5 w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-full bg-[var(--color-primary-subtle)] text-[var(--color-primary-dark)] text-sm font-semibold hover:opacity-90 transition-opacity disabled:opacity-60"
         >
@@ -251,6 +272,7 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
                     kind="review"
                     id={b.id}
                     phone={client.whatsapp_number || client.phone}
+                    social={social}
                     message={(url) => `Hi ${client.name.split(" ")[0]}, thank you for coming in! Could you leave a quick review of your ${b.title}? It really helps ${businessName}: ${url}`}
                     className="flex-shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-[var(--color-border)] text-xs font-semibold hover:bg-[var(--color-canvas)] disabled:opacity-60"
                   >
@@ -283,9 +305,11 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
   );
 }
 
+const QUICK_ACTION_CLASS =
+  "flex items-center justify-center gap-2 px-3 py-2.5 rounded-full bg-[var(--color-canvas)] border border-[var(--color-border)] text-sm font-semibold text-[var(--color-ink-mid)] hover:bg-white hover:border-[var(--color-primary)]/30 transition-colors";
+
 function QuickAction({ icon, label, href, external }: { icon: React.ReactNode; label: string; href: string; external?: boolean }) {
-  const className =
-    "flex items-center justify-center gap-2 px-3 py-2.5 rounded-full bg-[var(--color-canvas)] border border-[var(--color-border)] text-sm font-semibold text-[var(--color-ink-mid)] hover:bg-white hover:border-[var(--color-primary)]/30 transition-colors";
+  const className = QUICK_ACTION_CLASS;
   if (external) {
     return (
       <a href={href} target="_blank" rel="noopener noreferrer" className={className}>

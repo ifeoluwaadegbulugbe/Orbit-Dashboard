@@ -230,7 +230,7 @@ export default function WelcomePage() {
   }
 
   async function handleAddClient() {
-    if (!clientName.trim() || !clientPhone.trim()) return;
+    if (!clientName.trim()) return;
     setSaving(true);
     try {
       const phone = clientPhone.trim();
@@ -487,7 +487,7 @@ export default function WelcomePage() {
                   autoFocus
                 />
                 <Input
-                  label="Phone"
+                  label="Phone (optional)"
                   placeholder={`e.g. +${country.dialCode || "234"} 801 234 5678`}
                   value={clientPhone}
                   onChange={(e) => setClientPhone(e.target.value)}
@@ -501,7 +501,7 @@ export default function WelcomePage() {
                 <Button
                   onClick={handleAddClient}
                   loading={saving}
-                  disabled={!clientName.trim() || !clientPhone.trim()}
+                  disabled={!clientName.trim()}
                 >
                   Add &amp; continue
                 </Button>

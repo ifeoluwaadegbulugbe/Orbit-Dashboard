@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useMemo } from "react";
+import { primaryContact } from "@/lib/social";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Search, User, Receipt, Calendar, X } from "lucide-react";
@@ -52,7 +53,7 @@ export function GlobalSearch() {
 
     return {
       clients: clients
-        .filter((c) => fuzz(c.name) || fuzz(c.phone) || (c.email && fuzz(c.email)))
+        .filter((c) => fuzz(c.name) || fuzz(c.phone) || (c.email && fuzz(c.email)) || fuzz(`@${c.instagram ?? ""} @${c.tiktok ?? ""}`))
         .slice(0, 5),
       payments: payments
         .filter(
@@ -136,7 +137,7 @@ export function GlobalSearch() {
                       <Avatar name={c.name} size={32} />
                       <div className="flex-1 min-w-0">
                         <div className="text-sm font-semibold truncate">{c.name}</div>
-                        <div className="text-xs text-[var(--color-muted)] truncate">{c.phone}</div>
+                        <div className="text-xs text-[var(--color-muted)] truncate">{primaryContact(c)}</div>
                       </div>
                       {c.outstanding_balance > 0 && (
                         <span className="text-xs font-bold text-[var(--color-danger-deep)] flex-shrink-0">

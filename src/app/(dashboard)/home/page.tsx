@@ -233,6 +233,8 @@ export default function HomePage() {
                   locked={!isPro}
                   onLocked={() => setPaywallOpen(true)}
                   clientPhone={c.whatsapp_number || c.phone}
+                  clientInstagram={c.instagram}
+                  clientTiktok={c.tiktok}
                   clientEmail={c.email}
                 />
               </div>
@@ -270,6 +272,8 @@ export default function HomePage() {
                   locked={!isPro}
                   onLocked={() => setPaywallOpen(true)}
                   clientPhone={clientById.get(p.client_id)?.whatsapp_number || clientById.get(p.client_id)?.phone}
+                  clientInstagram={clientById.get(p.client_id)?.instagram}
+                  clientTiktok={clientById.get(p.client_id)?.tiktok}
                   clientEmail={clientById.get(p.client_id)?.email}
                 />
               </div>
@@ -302,6 +306,8 @@ export default function HomePage() {
                     locked={!isPro}
                     onLocked={() => setPaywallOpen(true)}
                     clientPhone={c.whatsapp_number || c.phone}
+                    clientInstagram={c.instagram}
+                    clientTiktok={c.tiktok}
                     clientEmail={c.email}
                   />
                 )}

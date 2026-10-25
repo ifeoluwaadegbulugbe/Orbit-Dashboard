@@ -19,6 +19,8 @@ import { toast } from "@/stores/toastStore";
 import { formatShortDate, relativeDate } from "@/lib/utils";
 import { BUSINESS_TYPE_LABELS, type PaymentStatus } from "@/types";
 import { toWhatsAppDigits } from "@/lib/phone";
+import { InstagramIcon, TikTokIcon } from "@/components/ui/SocialIcons";
+import { SocialSendButton, firstSocial } from "@/components/clients/SocialSendButton";
 
 const STATUS_PILL: Record<ProjectStatus, { dot: string; bg: string; color: string }> = {
   not_started: { dot: "#9A9893", bg: "var(--color-border-light)",      color: "var(--color-ink-mid)" },
@@ -114,7 +116,8 @@ export default function ProjectDetailPage({
   }
 
   const pill = STATUS_PILL[status];
-  const whatsappUrl = `https://wa.me/${toWhatsAppDigits(client.phone, country.dialCode) ?? ""}`;
+  const waDigits = toWhatsAppDigits(client.whatsapp_number || client.phone, country.dialCode);
+  const social = firstSocial(client);
 
   return (
     <div className="space-y-7">
@@ -330,22 +333,29 @@ export default function ProjectDetailPage({
             </div>
 
             <div className="mt-5 pt-5 border-t border-[var(--color-border)] space-y-3">
-              <ContactRow icon={<Phone className="h-3.5 w-3.5" />} value={client.phone} />
+              {client.phone && <ContactRow icon={<Phone className="h-3.5 w-3.5" />} value={client.phone} />}
+              {client.instagram && <ContactRow icon={<InstagramIcon className="h-3.5 w-3.5" />} value={`@${client.instagram}`} />}
+              {client.tiktok && <ContactRow icon={<TikTokIcon className="h-3.5 w-3.5" />} value={`@${client.tiktok}`} />}
               {client.email && (
                 <ContactRow icon={<Mail className="h-3.5 w-3.5" />} value={client.email} />
               )}
             </div>
 
             <div className="mt-5 space-y-2">
-              <a
-                href={whatsappUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-full bg-[var(--color-success-light)] text-[var(--color-success-deep)] text-small font-semibold hover:opacity-90 transition-opacity"
-              >
-                <MessageCircle className="h-4 w-4" />
-                WhatsApp
-              </a>
+              {waDigits ? (
+                <a
+                  href={`https://wa.me/${waDigits}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-full bg-[var(--color-success-light)] text-[var(--color-success-deep)] text-small font-semibold hover:opacity-90 transition-opacity"
+                >
+                  <MessageCircle className="h-4 w-4" />
+                  WhatsApp
+                </a>
+              ) : social ? (
+                <SocialSendButton platform={social.platform} handle={social.handle}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-full bg-[var(--color-primary-subtle)] text-[var(--color-primary-dark)] text-small font-semibold hover:opacity-90 transition-opacity" />
+              ) : null}
               <Link
                 href={`/clients/${client.id}`}
                 className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-full bg-white border border-[var(--color-border)] text-small font-semibold hover:bg-[var(--color-canvas)] transition-colors"

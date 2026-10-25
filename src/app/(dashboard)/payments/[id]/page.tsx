@@ -20,6 +20,8 @@ import { InvoicePdfActions } from "@/components/invoices/InvoicePdfActions";
 import { RefundButton } from "@/components/orbit-pay/RefundButton";
 import type { PaymentStatus } from "@/types";
 import { toWhatsAppDigits } from "@/lib/phone";
+import { SocialSendButton, firstSocial } from "@/components/clients/SocialSendButton";
+import { primaryContact } from "@/lib/social";
 import { track } from "@/lib/analytics/browser";
 
 const TONE: Record<PaymentStatus, "success" | "warning" | "danger" | "info" | "neutral"> = {
@@ -111,18 +113,20 @@ export default function PaymentDetailPage({ params }: { params: Promise<{ id: st
     setTimeout(() => setCopied(false), 1500);
   }
 
-  const whatsappReminderUrl = client
-    ? `https://wa.me/${toWhatsAppDigits(client.phone, country.dialCode) ?? ""}?text=${encodeURIComponent(
-        `Hi ${client.name}, this is a friendly reminder for invoice ${payment.invoice_number ?? ""} (${formatCurrency(payment.amount)}).`,
-      )}`
-    : "#";
+  const waDigits = client ? toWhatsAppDigits(client.whatsapp_number || client.phone, country.dialCode) : null;
+  // No phone number: send through Instagram/TikTok instead (copy, open, paste).
+  const social = waDigits ? null : firstSocial(client);
+  const reminderMessage = client
+    ? `Hi ${client.name}, this is a friendly reminder for invoice ${payment.invoice_number ?? ""} (${formatCurrency(payment.amount)}).`
+    : "";
+  const whatsappReminderUrl = waDigits ? `https://wa.me/${waDigits}?text=${encodeURIComponent(reminderMessage)}` : "#";
 
   const paymentLinkMessage = client && payment.payment_link
     ? `Hi ${client.name}! Here's your invoice ${payment.invoice_number ? `(${payment.invoice_number}) ` : ""}for ${formatCurrency(payment.amount)}. You can pay securely here: ${payment.payment_link}`
     : "";
 
-  const whatsappPayUrl = client && payment.payment_link
-    ? `https://wa.me/${toWhatsAppDigits(client.phone, country.dialCode) ?? ""}?text=${encodeURIComponent(paymentLinkMessage)}`
+  const whatsappPayUrl = waDigits && payment.payment_link
+    ? `https://wa.me/${waDigits}?text=${encodeURIComponent(paymentLinkMessage)}`
     : "#";
 
   return (
@@ -194,7 +198,7 @@ export default function PaymentDetailPage({ params }: { params: Promise<{ id: st
           <Avatar name={client.name} size={48} />
           <div className="flex-1 min-w-0">
             <div className="text-body font-semibold truncate">{client.name}</div>
-            <div className="text-small text-[var(--color-muted)] mt-0.5">{client.phone}</div>
+            <div className="text-small text-[var(--color-muted)] mt-0.5">{primaryContact(client)}</div>
           </div>
           <User className="h-4 w-4 text-[var(--color-muted)]" />
         </Link>
@@ -241,7 +245,13 @@ export default function PaymentDetailPage({ params }: { params: Promise<{ id: st
                     )}
                   </button>
 
-                  {client && (
+                  {social && (
+                    <span onClickCapture={() => track("invoice_sent", { dedupeKey: `invoice_sent:${payment.id}:${social.platform}`, props: { method: social.platform, confirmed: false } })} className="contents">
+                      <SocialSendButton platform={social.platform} handle={social.handle} text={paymentLinkMessage}
+                        className="inline-flex items-center justify-center gap-2 px-4 py-3 rounded-full bg-[var(--color-primary-subtle)] text-[var(--color-primary-dark)] text-small font-semibold hover:opacity-90 transition-opacity" />
+                    </span>
+                  )}
+                  {waDigits && (
                     <a
                       href={whatsappPayUrl}
                       target="_blank"
@@ -296,7 +306,11 @@ export default function PaymentDetailPage({ params }: { params: Promise<{ id: st
       )}
 
       {/* Reminder action */}
-      {client && payment.status !== "paid" && !payment.payment_link && (
+      {social && payment.status !== "paid" && !payment.payment_link && (
+        <SocialSendButton platform={social.platform} handle={social.handle} text={reminderMessage}
+          className="w-full flex items-center justify-center gap-2 px-5 py-3.5 bg-white border border-[var(--color-border)] text-[var(--color-ink)] rounded-full text-small font-semibold hover:bg-[var(--color-canvas)] transition-colors" />
+      )}
+      {waDigits && payment.status !== "paid" && !payment.payment_link && (
         <a
           href={whatsappReminderUrl}
           target="_blank"

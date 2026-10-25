@@ -5,6 +5,7 @@ import { Sparkles, Copy, Check, Loader2, RefreshCw, MessageCircle, Mail, Externa
 import { toast } from "@/stores/toastStore";
 import { buildWhatsAppLink } from "@/lib/whatsapp";
 import { useCurrency } from "@/hooks/useCurrency";
+import { SocialSendButton } from "@/components/clients/SocialSendButton";
 
 interface SuggestButtonProps {
   label: string;
@@ -17,6 +18,9 @@ interface SuggestButtonProps {
   clientPhone?: string | null;
   /** When present, shows a "Email it" button that actually sends via Resend. */
   clientEmail?: string | null;
+  /** When present, shows "Copy & open Instagram/TikTok" (those apps can't take a pre-filled message). */
+  clientInstagram?: string | null;
+  clientTiktok?: string | null;
 }
 
 /**
@@ -27,7 +31,7 @@ interface SuggestButtonProps {
  * is the zero-setup alternative, see src/lib/whatsapp.ts) and email (a real
  * send via the existing Resend integration).
  */
-export function SuggestButton({ label, kind, context, locked, onLocked, clientPhone, clientEmail }: SuggestButtonProps) {
+export function SuggestButton({ label, kind, context, locked, onLocked, clientPhone, clientEmail, clientInstagram, clientTiktok }: SuggestButtonProps) {
   const { country } = useCurrency();
   const [loading, setLoading] = useState(false);
   const [suggestion, setSuggestion] = useState<string | null>(null);
@@ -104,6 +108,14 @@ export function SuggestButton({ label, kind, context, locked, onLocked, clientPh
               Send via WhatsApp
               <ExternalLink className="h-3 w-3" />
             </a>
+          )}
+          {clientInstagram && (
+            <SocialSendButton platform="instagram" handle={clientInstagram} text={suggestion}
+              className="inline-flex items-center gap-1.5 text-tiny font-semibold text-[var(--color-primary-dark)] hover:opacity-80 [&>svg]:h-3.5 [&>svg]:w-3.5" />
+          )}
+          {clientTiktok && (
+            <SocialSendButton platform="tiktok" handle={clientTiktok} text={suggestion}
+              className="inline-flex items-center gap-1.5 text-tiny font-semibold text-[var(--color-ink)] hover:opacity-80 [&>svg]:h-3.5 [&>svg]:w-3.5" />
           )}
           {clientEmail && (
             <button

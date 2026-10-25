@@ -14,6 +14,8 @@ import { useSubscription } from "@/hooks/useSubscription";
 import { useAuthStore } from "@/stores/authStore";
 import { PaywallModal } from "@/components/paywall/PaywallModal";
 import { FREE_CLIENT_LIMIT } from "@/lib/constants";
+import { normalizeHandle } from "@/lib/social";
+import { InstagramIcon, TikTokIcon } from "@/components/ui/SocialIcons";
 import type { ClientStatus } from "@/types";
 import { useCurrency } from "@/hooks/useCurrency";
 
@@ -21,6 +23,8 @@ interface FormValues {
   name: string;
   phone: string;
   email: string;
+  instagram: string;
+  tiktok: string;
   status: ClientStatus;
   birthday: string;
   notes: string;
@@ -39,7 +43,7 @@ export default function NewClientPage() {
   const atLimit = !isPro && clients.length >= FREE_CLIENT_LIMIT;
 
   const { register, handleSubmit, formState } = useForm<FormValues>({
-    defaultValues: { status: "active" },
+    defaultValues: { status: "active", phone: "", email: "", instagram: "", tiktok: "" },
   });
 
   async function onSubmit(values: FormValues) {
@@ -51,6 +55,10 @@ export default function NewClientPage() {
       setError("Your profile isn't loaded yet. Try again in a moment.");
       return;
     }
+    const instagram = normalizeHandle(values.instagram, "instagram");
+    const tiktok = normalizeHandle(values.tiktok, "tiktok");
+    if (values.instagram.trim() && !instagram) return setError("That Instagram username doesn't look right. Use just the name, like @amaka.glam.");
+    if (values.tiktok.trim() && !tiktok) return setError("That TikTok username doesn't look right. Use just the name, like @amaka.glam.");
     setError(null);
     try {
       const phone = values.phone.trim();
@@ -59,6 +67,9 @@ export default function NewClientPage() {
         phone,
         whatsapp_number: phone,         // Default WhatsApp to the same number
         email: values.email.trim() || null,
+        // Only sent when filled, so saving still works before migration 028 adds the columns.
+        ...(instagram ? { instagram } : {}),
+        ...(tiktok ? { tiktok } : {}),
         status: values.status,
         birthday: values.birthday || null,
         notes: values.notes.trim() || null,
@@ -121,12 +132,31 @@ export default function NewClientPage() {
           {...register("name", { required: true })}
         />
         <Input
-          label="Phone"
+          label="Phone (optional)"
           icon={<Phone className="h-4 w-4" />}
           placeholder={`e.g. +${country.dialCode || "234"} 801 234 5678`}
           autoComplete="tel"
-          {...register("phone", { required: true })}
+          hint="Met them on Instagram or TikTok? Leave this empty and add their username below."
+          {...register("phone")}
         />
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+          <Input
+            label="Instagram (optional)"
+            icon={<InstagramIcon className="h-4 w-4" />}
+            placeholder="@username"
+            autoCapitalize="none"
+            autoCorrect="off"
+            {...register("instagram")}
+          />
+          <Input
+            label="TikTok (optional)"
+            icon={<TikTokIcon className="h-4 w-4" />}
+            placeholder="@username"
+            autoCapitalize="none"
+            autoCorrect="off"
+            {...register("tiktok")}
+          />
+        </div>
         <Input
           label="Email (optional)"
           type="email"
