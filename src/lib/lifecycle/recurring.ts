@@ -2,8 +2,9 @@
  * Emails for owners past onboarding: Pro trial reminders, the Monday weekly
  * summary and the Thursday tip. Same rules as campaigns.ts - each one is
  * eligible only while it's true and useful, and the engine sends at most one
- * per run. The summary and tips are for people actively using Orbit; anyone
- * away for a week or more gets the come-back emails instead, never both.
+ * per run. The summary is for people actively using Orbit (anyone away for a
+ * week or more gets the come-back emails instead); the Thursday tip goes to
+ * every signed-up owner who hasn't turned tips off.
  *
  * Trial reminders are account emails: the card on file is charged when the
  * trial ends, so everyone on a trial gets them, whatever their marketing
@@ -40,7 +41,8 @@ function hasStarted(f: UserFacts): boolean {
   return f.clientCount + f.bookingCount + f.invoiceCount + f.serviceCount > 0;
 }
 
-/* ── Weekly tips: one a week, never repeated, only if it fits how they use Orbit ── */
+/* ── Weekly tips: one every week for every owner. Tips that fit how they use Orbit come first;
+   once they've had every tip, the series starts again from the top. ── */
 
 export interface Tip {
   id: string;
@@ -135,11 +137,76 @@ export const TIPS: Tip[] = [
     body: "Insights shows your busiest days, your best clients and how much you've made this month compared with last. It's the quickest way to see what's working.",
     cta: { text: "See your insights", path: "/analytics" },
   },
+  // ── for any business, whatever they've set up so far ──
+  {
+    id: "booking_page_profile",
+    applies: () => true,
+    subject: "Make your booking page feel like you",
+    statement: "First impressions, *handled.*",
+    body: "Your booking page is often the first thing a new client sees. Add a short intro, where you're based, your Instagram and your WhatsApp number, so it looks like a real business, not just a form.",
+    cta: { text: "Edit your booking page", path: "/booking-link" },
+  },
+  {
+    id: "prices_visible",
+    applies: () => true,
+    subject: "Stop answering \"how much?\" in your DMs",
+    statement: "Let your prices *do the talking.*",
+    body: "Add each service with its price and how long it takes. They show on your booking page, so clients know what to expect before they message you, and the people who book are the ones ready to pay.",
+    cta: { text: "Add your services", path: "/services" },
+  },
+  {
+    id: "whatsapp_status",
+    applies: () => true,
+    subject: "A free way to fill your week",
+    statement: "Post your link *every Monday.*",
+    body: "Share your booking link on your WhatsApp Status at the start of each week with a line like \"Booking for this week is open\". Your regulars see it, tap it and pick a time, without a single back-and-forth message.",
+    cta: { text: "Get your booking link", path: "/booking-link" },
+  },
+  {
+    id: "client_notes",
+    applies: () => true,
+    subject: "Remember every client like they're your only one",
+    statement: "Write it down *once.*",
+    body: "Their favourite style, their allergies, how they like to be greeted. Add it to the client's notes in Orbit, and it's there next time they book. Clients notice, and they come back.",
+    cta: { text: "Open your clients", path: "/clients" },
+  },
+  {
+    id: "message_templates",
+    applies: () => true,
+    subject: "Stop typing the same messages",
+    statement: "Write it once, *send it forever.*",
+    body: "Your price list, your address, your aftercare advice: save the messages you send all the time as templates in Orbit, then copy them in one tap whenever someone asks.",
+    cta: { text: "Set up your templates", path: "/templates" },
+  },
+  {
+    id: "check_in_after_visit",
+    applies: () => true,
+    subject: "The one message that brings clients back",
+    statement: "Check in *a week later.*",
+    body: "A week after a visit, send a short \"How are you finding it?\" message. It shows you care, catches problems early, and reminds them to book again. Orbit can draft it for you.",
+    cta: { text: "Open your clients", path: "/clients" },
+  },
+  {
+    id: "quiet_days",
+    applies: () => true,
+    subject: "Got a quiet day coming up?",
+    statement: "Fill it with *your regulars.*",
+    body: "When your week looks slow, message a few regulars with a midweek slot or a small offer. People who already love your work are the quickest to say yes, and Orbit shows you who they are.",
+    cta: { text: "See your clients", path: "/clients" },
+  },
 ];
 
-/** The next tip this owner hasn't had that fits what they use. */
-export function nextTip(ctx: CampaignContext, userId: string): Tip | null {
-  return TIPS.find((t) => t.applies(ctx.facts) && !ctx.sentKeys.has(`weekly_tip:${userId}:${t.id}`)) ?? null;
+/** Idempotency key for a tip in a given round of the series (round 0 keeps the original key). */
+const tipKey = (userId: string, tipId: string, round: number) => `weekly_tip:${userId}:${tipId}${round ? `:r${round}` : ""}`;
+
+/** The next tip for this owner: one that fits what they use and they haven't had in this round. */
+export function nextTip(ctx: CampaignContext, userId: string): { tip: Tip; key: string } | null {
+  const fitting = TIPS.filter((t) => t.applies(ctx.facts));
+  for (let round = 0; round < 50; round++) {
+    const tip = fitting.find((t) => !ctx.sentKeys.has(tipKey(userId, t.id, round)));
+    if (tip) return { tip, key: tipKey(userId, tip.id, round) };
+  }
+  return null;
 }
 
 /* ── the campaigns ── */
@@ -256,22 +323,23 @@ export const RECURRING_CAMPAIGNS: Campaign[] = [
     },
   },
 
-  // ── Weekly tip: Thursday or Friday, once setup emails are done ──────────────
+  // ── Weekly tip: every owner, every Thursday ───────────────────────────────
   {
     id: "weekly_tip",
     priority: 50,
     category: "tips",
-    key: (u, ctx) => `weekly_tip:${u}:${nextTip(ctx, u)?.id ?? "none"}`,
+    key: (u, ctx) => nextTip(ctx, u)?.key ?? `weekly_tip:${u}:none`,
     eligible: (ctx) =>
+      // Friday too, in case Thursday's one email slot went to something more urgent
       (ctx.local.weekday === 4 || ctx.local.weekday === 5) && ctx.local.hour >= 10
-      && ctx.daysSinceSignup >= 10
-      && ctx.daysInactive < 7 // drifting away: the come-back emails cover them instead
+      // first 3 days belong to the welcome email - a tip must never take its slot
+      && ctx.daysSinceSignup >= 3
       && (ctx.sent.get("weekly_tip") ?? Infinity) >= 6
       && !!nextTip(ctx, ctx.userId),
     goal: () => false,
-    subject: (ctx) => nextTip(ctx, ctx.userId)!.subject,
+    subject: (ctx) => nextTip(ctx, ctx.userId)!.tip.subject,
     content: (ctx) => {
-      const t = nextTip(ctx, ctx.userId)!;
+      const t = nextTip(ctx, ctx.userId)!.tip;
       return {
         preheader: t.body.slice(0, 110),
         eyebrow: "Orbit tip",
