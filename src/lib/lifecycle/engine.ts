@@ -8,7 +8,8 @@
  *      email asked (email -> product action attribution).
  *   4. Pick at most ONE email: highest-priority campaign that is eligible
  *      right now, not already sent, allowed by preferences, suppression and
- *      frequency caps.
+ *      frequency caps. Account emails (trial ending) go first and skip the
+ *      preferences and caps, but never go to a dead or complaining address.
  *   5. Claim a unique idempotency key BEFORE sending, so overlapping runs or
  *      re-processed events can never send the same email twice.
  *
@@ -26,6 +27,7 @@ import {
   activation, firstValueAchieved, lifecycleStage, nextBestAction, daysSince, type UserFacts,
 } from "./activation";
 import { CAMPAIGNS, type Campaign, type CampaignContext, type WaitingItem } from "./campaigns";
+import type { WeekSummary } from "./recurring";
 import { formatMoney } from "@/lib/countries";
 import { renderEmail } from "@/lib/email-design/render";
 import { allRows } from "@/lib/supabase/all-rows";
@@ -48,10 +50,11 @@ interface ProfileRow {
   email_confirmed?: boolean | null;
 }
 interface PaymentRow { user_id: string; status: string; date: string; created_at: string; amount?: number | null }
-interface BookingRow { user_id: string; status?: string | null; date?: string | null }
-interface ClientRow { user_id: string; status?: string | null }
-interface PrefRow { user_id: string; tips: boolean; product_updates: boolean; promotions: boolean; unsubscribed_at: string | null }
-interface SentRow { id: string; user_id: string; campaign: string; idempotency_key: string; status: string; sent_at: string | null; converted_at: string | null; attempts: number; next_attempt_at: string | null }
+interface BookingRow { user_id: string; status?: string | null; date?: string | null; created_at?: string | null }
+interface ClientRow { user_id: string; status?: string | null; created_at?: string | null }
+/** weekly_summary is missing until migration 029 runs - treated as on. */
+interface PrefRow { user_id: string; tips: boolean; product_updates: boolean; promotions: boolean; weekly_summary?: boolean; unsubscribed_at: string | null }
+interface SentRow { id: string; user_id: string; campaign: string; category?: string | null; idempotency_key: string; status: string; sent_at: string | null; converted_at: string | null; attempts: number; next_attempt_at: string | null }
 
 export interface RunReport {
   dryRun: boolean;
@@ -79,9 +82,9 @@ export async function runLifecycle(supabase: SupabaseClient, now = new Date()): 
     allRows(() => supabase.from("bookings").select("user_id, created_at, status, date").order("id")),
     allRows(() => supabase.from("payments").select("user_id, status, date, created_at, amount").order("id")),
     allRows(() => supabase.from("reminders").select("user_id").order("id")),
-    allRows(() => supabase.from("email_preferences").select("user_id, tips, product_updates, promotions, unsubscribed_at").order("user_id")),
-    allRows(() => supabase.from("email_suppressions").select("email").order("email")),
-    allRows(() => supabase.from("lifecycle_emails").select("id, user_id, campaign, idempotency_key, status, sent_at, converted_at, attempts, next_attempt_at").order("id")),
+    allRows(() => supabase.from("email_preferences").select("*").order("user_id")),
+    allRows(() => supabase.from("email_suppressions").select("email, reason").order("email")),
+    allRows(() => supabase.from("lifecycle_emails").select("id, user_id, campaign, category, idempotency_key, status, sent_at, converted_at, attempts, next_attempt_at").order("id")),
     supabase.from("user_product_events").select("id, user_id, created_at").eq("event", "checkout_started")
       .gte("created_at", new Date(nowMs - 3 * DAY).toISOString()).order("created_at", { ascending: false }),
   ]);
@@ -115,7 +118,8 @@ export async function runLifecycle(supabase: SupabaseClient, now = new Date()): 
     paymentsByUser.set(p.user_id, [...(paymentsByUser.get(p.user_id) ?? []), p]);
   }
   const prefs = new Map(((prefsQ.data ?? []) as PrefRow[]).map((p) => [p.user_id, p]));
-  const suppressed = new Set(((suppQ.data ?? []) as { email: string }[]).map((s) => s.email.toLowerCase()));
+  // An unsubscribe stops marketing; a bounce or complaint stops everything.
+  const suppressed = new Map(((suppQ.data ?? []) as { email: string; reason?: string }[]).map((s) => [s.email.toLowerCase(), s.reason ?? "manual"]));
   const sentByUser = new Map<string, SentRow[]>();
   for (const r of (sentQ.data ?? []) as SentRow[]) sentByUser.set(r.user_id, [...(sentByUser.get(r.user_id) ?? []), r]);
   const lastCheckout = new Map<string, { id: number; created_at: string }>();
@@ -176,17 +180,14 @@ export async function runLifecycle(supabase: SupabaseClient, now = new Date()): 
     // ── 4. Pick at most one email ───────────────────────────────────────────
     const email = p.email?.trim().toLowerCase();
     if (!email) { skip("no_email"); continue; }
-    if (suppressed.has(email)) { skip("suppressed"); continue; }
+    const suppression = suppressed.get(email);
+    if (suppression && suppression !== "unsubscribe") { skip("suppressed"); continue; }
     // Never email an address whose owner hasn't confirmed it's theirs.
     if (p.email_confirmed === false) { skip("unconfirmed"); continue; }
     // Reserved test domains never deliver - sending only earns a bounce.
     if (/@(example\.(com|org|net)|[^@]+\.(test|invalid|example|localhost))$/.test(email)) { skip("test_address"); continue; }
     const pref = prefs.get(p.id);
-    if (pref?.unsubscribed_at) { skip("unsubscribed"); continue; }
-
-    const sentTimes = history.filter((r) => r.status === "sent" && r.sent_at).map((r) => new Date(r.sent_at!).getTime());
-    if (sentTimes.filter((t) => nowMs - t < DAY).length >= MAX_PER_DAY) { skip("daily_cap"); continue; }
-    if (sentTimes.filter((t) => nowMs - t < 7 * DAY).length >= MAX_PER_WEEK) { skip("weekly_cap"); continue; }
+    const optedOut = !!suppression || !!pref?.unsubscribed_at;
 
     const daysSentAgo = new Map<string, number>();
     for (const r of history) {
@@ -195,7 +196,9 @@ export async function runLifecycle(supabase: SupabaseClient, now = new Date()): 
       if (!daysSentAgo.has(r.campaign) || d < daysSentAgo.get(r.campaign)!) daysSentAgo.set(r.campaign, d);
     }
     const checkout = lastCheckout.get(p.id);
+    const trialMs = p.subscription_status === "trial" && p.trial_ends_at ? new Date(p.trial_ends_at).getTime() - nowMs : 0;
     const ctx: CampaignContext = {
+      userId: p.id,
       facts,
       firstName: p.full_name?.trim().split(/\s+/)[0] || null,
       businessName: p.business_name?.trim() || null,
@@ -207,21 +210,35 @@ export async function runLifecycle(supabase: SupabaseClient, now = new Date()): 
       inactiveSince: facts.lastActiveAt ?? p.created_at,
       daysInactive: daysSince(facts.lastActiveAt ?? p.created_at, nowMs) ?? 0,
       waiting: whatsWaiting(p, payments, bookingRowsByUser.get(p.id) ?? [], clientRowsByUser.get(p.id) ?? [], nowMs),
+      trial: trialMs > 0 ? { endsAt: p.trial_ends_at!, hoursLeft: trialMs / 3_600_000 } : null,
+      week: weekSummary(payments, bookingRowsByUser.get(p.id) ?? [], clientRowsByUser.get(p.id) ?? [], nowMs),
+      local: lagosDay(nowMs),
+      sentKeys: new Set(history.filter((r) => r.status === "sent").map((r) => r.idempotency_key)),
+      money: (amount) => formatMoney(amount, p.country_code),
     };
 
     const byKey = new Map(history.map((r) => [r.idempotency_key, r]));
-    const candidates = CAMPAIGNS
-      .filter((c) => (pref ? pref[c.category] !== false : true))
-      .filter((c) => {
-        const prior = byKey.get(c.key(p.id, ctx));
-        if (!prior) return true;
-        // Only a failed send that's due for a retry may go again.
-        return prior.status === "failed" && prior.attempts < MAX_ATTEMPTS
-          && (!prior.next_attempt_at || new Date(prior.next_attempt_at).getTime() <= nowMs);
-      })
-      .filter((c) => c.eligible(ctx))
-      .sort((a, b) => b.priority - a.priority);
-    const campaign = candidates[0];
+    const sendable = (c: Campaign) => {
+      const prior = byKey.get(c.key(p.id, ctx));
+      if (!prior) return true;
+      // Only a failed send that's due for a retry may go again.
+      return prior.status === "failed" && prior.attempts < MAX_ATTEMPTS
+        && (!prior.next_attempt_at || new Date(prior.next_attempt_at).getTime() <= nowMs);
+    };
+    const pick = (list: Campaign[]) => list.filter((c) => c.eligible(ctx)).filter(sendable).sort((a, b) => b.priority - a.priority)[0];
+
+    // Account emails first: no preferences, no caps.
+    let campaign = pick(CAMPAIGNS.filter((c) => c.transactional));
+    if (!campaign) {
+      if (optedOut) { skip("unsubscribed"); continue; }
+      // Caps count marketing email only.
+      const sentTimes = history
+        .filter((r) => r.status === "sent" && r.sent_at && r.category !== "account")
+        .map((r) => new Date(r.sent_at!).getTime());
+      if (sentTimes.filter((t) => nowMs - t < DAY).length >= MAX_PER_DAY) { skip("daily_cap"); continue; }
+      if (sentTimes.filter((t) => nowMs - t < 7 * DAY).length >= MAX_PER_WEEK) { skip("weekly_cap"); continue; }
+      campaign = pick(CAMPAIGNS.filter((c) => !c.transactional && c.category !== "account" && (pref ? pref[c.category] !== false : true)));
+    }
     if (!campaign) { skip("nothing_eligible"); continue; }
 
     if (dryRun) { report.wouldSend.push({ user: p.id, campaign: campaign.id }); continue; }
@@ -373,6 +390,35 @@ function whatsWaiting(p: ProfileRow, payments: PaymentRow[], bookings: BookingRo
   if (followUps) items.push({ icon: "client", title: `${plural(followUps, "client")} due a follow-up`, meta: "A quick message keeps them coming back", time: "" });
 
   return items;
+}
+
+/** Today in Lagos (UTC+1 all year, no daylight saving). */
+function lagosDay(nowMs: number): CampaignContext["local"] {
+  const d = new Date(nowMs + 3_600_000);
+  const weekday = d.getUTCDay();
+  const monday = new Date(d.getTime() - ((weekday + 6) % 7) * DAY);
+  return { weekday, hour: d.getUTCHours(), weekStart: monday.toISOString().slice(0, 10) };
+}
+
+/** The last 7 days and the coming week, from the owner's own records. */
+function weekSummary(payments: PaymentRow[], bookings: BookingRow[], clients: ClientRow[], nowMs: number): WeekSummary {
+  const weekAgo = nowMs - 7 * DAY;
+  const fromDay = new Date(weekAgo).toISOString().slice(0, 10);
+  const today = new Date(nowMs).toISOString().slice(0, 10);
+  const weekOut = new Date(nowMs + 7 * DAY).toISOString().slice(0, 10);
+  const recent = (iso?: string | null) => !!iso && new Date(iso).getTime() >= weekAgo;
+  const paid = payments.filter((x) => x.status === "paid" && x.date >= fromDay && x.date <= today);
+  const unpaid = payments.filter((x) => ["pending", "overdue", "partial"].includes(x.status));
+  return {
+    newBookings: bookings.filter((b) => recent(b.created_at) && b.status !== "cancelled").length,
+    newClients: clients.filter((c) => recent(c.created_at)).length,
+    paidCount: paid.length,
+    paidAmount: paid.reduce((sum, x) => sum + (Number(x.amount) || 0), 0),
+    unpaidCount: unpaid.length,
+    owedAmount: unpaid.reduce((sum, x) => sum + (Number(x.amount) || 0), 0),
+    upcoming: bookings.filter((b) => b.status === "confirmed" && (b.date ?? "") >= today && (b.date ?? "") <= weekOut).length,
+    requests: bookings.filter((b) => b.status === "pending" && (b.date ?? "") >= today).length,
+  };
 }
 
 /** Errors that mean the SENDER is misconfigured, not that this one email failed. */

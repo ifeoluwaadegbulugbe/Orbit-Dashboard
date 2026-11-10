@@ -1,5 +1,6 @@
 /**
- * Lifecycle campaigns: onboarding, activation, checkout recovery, win-back.
+ * Lifecycle campaigns: onboarding, activation, checkout recovery, win-back
+ * (plus trial reminders, weekly summary and weekly tips in recurring.ts).
  *
  * Each campaign is a rule, not a timer: `eligible` is evaluated against what
  * the owner has ACTUALLY done every time the job runs, right before sending.
@@ -11,11 +12,15 @@
 import { activation, ACTIVATION_STEPS, daysSince, firstValueAchieved, type UserFacts } from "./activation";
 import type { EmailContent } from "@/lib/email-design/render";
 import { welcomeEmail, activationClientEmail, bookingLinkEmail, reengagementEmail } from "@/lib/email-design/templates";
+import { RECURRING_CAMPAIGNS, type WeekSummary } from "./recurring";
 
 /** Matches the email_preferences columns. */
-export type EmailCategory = "tips" | "product_updates" | "promotions";
+export type PreferenceCategory = "tips" | "product_updates" | "promotions" | "weekly_summary";
+/** "account" emails (e.g. a trial about to charge their card) can't be turned off. */
+export type EmailCategory = PreferenceCategory | "account";
 
 export interface CampaignContext {
+  userId: string;
   facts: UserFacts;
   firstName: string | null;
   businessName: string | null;
@@ -33,6 +38,16 @@ export interface CampaignContext {
   daysInactive: number;
   /** Real things waiting in their Orbit right now. */
   waiting: WaitingItem[];
+  /** Set while they're on a Pro trial that hasn't ended. */
+  trial: { endsAt: string; hoursLeft: number } | null;
+  /** Last 7 days and the coming week, for the Monday summary. */
+  week: WeekSummary;
+  /** Today in Lagos time (most owners are in West Africa): 0 = Sunday. weekStart is that week's Monday. */
+  local: { weekday: number; hour: number; weekStart: string };
+  /** Idempotency keys of emails already sent to them. */
+  sentKeys: Set<string>;
+  /** An amount in their own currency. */
+  money: (amount: number) => string;
 }
 
 export interface WaitingItem {
@@ -47,6 +62,8 @@ export interface Campaign {
   /** Higher wins when several qualify in the same run. */
   priority: number;
   category: EmailCategory;
+  /** Account emails: sent even to people who opted out of marketing, and never counted toward the caps. */
+  transactional?: boolean;
   /** Unique per user (and per occurrence where a campaign can repeat). */
   key: (userId: string, ctx: CampaignContext) => string;
   eligible: (ctx: CampaignContext) => boolean;
@@ -297,6 +314,8 @@ export const CAMPAIGNS: Campaign[] = [
     subject: () => "Your business is still here",
     content: (ctx) => reengagementEmail({ ...winbackParams(ctx), variant: "last" }),
   },
+
+  ...RECURRING_CAMPAIGNS,
 ];
 
 /** Win-back is for people who actually used Orbit; brand-new sign-ups get the onboarding emails instead. */

@@ -25,7 +25,7 @@ export default async function UnsubscribePage({
       <PublicShell>
         <PublicMessage
           title="You're unsubscribed"
-          body="You won't get tips, updates or offers from Orbit any more. Important emails about your account, security and payments will still reach you. Changed your mind? Turn them back on under Settings → Email preferences."
+          body="You won't get tips, weekly summaries, updates or offers from Orbit any more. Important emails about your account, security and payments will still reach you. Changed your mind? Turn them back on under Settings → Email preferences."
         />
       </PublicShell>
     );
@@ -39,7 +39,7 @@ export default async function UnsubscribePage({
       >
         <h1 className="text-card-title font-bold">Unsubscribe from Orbit emails?</h1>
         <p className="mt-2 text-small text-[var(--color-ink-light)] leading-relaxed">
-          You&apos;ll stop getting setup tips, product updates and offers. Important emails about your
+          You&apos;ll stop getting setup tips, weekly summaries, product updates and offers. Important emails about your
           account, security and payments will still be sent.
         </p>
         <input type="hidden" name="confirm" value="1" />

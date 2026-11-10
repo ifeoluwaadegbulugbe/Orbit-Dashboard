@@ -27,7 +27,8 @@ export async function PUT(request: Request) {
     tips: body.tips !== false,
     product_updates: body.product_updates !== false,
     promotions: body.promotions !== false,
+    weekly_summary: body.weekly_summary !== false,
   };
   await savePreferences(createServiceClient(), userId, prefs);
-  return NextResponse.json({ ok: true, ...prefs, unsubscribed: !(prefs.tips || prefs.product_updates || prefs.promotions) });
+  return NextResponse.json({ ok: true, ...prefs, unsubscribed: !(prefs.tips || prefs.product_updates || prefs.promotions || prefs.weekly_summary) });
 }

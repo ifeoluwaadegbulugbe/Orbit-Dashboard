@@ -4,9 +4,10 @@ import { useEffect, useState } from "react";
 import { Mail } from "lucide-react";
 import { toast } from "@/stores/toastStore";
 
-interface Prefs { tips: boolean; product_updates: boolean; promotions: boolean; unsubscribed: boolean }
+interface Prefs { tips: boolean; product_updates: boolean; promotions: boolean; weekly_summary: boolean; unsubscribed: boolean }
 
 const OPTIONS: { key: keyof Omit<Prefs, "unsubscribed">; label: string; hint: string }[] = [
+  { key: "weekly_summary", label: "Weekly summary", hint: "Your bookings, payments and unpaid invoices, every Monday" },
   { key: "tips", label: "Tips & setup help", hint: "Short guides that help you get more out of Orbit" },
   { key: "product_updates", label: "Product updates", hint: "New features worth knowing about" },
   { key: "promotions", label: "Offers", hint: "Pro plan offers and upgrade reminders" },
@@ -34,7 +35,7 @@ export function EmailPreferences() {
     const res = await fetch("/api/email/preferences", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ tips: next.tips, product_updates: next.product_updates, promotions: next.promotions }),
+      body: JSON.stringify({ tips: next.tips, product_updates: next.product_updates, promotions: next.promotions, weekly_summary: next.weekly_summary }),
     });
     if (res.ok) setPrefs(await res.json());
     else { setPrefs(prefs); toast("Couldn't save your email settings.", "danger"); }
