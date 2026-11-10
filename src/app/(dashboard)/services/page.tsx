@@ -4,6 +4,9 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Scissors, Plus, Trash2, Save, ArrowRight, Sparkles, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/Input";
+import { Select } from "@/components/ui/Select";
+import { useCurrency } from "@/hooks/useCurrency";
+import { cleanDeposit, depositForService } from "@/lib/booking-policies";
 import { Button } from "@/components/ui/Button";
 import { useServices, useUpdateServices } from "@/hooks/useServices";
 import { useAuthStore } from "@/stores/authStore";
@@ -24,6 +27,7 @@ export default function ServicesPage() {
   const profile = useAuthStore((s) => s.profile);
   const { data: remoteServices = [], isLoading } = useServices();
   const update = useUpdateServices();
+  const { symbol, format } = useCurrency();
 
   // Local editable copy. We hydrate from the server list, then let the user
   // freely edit and only persist when they tap Save.
@@ -72,6 +76,7 @@ export default function ServicesPage() {
         name: s.name.trim(),
         duration_minutes: Number.isFinite(s.duration_minutes) ? s.duration_minutes : 60,
         price: s.price.trim(),
+        deposit: cleanDeposit(s.deposit),
       }))
       .filter((s) => s.name.length > 0);
 
@@ -214,6 +219,12 @@ export default function ServicesPage() {
                   >
                     <Trash2 className="h-4 w-4" />
                   </button>
+                  <DepositRow
+                    service={s}
+                    symbol={symbol}
+                    format={format}
+                    onChange={(deposit) => updateService(i, { deposit })}
+                  />
                 </div>
               ))}
 
@@ -251,8 +262,57 @@ export default function ServicesPage() {
           <li>· Your public booking link (<Link href="/booking-link" className="text-[var(--color-primary)] font-semibold">manage link</Link>)</li>
           <li>· The &quot;New booking&quot; dialog in the Work tab</li>
           <li>· The invoice builder (services become invoice line items)</li>
+          <li>· Deposits: when you confirm a booking, Orbit sends the client a link to pay the deposit, and invoices the rest</li>
         </ul>
       </div>
+    </div>
+  );
+}
+
+/** "No deposit" / fixed amount / percentage of the price, under each service. */
+function DepositRow({ service, symbol, format, onChange }: {
+  service: Service;
+  symbol: string;
+  format: (n: number) => string;
+  onChange: (deposit: Service["deposit"]) => void;
+}) {
+  const kind = service.deposit?.kind ?? "";
+  const amount = depositForService({ ...service, deposit: cleanDeposit(service.deposit) });
+  return (
+    <div className="sm:col-span-4 flex flex-wrap items-center gap-2 text-small">
+      <span className="text-[var(--color-ink-light)] font-semibold">Deposit</span>
+      <Select
+        aria-label={`Deposit for ${service.name || "this service"}`}
+        className="w-auto"
+        value={kind}
+        onChange={(e) => {
+          const k = e.target.value;
+          onChange(k === "fixed" || k === "percent" ? { kind: k, value: service.deposit?.value ?? (k === "percent" ? 30 : 0) } : null);
+        }}
+      >
+        <option value="">No deposit</option>
+        <option value="fixed">Fixed amount</option>
+        <option value="percent">% of price</option>
+      </Select>
+      {kind && (
+        <Input
+          aria-label={kind === "percent" ? "Deposit percentage" : "Deposit amount"}
+          type="number"
+          min={1}
+          max={kind === "percent" ? 100 : undefined}
+          className="w-28"
+          icon={kind === "fixed" ? <span className="text-small">{symbol}</span> : undefined}
+          placeholder={kind === "percent" ? "30" : "5000"}
+          value={service.deposit?.value || ""}
+          onChange={(e) => onChange({ kind: kind as "fixed" | "percent", value: Number(e.target.value) })}
+        />
+      )}
+      {kind === "percent" && <span className="text-[var(--color-muted)]">%</span>}
+      {kind && (
+        <span className="text-tiny text-[var(--color-muted)]">
+          {amount > 0 ? `Client pays ${format(amount)} to secure the booking` : kind === "percent" ? "Add a price with a number to use a percentage" : "Enter an amount"}
+        </span>
+      )}
     </div>
   );
 }

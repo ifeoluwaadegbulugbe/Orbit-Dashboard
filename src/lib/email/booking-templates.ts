@@ -26,6 +26,18 @@ export interface BookingMessageParams {
   clientPhone?: string | null;
   /** Client's private "my appointments" page - included in client-facing confirmations. */
   portalUrl?: string | null;
+  /** Deposit asked for when the booking was confirmed (amount already formatted, e.g. "₦10,000"). */
+  deposit?: { amount: string; payUrl: string | null; deadlineHours: number } | null;
+  /** The business's booking policies, as sentences. */
+  policies?: string[];
+}
+
+function depositSentence(p: BookingMessageParams): string {
+  const d = p.deposit!;
+  const when = d.deadlineHours > 0 ? ` within ${d.deadlineHours} hours` : "";
+  return d.payUrl
+    ? `Please pay your ${d.amount} deposit${when} to secure your booking.`
+    : `A ${d.amount} deposit secures your booking. ${p.businessName} will tell you how to pay it${when}.`;
 }
 
 // ─── Formatting helpers ─────────────────────────────────────────────────────
@@ -69,7 +81,21 @@ export function buildConfirmEmail(p: BookingMessageParams): {
   const dateLine = formatDate(p.date);
   const timeLine = formatTime(p.time);
 
-  const subject = `Your booking with ${p.businessName} is confirmed`;
+  const subject = p.deposit
+    ? `Your booking with ${p.businessName} is confirmed - pay your deposit to secure it`
+    : `Your booking with ${p.businessName} is confirmed`;
+  const depositHtml = p.deposit ? `
+    <div style="background: #FDF2F5; border: 1px solid #F6C9D6; border-radius: 12px; padding: 18px 20px; margin: 0 0 24px;">
+      <div style="font-size: 15px; font-weight: 700; margin: 0 0 6px;">Secure your booking</div>
+      <p style="font-size: 14px; color: #3D3D3D; margin: 0 0 ${p.deposit.payUrl ? "14px" : "0"}; line-height: 1.5;">${escapeHtml(depositSentence(p))}</p>
+      ${p.deposit.payUrl ? `<a href="${escapeHtml(p.deposit.payUrl)}" style="display: inline-block; background: #E8557A; color: #ffffff; text-decoration: none; font-size: 14px; font-weight: 700; padding: 12px 24px; border-radius: 999px;">Pay ${escapeHtml(p.deposit.amount)} deposit</a>
+      <p style="font-size: 12px; color: #6B6B6B; margin: 10px 0 0;">Card, bank transfer or USSD. It goes straight to ${escapeHtml(p.businessName)}.</p>` : ""}
+    </div>` : "";
+  const policiesHtml = p.policies?.length ? `
+    <div style="margin: 0 0 24px;">
+      <div style="font-size: 13px; font-weight: 700; color: #6B6B6B; text-transform: uppercase; letter-spacing: 0.5px; margin: 0 0 8px;">Booking policies</div>
+      <ul style="margin: 0; padding-left: 18px; font-size: 14px; color: #3D3D3D; line-height: 1.6;">${p.policies.map((l) => `<li>${escapeHtml(l)}</li>`).join("")}</ul>
+    </div>` : "";
   const html = `<!DOCTYPE html>
 <html><body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 560px; margin: 0 auto; padding: 24px; color: #1A1A1A; background: #F2F1EF;">
   <div style="background: white; border-radius: 16px; padding: 32px; border: 1px solid #E5E3DF;">
@@ -83,6 +109,8 @@ export function buildConfirmEmail(p: BookingMessageParams): {
       <tr><td style="padding: 8px 0; font-size: 13px; color: #6B6B6B;">Date</td><td style="padding: 8px 0; font-size: 15px; font-weight: 600;">${escapeHtml(dateLine)}</td></tr>
       <tr><td style="padding: 8px 0; font-size: 13px; color: #6B6B6B;">Time</td><td style="padding: 8px 0; font-size: 15px; font-weight: 600;">${escapeHtml(timeLine)}</td></tr>
     </table>
+    ${depositHtml}
+    ${policiesHtml}
     ${p.portalUrl ? `<p style="margin: 0 0 24px;"><a href="${escapeHtml(p.portalUrl)}" style="display: inline-block; background: #E8557A; color: #ffffff; text-decoration: none; font-size: 14px; font-weight: 700; padding: 12px 24px; border-radius: 999px;">View my appointments</a></p>` : ""}
     <p style="font-size: 14px; color: #6B6B6B; margin: 0; line-height: 1.6;">
       Need to change something? ${p.ownerEmail ? `Reply to this email or message ${escapeHtml(p.businessName)} directly.` : `Message ${escapeHtml(p.businessName)} directly.`}
@@ -98,7 +126,13 @@ Your booking with ${p.businessName} is confirmed.
   Service: ${p.service}
   Date:    ${dateLine}
   Time:    ${timeLine}
-${p.portalUrl ? `
+${p.deposit ? `
+${depositSentence(p)}${p.deposit.payUrl ? `
+Pay here: ${p.deposit.payUrl}` : ""}
+` : ""}${p.policies?.length ? `
+Booking policies:
+${p.policies.map((l) => `- ${l}`).join("\n")}
+` : ""}${p.portalUrl ? `
 Your appointments, invoices and rebooking: ${p.portalUrl}
 ` : ""}
 See you then.
@@ -166,7 +200,13 @@ function buildConfirmText(p: BookingMessageParams): string {
 
 ${p.service}
 ${formatDate(p.date)} at ${formatTime(p.time)}
-${p.portalUrl ? `
+${p.deposit ? `
+${depositSentence(p)}${p.deposit.payUrl ? `
+Pay here: ${p.deposit.payUrl}` : ""}
+` : ""}${p.policies?.length ? `
+Booking policies:
+${p.policies.map((l) => `- ${l}`).join("\n")}
+` : ""}${p.portalUrl ? `
 Your appointments & rebooking: ${p.portalUrl}
 ` : ""}
 See you then!`;

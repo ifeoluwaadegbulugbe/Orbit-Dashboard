@@ -8,6 +8,7 @@ import { clientIp, overLimit, HOUR } from "@/lib/rate-limit";
 import { ymdInZone } from "@/lib/time/ymd";
 import { slotsForBusiness } from "@/lib/booking-availability";
 import type { BookingConfig } from "@/lib/booking-profile";
+import { hasPolicies, depositForBooking } from "@/lib/booking-policies";
 
 /**
  * Public booking submission. Accepts an unauthenticated POST from /book/<slug>
@@ -37,6 +38,8 @@ interface RequestBody {
   time?: string;
   customer?: { name?: string; email?: string | null; phone?: string | null };
   notes?: string | null;
+  /** The client ticked "I agree" to the business's policies / deposit. */
+  acceptPolicies?: boolean;
 }
 
 interface ProfileRow {
@@ -57,7 +60,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
   }
 
-  const { slug, services: servicesArr, service: legacyService, date, time, customer, notes } = body;
+  const { slug, services: servicesArr, service: legacyService, date, time, customer, notes, acceptPolicies } = body;
 
   // Stop anyone flooding a business with fake bookings (and the owner with emails).
   const ip = clientIp(request);
@@ -123,6 +126,13 @@ export async function POST(request: Request) {
   }
 
   const profile = profileData as ProfileRow;
+
+  // Policies and deposits must be agreed to - checked here too, not just in the form.
+  const mustAgree = hasPolicies(profile.booking_link?.policies)
+    || depositForBooking(profile.booking_link?.services ?? [], bookingTitle) > 0;
+  if (mustAgree && acceptPolicies !== true) {
+    return NextResponse.json({ error: "Please agree to the booking policies first.", code: "POLICIES_NOT_ACCEPTED" }, { status: 400 });
+  }
 
   // Sum the selected services' durations (from profile.booking_link.services)
   // so the calendar event reflects real length instead of a flat default.
@@ -211,6 +221,7 @@ export async function POST(request: Request) {
   const combinedNotes = [
     notes?.trim() || null,
     `Submitted via booking link as ${customerName}`,
+    mustAgree ? `Agreed to your booking policies on ${new Date().toISOString().slice(0, 10)}` : null,
     customerEmail ? `Email: ${customerEmail}` : null,
     customerPhone ? `Phone: ${customerPhone}` : null,
   ]

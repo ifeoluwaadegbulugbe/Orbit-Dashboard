@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Calendar, Clock, User, Mail, Phone, MessageSquare, Check, Loader2 } from "lucide-react";
+import { Calendar, Clock, User, Mail, Phone, MessageSquare, Check, Loader2, ShieldCheck } from "lucide-react";
 import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
 import { Button } from "@/components/ui/Button";
@@ -29,11 +29,17 @@ interface PublicBookingFormProps {
   hasHours?: boolean;
   /** Currency symbol for plain-number prices ("5000" -> "₦5,000"). */
   currencySymbol?: string;
+  /** Deposit for each service (same order as `services`), 0 = none. */
+  deposits?: number[];
+  /** The business's booking policies as sentences; the client must agree to them. */
+  policies?: string[];
 }
 
 export function PublicBookingForm({
   slug, businessName, services, initialServices = [], initialName = "", initialPhone = "", initialEmail = "", dialCode = "234", hasHours = false, currencySymbol = "₦",
+  deposits = [], policies = [],
 }: PublicBookingFormProps) {
+  const [agreed, setAgreed] = useState(false);
   const [selectedIndices, setSelectedIndices] = useState<number[]>(() => {
     const wanted = initialServices.map((n) => n.trim().toLowerCase());
     return services.map((s, i) => (wanted.includes(s.name.trim().toLowerCase()) ? i : -1)).filter((i) => i >= 0);
@@ -59,6 +65,10 @@ export function PublicBookingForm({
 
   const selectedServices = selectedIndices.map((i) => services[i]).filter(Boolean);
   const totalMinutes = selectedServices.reduce((sum, s) => sum + (s.duration_minutes || 0), 0);
+  const depositTotal = selectedIndices.reduce((sum, i) => sum + (deposits[i] || 0), 0);
+  const money = (n: number) => `${currencySymbol}${n.toLocaleString("en-NG")}`;
+  // Agreeing is needed when there are rules to agree to, or a deposit to pay.
+  const needsAgreement = policies.length > 0 || depositTotal > 0;
 
   // Fetch free times whenever the date or the chosen services' length changes.
   const durationForSlots = totalMinutes || 60;
@@ -97,6 +107,10 @@ export function PublicBookingForm({
       setError("Please select at least one service.");
       return;
     }
+    if (needsAgreement && !agreed) {
+      setError(`Please read and agree to ${businessName}'s booking policies.`);
+      return;
+    }
 
     setError(null);
     setSubmitting(true);
@@ -115,6 +129,7 @@ export function PublicBookingForm({
             phone: phone.trim() || null,
           },
           notes: notes.trim() || null,
+          acceptPolicies: needsAgreement ? agreed : undefined,
         }),
       });
       const json = await res.json();
@@ -140,6 +155,11 @@ export function PublicBookingForm({
         <p className="text-body text-[var(--color-ink-light)] leading-relaxed max-w-md mx-auto">
           {businessName} will confirm by WhatsApp or email soon. Keep an eye on your messages.
         </p>
+        {depositTotal > 0 && (
+          <p className="mt-3 text-small text-[var(--color-ink-mid)] max-w-md mx-auto">
+            Once it&apos;s confirmed, you&apos;ll get a link to pay your {money(depositTotal)} deposit to secure your booking.
+          </p>
+        )}
       </div>
     );
   }
@@ -197,6 +217,9 @@ export function PublicBookingForm({
                     <div className="text-body font-bold text-[var(--color-ink)] leading-snug">
                       {displayPrice(s.price, currencySymbol)}
                     </div>
+                    {deposits[i] > 0 && (
+                      <div className="text-tiny font-semibold text-[var(--color-primary-dark)] mt-0.5">{money(deposits[i])} deposit</div>
+                    )}
                   </div>
                 </button>
               );
@@ -304,6 +327,36 @@ export function PublicBookingForm({
           onChange={(e) => setNotes(e.target.value)}
         />
       </div>
+
+      {/* Deposit + policies */}
+      {needsAgreement && (
+        <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-canvas)] p-4 sm:p-5 space-y-3">
+          <div className="flex items-center gap-2 text-small font-semibold text-[var(--color-ink)]">
+            <ShieldCheck className="h-4 w-4 text-[var(--color-primary)]" /> Before you book
+          </div>
+          {depositTotal > 0 && (
+            <p className="text-small text-[var(--color-ink-mid)] leading-relaxed">
+              A <b>{money(depositTotal)} deposit</b> secures this booking. You&apos;ll get a secure link to pay it once {businessName} confirms.
+            </p>
+          )}
+          {policies.length > 0 && (
+            <ul className="space-y-1.5 text-small text-[var(--color-ink-mid)] leading-relaxed list-disc pl-5">
+              {policies.map((l) => <li key={l}>{l}</li>)}
+            </ul>
+          )}
+          <label className="flex items-start gap-3 cursor-pointer pt-1">
+            <input
+              type="checkbox"
+              checked={agreed}
+              onChange={(e) => setAgreed(e.target.checked)}
+              className="mt-0.5 h-5 w-5 flex-shrink-0 accent-[var(--color-primary)]"
+            />
+            <span className="text-small font-semibold text-[var(--color-ink)]">
+              I agree to {businessName}&apos;s booking {depositTotal > 0 && policies.length === 0 ? "terms" : "policies"}
+            </span>
+          </label>
+        </div>
+      )}
 
       {/* Submit */}
       <Button

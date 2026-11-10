@@ -25,6 +25,8 @@ interface RespondResult {
   clientHasPhone?: boolean;
   invoiceCreated?: boolean;
   invoiceNumber?: string | null;
+  /** Set when the booked service has a deposit. `link` is null without Orbit Pay. */
+  deposit?: { amount: string; link: string | null; problem: string | null } | null;
   error?: string;
 }
 
@@ -62,7 +64,7 @@ export function BookingActions({
       // queries. Invalidate the relevant ones so they show the new status.
       qc.invalidateQueries({ queryKey: ["bookings"] });
       qc.invalidateQueries({ queryKey: ["notifications"] });
-      if (json.invoiceCreated) {
+      if (json.invoiceCreated || json.deposit) {
         qc.invalidateQueries({ queryKey: ["payments"] });
       }
 
@@ -74,7 +76,12 @@ export function BookingActions({
 
       // Compose a toast that tells the owner exactly what happened.
       const who = clientName ? ` ${clientName}` : "";
-      const invoiceSuffix = json.invoiceCreated ? ` Invoice ${json.invoiceNumber} created.` : "";
+      const depositNote = json.deposit
+        ? json.deposit.link
+          ? ` ${json.deposit.amount} deposit link sent.`
+          : ` ${json.deposit.amount} deposit invoice created - set up Orbit Pay (Money) to send a payment link.`
+        : "";
+      const invoiceSuffix = `${depositNote}${json.invoiceCreated ? ` Invoice ${json.invoiceNumber} created${json.deposit ? " for the balance" : ""}.` : ""}`;
       if (action === "confirmed") {
         if (json.emailSent && json.whatsappUrl) {
           toast(`Confirmed${who}. Email sent + WhatsApp opened.${invoiceSuffix}`, "success");

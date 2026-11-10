@@ -2,6 +2,7 @@ import "server-only";
 import type { createServiceClient } from "@/lib/supabase/server";
 import { computeServiceAmount } from "@/lib/services/price";
 import { track } from "@/lib/analytics/server";
+import { formatMoney } from "@/lib/countries";
 
 type ServiceClient = ReturnType<typeof createServiceClient>;
 
@@ -29,28 +30,33 @@ interface AutoInvoiceResult {
  * the owner creates the invoice by hand, same as before this existed.
  *
  * Deduped on booking_id - safe to call more than once for the same booking.
+ * With a deposit (see deposit.ts), this invoice is just the balance.
  */
 export async function maybeCreateInvoiceForBooking(
   supabase: ServiceClient,
   booking: BookingForInvoice,
+  depositAmount = 0,
 ): Promise<AutoInvoiceResult> {
   const { data: existing } = await supabase
     .from("payments")
     .select("id")
     .eq("booking_id", booking.id)
-    .maybeSingle();
-  if (existing) return { created: false };
+    .neq("type", "deposit")
+    .limit(1);
+  if (existing?.length) return { created: false };
 
   const { data: profileRow } = await supabase
     .from("profiles")
-    .select("booking_link")
+    .select("booking_link, country_code")
     .eq("id", booking.user_id)
     .maybeSingle();
   const services =
     (profileRow?.booking_link as { services?: { name: string; price: string }[] } | null)?.services ?? [];
 
-  const amount = computeServiceAmount(services, booking.title);
-  if (amount === null) return { created: false };
+  const total = computeServiceAmount(services, booking.title);
+  if (total === null) return { created: false };
+  const amount = Math.max(0, total - depositAmount);
+  if (amount <= 0) return { created: false }; // the deposit covers it all
 
   const invoiceNumber = `INV-${Date.now().toString().slice(-6)}`;
 
@@ -64,7 +70,7 @@ export async function maybeCreateInvoiceForBooking(
     type: "full",
     status: "pending",
     date: booking.date,
-    notes: null,
+    notes: depositAmount > 0 ? `Balance after the ${formatMoney(depositAmount, profileRow?.country_code)} deposit` : null,
     invoice_number: invoiceNumber,
     line_items: null,
     payment_link: null,

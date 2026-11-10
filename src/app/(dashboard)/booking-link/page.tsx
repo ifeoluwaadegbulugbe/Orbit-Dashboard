@@ -17,6 +17,8 @@ import {
 import { appUrl } from "@/lib/app-url";
 import { track } from "@/lib/analytics/browser";
 import { OpeningHoursEditor, DEFAULT_HOURS } from "@/components/booking/OpeningHoursEditor";
+import { PoliciesEditor } from "@/components/booking/PoliciesEditor";
+import { cleanPolicies } from "@/lib/booking-policies";
 import { hoursLabel, validHours } from "@/lib/booking-hours";
 
 const BOOKING_STORAGE_KEY = "orbit_booking_link_v1";
@@ -127,7 +129,7 @@ function BookingLinkInner() {
       toast("Check your opening hours: closing time must be after opening time.", "danger");
       return;
     }
-    const toSave: BookingConfig = { ...config, hours, availability: hoursLabel(hours) };
+    const toSave: BookingConfig = { ...config, hours, availability: hoursLabel(hours), policies: cleanPolicies(config.policies) };
     setConfig(toSave);
     setSaving(true);
 
@@ -297,6 +299,8 @@ function BookingLinkInner() {
             onChange={(e) => update("whatsapp", e.target.value)}
           />
         </div>
+
+        <PoliciesEditor value={config.policies} onChange={(p) => update("policies", p)} />
 
         {userId && (
           <PhotoGalleryEditor

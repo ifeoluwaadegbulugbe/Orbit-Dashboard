@@ -9,6 +9,7 @@ import {
 } from "@/lib/booking-profile";
 import { dialCodeFor, findCountryByCode, DEFAULT_COUNTRY } from "@/lib/countries";
 import { validHours } from "@/lib/booking-hours";
+import { policyLines, depositForService } from "@/lib/booking-policies";
 
 interface ProfileRow {
   country_code?: string | null;
@@ -225,6 +226,8 @@ export default async function PublicBookingPage({
             slug={slug}
             businessName={name}
             services={config.services ?? []}
+            deposits={(config.services ?? []).map((s) => depositForService(s))}
+            policies={policyLines(config.policies)}
             initialServices={presetServices}
             initialName={first(sp.name)}
             initialPhone={first(sp.phone)}

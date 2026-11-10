@@ -1,5 +1,6 @@
 import { toWhatsAppDigits } from "@/lib/phone";
 import type { OpeningHours } from "@/lib/booking-hours";
+import type { BookingPolicies, ServiceDeposit } from "@/lib/booking-policies";
 /**
  * The public booking profile stored in profiles.booking_link (jsonb).
  * Edited on /booking-link, rendered on /book/<slug>.
@@ -9,6 +10,7 @@ export interface BookingService {
   name: string;
   duration_minutes: number;
   price: string;
+  deposit?: ServiceDeposit | null;
 }
 
 export interface BookingConfig {
@@ -27,6 +29,8 @@ export interface BookingConfig {
   whatsapp?: string;
   /** Public URLs of work photos (max MAX_PHOTOS). */
   photos?: string[];
+  /** Cancellation, lateness and refund rules clients agree to before booking. */
+  policies?: BookingPolicies;
 }
 
 export const MAX_PHOTOS = 8;

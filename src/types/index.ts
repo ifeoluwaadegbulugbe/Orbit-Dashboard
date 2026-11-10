@@ -1,3 +1,4 @@
+import type { ServiceDeposit } from "@/lib/booking-policies";
 // Mirrors mobile app types - keeps Supabase rows shape-compatible across platforms.
 // IMPORTANT: column names here MUST match what's in the Supabase DB. The mobile
 // app's `src/types/index.ts` is the source of truth.
@@ -225,6 +226,8 @@ export interface Service {
   duration_minutes: number;
   /** Free-form price string (so owners can write "$80", "Free", "From N5,000"). */
   price: string;
+  /** Asked for when the owner confirms a booking (see src/lib/booking-policies.ts). */
+  deposit?: ServiceDeposit | null;
 }
 
 /**

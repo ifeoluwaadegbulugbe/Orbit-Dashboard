@@ -5,6 +5,9 @@ import { sendEmail } from "@/lib/email/server";
 import { clientPortalUrl } from "@/lib/signed-links";
 import { syncBookingToGoogleCalendar } from "@/lib/google-calendar/server";
 import { maybeCreateInvoiceForBooking } from "@/lib/bookings/auto-invoice";
+import { maybeRequestDeposit } from "@/lib/bookings/deposit";
+import { policyLines } from "@/lib/booking-policies";
+import type { BookingConfig } from "@/lib/booking-profile";
 import { getEffectiveRule, type MessageRuleRow } from "@/lib/automations/rules";
 import {
   buildConfirmEmail,
@@ -13,7 +16,7 @@ import {
   buildOwnerCancelEmail,
   buildWhatsAppUrl,
 } from "@/lib/email/booking-templates";
-import { dialCodeFor } from "@/lib/countries";
+import { dialCodeFor, formatMoney } from "@/lib/countries";
 import { track } from "@/lib/analytics/server";
 
 /**
@@ -59,6 +62,7 @@ interface ProfileRow {
   full_name: string | null;
   business_name: string | null;
   email: string | null;
+  booking_link?: BookingConfig | null;
 }
 
 export async function POST(
@@ -128,11 +132,18 @@ export async function POST(
   // never blocks or fails this request.
   await syncBookingToGoogleCalendar(supabase, id);
 
+  // A service with a deposit: ask for it now, with an Orbit Pay link when
+  // the owner has Orbit Pay set up.
+  const deposit = action === "confirmed"
+    ? await maybeRequestDeposit(supabase, booking, { id: userId, email: authData.user.email })
+    : null;
+
   // Auto-create an invoice once a booking is actually confirmed (not on a
-  // still-pending request, which might get declined). Best-effort: quietly
-  // does nothing if the title doesn't resolve to a priced service.
+  // still-pending request, which might get declined) - for the balance, if
+  // there's a deposit. Best-effort: quietly does nothing if the title
+  // doesn't resolve to a priced service.
   const autoInvoice =
-    action === "confirmed" ? await maybeCreateInvoiceForBooking(supabase, booking) : { created: false as const };
+    action === "confirmed" ? await maybeCreateInvoiceForBooking(supabase, booking, deposit?.amount ?? 0) : { created: false as const };
 
   const event = action === "confirmed" ? "booking_confirmed" : "booking_cancelled";
   await track(userId, event, { dedupeKey: `${event}:${id}:${userId}`, props: { auto_invoice: autoInvoice.created } });
@@ -146,7 +157,7 @@ export async function POST(
       .maybeSingle(),
     supabase
       .from("profiles")
-      .select("full_name, business_name, email, country_code")
+      .select("full_name, business_name, email, country_code, booking_link")
       .eq("id", userId)
       .maybeSingle(),
   ]);
@@ -169,6 +180,10 @@ export async function POST(
     clientEmail: client?.email ?? null,
     clientPhone: client?.whatsapp_number || client?.phone || null,
     portalUrl: booking.client_id ? clientPortalUrl(booking.client_id, request) : null,
+    deposit: deposit
+      ? { amount: formatMoney(deposit.amount, profile?.country_code), payUrl: deposit.link, deadlineHours: profile?.booking_link?.policies?.depositDeadlineHours ?? 0 }
+      : null,
+    policies: action === "confirmed" ? policyLines(profile?.booking_link?.policies) : [],
   };
 
   // ── Email the client if we have an address and this trigger is enabled ──
@@ -223,7 +238,7 @@ export async function POST(
       action === "confirmed"
         ? `You confirmed ${booking.client_name}'s booking`
         : `You cancelled ${booking.client_name}'s booking`,
-    body: `${booking.title} on ${booking.date} at ${String(booking.time).slice(0, 5)}.${emailSent ? " Email sent to client." : ""}${autoInvoice.created ? ` Invoice ${autoInvoice.invoiceNumber} created.` : ""}`,
+    body: `${booking.title} on ${booking.date} at ${String(booking.time).slice(0, 5)}.${emailSent ? " Email sent to client." : ""}${deposit ? ` ${formatMoney(deposit.amount, profile?.country_code)} deposit requested${deposit.link ? " with a payment link" : ""}.` : ""}${autoInvoice.created ? ` Invoice ${autoInvoice.invoiceNumber} created${deposit ? " for the balance" : ""}.` : ""}`,
     actionUrl: `/clients/${booking.client_id}`,
     metadata: {
       booking_id: booking.id,
@@ -243,6 +258,7 @@ export async function POST(
     clientHasPhone: !!whatsappTarget,
     invoiceCreated: autoInvoice.created,
     invoiceNumber: autoInvoice.created ? autoInvoice.invoiceNumber : null,
+    deposit: deposit ? { amount: formatMoney(deposit.amount, profile?.country_code), link: deposit.link, problem: deposit.linkProblem ?? null } : null,
   });
 }
 
