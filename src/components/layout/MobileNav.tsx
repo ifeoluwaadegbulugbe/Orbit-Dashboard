@@ -4,14 +4,14 @@ import { useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  X, Home, Users, Briefcase, Wallet2, LineChart, Settings, Sparkles,
-  Zap, MessageSquare, Bell, Download, BookOpen, CalendarDays, ShieldCheck,
+  X, Home, Users, Briefcase, Wallet2, LineChart, Settings, Zap, MessageSquare, Bell, Download, BookOpen, CalendarDays, ShieldCheck,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/stores/authStore";
 import { ADMIN_EMAILS } from "@/lib/subscription/isPro";
 
+import { OrbitMark } from "@/components/brand/OrbitMark";
 interface NavItem {
   href: string;
   label: string;
@@ -57,9 +57,7 @@ export function MobileNav({ open, onClose }: { open: boolean; onClose: () => voi
       <aside className="absolute left-0 top-0 bottom-0 w-72 bg-white border-r border-[var(--color-border)] shadow-soft-lg flex flex-col">
         <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--color-border)] flex-shrink-0">
           <Link href="/home" className="flex items-center gap-2" onClick={onClose}>
-            <div className="w-8 h-8 rounded-lg bg-[var(--color-primary)] flex items-center justify-center">
-              <Sparkles className="h-4 w-4 text-white" />
-            </div>
+            <OrbitMark size={32} />
             <span className="text-lg font-bold tracking-tight">
               Orbit<span className="text-[var(--color-primary)]">.</span>
             </span>

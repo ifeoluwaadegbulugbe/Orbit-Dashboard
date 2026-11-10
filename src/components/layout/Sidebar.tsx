@@ -13,6 +13,7 @@ import { ADMIN_EMAILS } from "@/lib/subscription/isPro";
 import { useSubscription } from "@/hooks/useSubscription";
 import { Badge } from "@/components/ui/Badge";
 
+import { OrbitMark } from "@/components/brand/OrbitMark";
 interface NavItem {
   href: string;
   label: string;
@@ -51,9 +52,7 @@ export function Sidebar() {
       {/* Brand */}
       <div className="px-5 sm:px-7 pt-8 pb-6 flex-shrink-0">
         <Link href="/home" className="flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-xl bg-[var(--color-primary)] flex items-center justify-center">
-            <Sparkles className="h-5 w-5 text-white" />
-          </div>
+          <OrbitMark size={36} />
           <span className="text-card-title font-bold text-[var(--color-ink)]">
             Orbit<span className="text-[var(--color-primary)]">.</span>
           </span>

@@ -1,4 +1,4 @@
-import { Sparkles } from "lucide-react";
+import { OrbitMark } from "@/components/brand/OrbitMark";
 
 /** Minimal frame for pages clients see without logging in (reviews, "my appointments"). */
 export function PublicShell({ children }: { children: React.ReactNode }) {
@@ -6,9 +6,7 @@ export function PublicShell({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen bg-[var(--color-canvas)]">
       <header className="border-b border-[var(--color-border)] bg-white">
         <div className="max-w-xl mx-auto px-4 sm:px-6 py-3.5 flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg bg-[var(--color-primary)] flex items-center justify-center">
-            <Sparkles className="h-3.5 w-3.5 text-white" />
-          </div>
+          <OrbitMark size={28} />
           <span className="text-body font-bold">
             Orbit<span className="text-[var(--color-primary)]">.</span>
           </span>

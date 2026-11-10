@@ -1,14 +1,12 @@
 import Link from "next/link";
-import { Sparkles } from "lucide-react";
 
+import { OrbitMark } from "@/components/brand/OrbitMark";
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen flex flex-col bg-[var(--color-canvas)]">
       <header className="px-6 py-5">
         <Link href="/" className="inline-flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-[var(--color-primary)] flex items-center justify-center">
-            <Sparkles className="h-4 w-4 text-white" />
-          </div>
+          <OrbitMark size={32} />
           <span className="text-lg font-bold tracking-tight">
             Orbit<span className="text-[var(--color-primary)]">.</span>
           </span>

@@ -218,7 +218,7 @@ function renderBlock(b: Block, base: string): string {
     }
     case "steps":
       return row(`
-        <div style="${font(TYPE.eyebrow)}text-transform:uppercase;color:${C.rose};">${img(base, "spark", 12, 12, "display:inline-block;vertical-align:-1px;margin-right:6px;")}${esc(b.title)}</div>
+        <div style="${font(TYPE.eyebrow)}text-transform:uppercase;color:${C.rose};">${img(base, "pixel", 12, 12, "display:inline-block;vertical-align:-1px;margin-right:6px;")}${esc(b.title)}</div>
         ${b.items.map((it, i) => `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:14px;"><tr>
           <td width="40" valign="top"><div style="width:28px;height:28px;line-height:28px;border-radius:999px;border:1.5px solid ${C.ink};text-align:center;font-family:${FONT.sans};font-size:13px;font-weight:800;color:${C.ink};">${i + 1}</div></td>
           <td valign="top" style="padding-top:3px;"><div style="${font(TYPE.body)}font-weight:700;color:${C.ink};">${rich(it.title)}</div>${it.body ? `<div style="${font(TYPE.small)}color:${C.meta};margin-top:2px;">${rich(it.body)}</div>` : ""}</td>
@@ -303,7 +303,7 @@ export function renderEmail(c: EmailContent, f: EmailFooter): { html: string; te
           <td><img src="${esc(base)}/icons/icon-192.png" width="28" height="28" alt="Orbit" style="display:block;border-radius:8px;"></td>
           <td style="padding-left:8px;font-family:${FONT.sans};font-size:18px;font-weight:800;letter-spacing:-0.4px;color:${C.ink};">Orbit<span style="color:${C.pink};">.</span></td>
         </tr></table></td>
-        ${c.eyebrow ? `<td align="right" valign="middle" style="${font(TYPE.eyebrow)}text-transform:uppercase;color:${C.rose};">${img(base, "spark", 12, 12, "display:inline-block;vertical-align:-1px;margin-right:6px;")}${esc(c.eyebrow)}</td>` : ""}
+        ${c.eyebrow ? `<td align="right" valign="middle" style="${font(TYPE.eyebrow)}text-transform:uppercase;color:${C.rose};">${img(base, "pixel", 12, 12, "display:inline-block;vertical-align:-1px;margin-right:6px;")}${esc(c.eyebrow)}</td>` : ""}
       </tr></table>
     </td></tr>
 
